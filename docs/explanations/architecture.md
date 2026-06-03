@@ -44,4 +44,4 @@ The dedicated welcome window appears on first launch. If the user closes it with
 
 - The UI layer is intentionally AppKit/SwiftUI mixed because non-activating panels, LSUIElement behavior, Settings routing, and global hotkeys need AppKit control points.
 - `PresetEditor.swift` and `PopupView.swift` are the largest files. They are still cohesive, but future feature work should split them only when new behavior creates a clear subcomponent boundary.
-- There is no distribution pipeline yet. Signing, notarization, and release packaging remain separate work.
+- Release CI/CD is wired for unsigned alpha artifacts by default. Developer ID signing and notarization are available when Apple credentials are configured.

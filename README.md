@@ -2,11 +2,12 @@
 
 Native macOS quick-translation app: global hotkey `Option+Q` opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
 
-> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Distribution signing/notarization is not wired yet.
+> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Unsigned alpha releases are the default; signed/notarized release mode is wired for GitHub Actions when Apple Developer ID and notary secrets are configured.
 
 ## Requirements
 
-- macOS 13+ (Ventura) at runtime
+- macOS 13 Ventura or later at runtime
+- Release artifacts are universal macOS apps for Intel and Apple Silicon
 - Xcode 15+ with Command Line Tools (tested with Xcode 26.5)
 - [`xcodegen`](https://github.com/yonaskolb/XcodeGen) via `brew install xcodegen`
 - Optional: [`xcbeautify`](https://github.com/cpisciotta/xcbeautify) for cleaner build logs
@@ -31,7 +32,19 @@ scripts/build.sh --release # Release build
 scripts/build.sh --no-gen  # Skip XcodeGen when project is already current
 ```
 
-The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing, and outputs `DerivedData/Build/Products/Debug/TransFlex.app`.
+The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default, and outputs `DerivedData/Build/Products/Debug/TransFlex.app`. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
+
+Release version values can be injected for CI-built bundles:
+
+```bash
+MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
+```
+
+## Release
+
+Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The phase 1 artifact is named like `TransFlex-0.2.0-macos-universal-unsigned.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
+
+Unsigned alpha artifacts are not notarized, so Gatekeeper can block them on tester machines. Signed and notarized releases require Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
 
 ## Test
 

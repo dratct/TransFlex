@@ -5,7 +5,15 @@
 # Usage:
 #   scripts/build.sh              # Debug build
 #   CONFIG=Release scripts/build.sh
+#   scripts/build.sh --release
 #   scripts/build.sh --no-gen     # Skip xcodegen step (project already current)
+#
+# Release version overrides:
+#   MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
+#
+# Signing modes:
+#   TRANSFLEX_SIGNING_MODE=adhoc        # default local/CI unsigned alpha build
+#   TRANSFLEX_SIGNING_MODE=developer-id # requires DEVELOPER_ID_APPLICATION and APPLE_TEAM_ID
 
 set -euo pipefail
 
@@ -15,6 +23,7 @@ cd "$ROOT_DIR"
 CONFIG="${CONFIG:-Debug}"
 SCHEME="${SCHEME:-TransFlex}"
 GENERATE=true
+SIGNING_MODE="${TRANSFLEX_SIGNING_MODE:-adhoc}"
 
 for arg in "$@"; do
   case "$arg" in
@@ -25,7 +34,9 @@ for arg in "$@"; do
 done
 
 DEVELOPER_DIR_ACTIVE="$(xcode-select -p 2>/dev/null || true)"
-if [[ "$DEVELOPER_DIR_ACTIVE" != *"Xcode.app"* ]]; then
+if [[ -z "$DEVELOPER_DIR_ACTIVE" ||
+      ! -d "$DEVELOPER_DIR_ACTIVE/Platforms/MacOSX.platform" ||
+      ! -d "$DEVELOPER_DIR_ACTIVE/Toolchains" ]]; then
   cat >&2 <<EOF
 error: xcode-select is pointing at Command Line Tools, not full Xcode.
        active: ${DEVELOPER_DIR_ACTIVE:-<none>}
@@ -49,18 +60,67 @@ if $GENERATE; then
   xcodegen generate
 fi
 
+VERSION_SETTINGS=()
+if [[ -n "${MARKETING_VERSION:-}" ]]; then
+  VERSION_SETTINGS+=(MARKETING_VERSION="$MARKETING_VERSION")
+fi
+if [[ -n "${CURRENT_PROJECT_VERSION:-}" ]]; then
+  VERSION_SETTINGS+=(CURRENT_PROJECT_VERSION="$CURRENT_PROJECT_VERSION")
+fi
+
+case "$SIGNING_MODE" in
+  adhoc)
+    SIGNING_SETTINGS=(
+      CODE_SIGN_IDENTITY=-
+      CODE_SIGNING_REQUIRED=NO
+      CODE_SIGNING_ALLOWED=YES
+    )
+    ;;
+  developer-id)
+    if [[ -z "${DEVELOPER_ID_APPLICATION:-}" ]]; then
+      echo "error: DEVELOPER_ID_APPLICATION is required when TRANSFLEX_SIGNING_MODE=developer-id." >&2
+      exit 1
+    fi
+    if [[ -z "${APPLE_TEAM_ID:-}" ]]; then
+      echo "error: APPLE_TEAM_ID is required when TRANSFLEX_SIGNING_MODE=developer-id." >&2
+      exit 1
+    fi
+    SIGNING_SETTINGS=(
+      CODE_SIGN_STYLE=Manual
+      CODE_SIGN_IDENTITY="$DEVELOPER_ID_APPLICATION"
+      CODE_SIGNING_REQUIRED=YES
+      CODE_SIGNING_ALLOWED=YES
+      DEVELOPMENT_TEAM="$APPLE_TEAM_ID"
+      ENABLE_HARDENED_RUNTIME=YES
+      OTHER_CODE_SIGN_FLAGS=--timestamp
+    )
+    ;;
+  *)
+    echo "error: TRANSFLEX_SIGNING_MODE must be 'adhoc' or 'developer-id'." >&2
+    exit 1
+    ;;
+esac
+
 echo "==> xcodebuild ($CONFIG)"
+echo "==> signing mode: $SIGNING_MODE"
+if [[ -n "${MARKETING_VERSION:-}" ]]; then
+  echo "==> marketing version: $MARKETING_VERSION"
+fi
+if [[ -n "${CURRENT_PROJECT_VERSION:-}" ]]; then
+  echo "==> build version: $CURRENT_PROJECT_VERSION"
+fi
+
 BUILD_CMD=(
   xcodebuild
   -scheme "$SCHEME"
   -configuration "$CONFIG"
   -derivedDataPath DerivedData
   -destination 'platform=macOS'
-  CODE_SIGN_IDENTITY=-
-  CODE_SIGNING_REQUIRED=NO
-  CODE_SIGNING_ALLOWED=YES
-  build
 )
+if (( ${#VERSION_SETTINGS[@]} > 0 )); then
+  BUILD_CMD+=("${VERSION_SETTINGS[@]}")
+fi
+BUILD_CMD+=("${SIGNING_SETTINGS[@]}" build)
 
 if command -v xcbeautify >/dev/null 2>&1; then
   "${BUILD_CMD[@]}" | xcbeautify

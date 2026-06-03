@@ -8,7 +8,9 @@ Use [tutorials/getting-started.md](tutorials/getting-started.md) when you want a
 
 ## How-To
 
-Use [how-to/development-workflows.md](how-to/development-workflows.md) for task recipes: build, test, run, configure providers, add OpenAI-compatible endpoints, manage presets, and reset onboarding.
+Use [how-to/development-workflows.md](how-to/development-workflows.md) for development recipes: build, test, run, configure providers, add OpenAI-compatible endpoints, manage presets, and reset onboarding.
+
+Use [how-to/release.md](how-to/release.md) for release recipes: tag builds, manual dispatch, draft prerelease review, and signed/notarized credential setup.
 
 ## Explanation
 

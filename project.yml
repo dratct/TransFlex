@@ -36,8 +36,8 @@ targets:
       properties:
         LSUIElement: true
         CFBundleDisplayName: TransFlex
-        CFBundleShortVersionString: "0.1.0"
-        CFBundleVersion: "1"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSHumanReadableCopyright: "Copyright © 2026 TransFlex Contributors."
         LSMinimumSystemVersion: "13.0"
         NSAppTransportSecurity:
