@@ -35,9 +35,12 @@ struct WelcomeFinishView: View {
             }
 
             HStack(spacing: 6) {
-                Image(systemName: "menubar.dock.rectangle")
-                    .font(.system(size: 11))
-                Text("Look for the speech-bubble icon in the menu bar.")
+                Image("MenuBarIcon")
+                    .resizable()
+                    .renderingMode(.template)
+                    .scaledToFit()
+                    .frame(width: 12, height: 12)
+                Text("Look for the TransFlex icon in the menu bar.")
                     .font(.system(size: 12))
             }
             .foregroundStyle(.secondary)

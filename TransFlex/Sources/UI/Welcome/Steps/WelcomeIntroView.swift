@@ -7,10 +7,11 @@ struct WelcomeIntroView: View {
             Spacer().frame(height: 4)
 
             VStack(spacing: 12) {
-                Image(systemName: "character.bubble.fill")
-                    .font(.system(size: 64, weight: .semibold))
-                    .foregroundStyle(Color.brandAccent)
-                    .symbolRenderingMode(.hierarchical)
+                Image("AppLogo")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 72, height: 72)
+                    .shadow(color: Color.brandAccent.opacity(0.28), radius: 16, y: 8)
 
                 Text("TransFlex")
                     .font(.system(.largeTitle, design: .rounded).weight(.bold))

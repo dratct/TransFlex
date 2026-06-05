@@ -1,0 +1,54 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">TransFlex brand preview</title>
+  <desc id="desc">Preview sheet for TransFlex app icon, website lockup, and menu bar glyph.</desc>
+  <defs>
+    <linearGradient id="pageBg" x1="0" y1="0" x2="1200" y2="900" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#08111f"/>
+      <stop offset="1" stop-color="#0f172a"/>
+    </linearGradient>
+    <linearGradient id="cardBg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#101c31"/>
+      <stop offset="1" stop-color="#0a1324"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1200" height="900" fill="url(#pageBg)"/>
+  <text x="72" y="86" fill="#f8fbff" font-family="Inter, SF Pro Display, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="42" font-weight="760" letter-spacing="0">TransFlex Brand Preview</text>
+  <text x="72" y="124" fill="#8fa4bd" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18" font-weight="520" letter-spacing="0">Neural-thread translation direction, raster app icon + vector lockup/glyph</text>
+
+  <rect x="72" y="170" width="456" height="540" rx="28" fill="url(#cardBg)" stroke="#263a59"/>
+  <text x="112" y="222" fill="#dbeafe" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="0">App icon</text>
+  <image href="transflex-app-icon-render.png" x="142" y="260" width="316" height="316" preserveAspectRatio="xMidYMid meet"/>
+  <text x="112" y="640" fill="#8fa4bd" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="15" font-weight="520" letter-spacing="0">Source: raster render cropped and masked to preserve soft lighting.</text>
+
+  <rect x="568" y="170" width="560" height="244" rx="28" fill="url(#cardBg)" stroke="#263a59"/>
+  <text x="608" y="222" fill="#dbeafe" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="0">Website lockup</text>
+  <image href="transflex-logo-lockup.svg" x="604" y="250" width="440" height="118" preserveAspectRatio="xMinYMid meet"/>
+
+  <rect x="568" y="454" width="560" height="256" rx="28" fill="url(#cardBg)" stroke="#263a59"/>
+  <text x="608" y="506" fill="#dbeafe" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="18" font-weight="700" letter-spacing="0">Small-size checks</text>
+  <image href="transflex-app-icon-render.png" x="608" y="544" width="96" height="96" preserveAspectRatio="xMidYMid meet"/>
+  <image href="transflex-app-icon-render.png" x="744" y="560" width="64" height="64" preserveAspectRatio="xMidYMid meet"/>
+  <image href="transflex-app-icon-render.png" x="848" y="576" width="32" height="32" preserveAspectRatio="xMidYMid meet"/>
+
+  <g transform="translate(950 552)">
+    <rect x="0" y="0" width="92" height="92" rx="18" fill="#f8fafc"/>
+    <svg x="15" y="15" width="62" height="62" viewBox="0 0 22 22" fill="none" stroke="#111827" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M2.4 7.2H6.5" stroke-width="1.65"/>
+      <path d="M2.4 11H5.4" stroke-width="1.65"/>
+      <path d="M3.2 14.8H6.2" stroke-width="1.65"/>
+      <path d="M16 7.2H19.8" stroke-width="1.65"/>
+      <path d="M16.7 11H19.8" stroke-width="1.65"/>
+      <path d="M16 14.8H19.2" stroke-width="1.65"/>
+      <path d="M8 3.6C6.8 6.5 8.2 8.4 10.4 9.3C13.1 10.4 12.9 12.3 11.3 13.4C9.5 14.7 9.4 16.4 12.4 18.4" stroke-width="1.65"/>
+      <circle cx="10.4" cy="9.3" r="1.45" fill="#111827" stroke="none"/>
+      <circle cx="11.5" cy="13.3" r="1.45" fill="#111827" stroke="none"/>
+      <circle cx="12.4" cy="18.1" r="1.25" fill="#111827" stroke="none"/>
+    </svg>
+  </g>
+  <text x="608" y="674" fill="#8fa4bd" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="15" font-weight="520" letter-spacing="0">128, 64, 32, and menu-bar glyph preview.</text>
+
+  <rect x="72" y="754" width="1056" height="76" rx="24" fill="#071325" stroke="#263a59"/>
+  <text x="112" y="801" fill="#a7f3d0" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="16" font-weight="650" letter-spacing="0">Next visual step:</text>
+  <text x="252" y="801" fill="#dbeafe" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="16" font-weight="520" letter-spacing="0">use this lockup as the hero brand signal on the app-introduction website.</text>
+</svg>

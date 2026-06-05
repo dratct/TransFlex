@@ -1,8 +1,8 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 22 22" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
   <title>TransFlex</title>
-  <path d="M4 3.5 H18 A2.5 2.5 0 0 1 20.5 6 V12 A2.5 2.5 0 0 1 18 14.5 H10.5 L7 18 L7.5 14.5 H4 A2.5 2.5 0 0 1 1.5 12 V6 A2.5 2.5 0 0 1 4 3.5 Z"/>
-  <path d="M5.5 7.5 H13.5"/>
-  <path d="M11.5 5.5 L13.5 7.5 L11.5 9.5"/>
-  <path d="M16.5 11 H8.5"/>
-  <path d="M10.5 9 L8.5 11 L10.5 13"/>
+  <path d="M3.2 8H7.5" stroke-width="2.15"/>
+  <path d="M3.2 14H7.5" stroke-width="2.15"/>
+  <path d="M14.5 8H18.8" stroke-width="2.15"/>
+  <path d="M14.5 14H18.8" stroke-width="2.15"/>
+  <path d="M11 6.4L12.15 9.85L15.6 11L12.15 12.15L11 15.6L9.85 12.15L6.4 11L9.85 9.85Z" fill="currentColor" stroke="none"/>
 </svg>

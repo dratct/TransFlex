@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: Hashable, CaseIterable {
-    case general, providers, presets, hotkeys
+    case general, providers, presets, hotkeys, about
 }
 
 @MainActor
@@ -33,6 +33,10 @@ struct SettingsRoot: View {
             HotkeysTab()
                 .tabItem { Label("Hotkeys", systemImage: "keyboard") }
                 .tag(SettingsTab.hotkeys)
+
+            AboutTab()
+                .tabItem { Label("About", systemImage: "info.circle") }
+                .tag(SettingsTab.about)
         }
         .padding(.top, 10)
         .frame(minWidth: 620, minHeight: 480)

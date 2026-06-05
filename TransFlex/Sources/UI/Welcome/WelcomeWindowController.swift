@@ -20,6 +20,7 @@ final class WelcomeWindowController {
         self.onFinishCallback = onFinish
         let win = window ?? makeWindow()
         window = win
+        DockVisibilityController.shared.showDockIcon(for: .welcome)
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.orderFrontRegardless()
@@ -49,6 +50,7 @@ final class WelcomeWindowController {
             Task { @MainActor in
                 self?.markShown()
                 self?.window = nil
+                DockVisibilityController.shared.hideDockIcon(for: .welcome)
             }
         }
         return win

@@ -21,10 +21,11 @@ struct WelcomeView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(systemName: "character.bubble.fill")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Color.brandAccent)
-                .symbolRenderingMode(.hierarchical)
+            Image("AppLogo")
+                .resizable()
+                .scaledToFit()
+                .frame(width: 34, height: 34)
+                .shadow(color: Color.brandAccent.opacity(0.18), radius: 8, y: 3)
             VStack(alignment: .leading, spacing: 2) {
                 Text("TransFlex")
                     .font(.system(size: 15, weight: .semibold))

@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 192" role="img" aria-labelledby="title desc">
+  <title id="title">TransFlex logo lockup</title>
+  <desc id="desc">Horizontal TransFlex logo lockup for website and marketing use.</desc>
+  <defs>
+    <linearGradient id="word" x1="210" y1="58" x2="510" y2="132" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f8fbff"/>
+      <stop offset="1" stop-color="#d9e8ff"/>
+    </linearGradient>
+  </defs>
+
+  <image href="transflex-app-icon-render.png" x="20" y="20" width="152" height="152" preserveAspectRatio="xMidYMid meet"/>
+  <text x="212" y="108" fill="url(#word)" font-family="Inter, SF Pro Display, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="62" font-weight="760" letter-spacing="0">TransFlex</text>
+  <text x="215" y="141" fill="#8ea3bb" font-family="Inter, SF Pro Text, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif" font-size="17" font-weight="560" letter-spacing="0">AI translation, anywhere on macOS</text>
+</svg>

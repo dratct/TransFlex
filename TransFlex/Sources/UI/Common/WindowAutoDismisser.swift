@@ -32,14 +32,16 @@ final class WindowAutoDismisser {
 
     private weak var window: NSWindow?
     private let label: String
+    private let onDismiss: (() -> Void)?
     private var workspaceObserver: NSObjectProtocol?
     private var mouseMonitor: Any?
 
     /// `label` is used as a tag in OSLog output so popup vs Settings dismiss
     /// events are distinguishable in `make log`.
-    init(window: NSWindow, label: String) {
+    init(window: NSWindow, label: String, onDismiss: (() -> Void)? = nil) {
         self.window = window
         self.label = label
+        self.onDismiss = onDismiss
     }
 
     deinit {
@@ -100,6 +102,8 @@ final class WindowAutoDismisser {
 
         if PopupDismissPolicy.shouldHide(activatedBundleID: bundleID, ownBundleID: ownBundleID) {
             window.orderOut(nil)
+            stop()
+            onDismiss?()
         }
     }
 }

@@ -21,7 +21,7 @@ final class StatusBarController: NSObject {
     private func configureButton() {
         guard let button = statusItem.button else { return }
         let image = NSImage(named: "MenuBarIcon")
-            ?? NSImage(systemSymbolName: "character.bubble", accessibilityDescription: "TransFlex")
+            ?? NSImage(systemSymbolName: "sparkle", accessibilityDescription: "TransFlex")
         image?.isTemplate = true
         image?.size = NSSize(width: 18, height: 18)
         button.image = image

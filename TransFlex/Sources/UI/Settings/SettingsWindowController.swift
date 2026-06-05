@@ -18,12 +18,15 @@ final class SettingsWindowController {
         tabState.selected = tab
         let win = window ?? makeWindow()
         window = win
+        DockVisibilityController.shared.showDockIcon(for: .settings)
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.orderFrontRegardless()
 
         if autoDismisser == nil {
-            autoDismisser = WindowAutoDismisser(window: win, label: "settings")
+            autoDismisser = WindowAutoDismisser(window: win, label: "settings") {
+                DockVisibilityController.shared.hideDockIcon(for: .settings)
+            }
         }
         autoDismisser?.start()
     }
@@ -42,6 +45,7 @@ final class SettingsWindowController {
         win.center()
         let delegate = SettingsWindowDelegate { [weak self] in
             self?.autoDismisser?.stop()
+            DockVisibilityController.shared.hideDockIcon(for: .settings)
         }
         win.delegate = delegate
         windowDelegate = delegate
