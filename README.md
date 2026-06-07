@@ -46,6 +46,10 @@ Public alpha releases are created by GitHub Actions from existing tags such as `
 
 Unsigned alpha artifacts are not notarized, so Gatekeeper can block them on tester machines. Signed and notarized releases require Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
 
+AI-assisted release review is handled by the project skill `transflex-release-manager` for Codex CLI and Claude Code. The skill inspects tags, commits, diffs, release automation, and current platform docs before recommending a version, release notes, gates, and approval commands. It does not tag, push, or publish without explicit approval.
+
+Project-local skill files live in `.codex/skills/transflex-release-manager/SKILL.md` and `.claude/skills/transflex-release-manager/SKILL.md`.
+
 ## Test
 
 ```bash

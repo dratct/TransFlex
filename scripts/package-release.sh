@@ -25,11 +25,16 @@ mkdir -p "$DIST_DIR"
 
 artifact="$DIST_DIR/TransFlex-${VERSION}-macos-universal-${SIGNING_LABEL}.zip"
 checksum="$artifact.sha256"
+artifact_name="$(basename "$artifact")"
+checksum_name="$(basename "$checksum")"
 
 rm -f "$artifact" "$checksum"
 
 ditto -c -k --keepParent "$APP_PATH" "$artifact"
-shasum -a 256 "$artifact" > "$checksum"
+(
+  cd "$DIST_DIR"
+  shasum -a 256 "$artifact_name" > "$checksum_name"
+)
 
 echo "==> Packaged: $artifact"
 echo "==> Checksum: $checksum"

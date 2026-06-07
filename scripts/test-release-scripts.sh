@@ -157,10 +157,40 @@ test_invalid_prerelease_versions_are_rejected() {
   done
 }
 
+test_package_checksum_uses_downloadable_asset_name() {
+  local case_dir="$TEST_TMP/package-checksum"
+  local app="$case_dir/Fake.app"
+  local artifact_name="TransFlex-0.2.0-macos-universal-unsigned.zip"
+  local checksum_name="$artifact_name.sha256"
+
+  mkdir -p "$app/Contents/MacOS"
+  printf '#!/usr/bin/env bash\nexit 0\n' > "$app/Contents/MacOS/TransFlex"
+  chmod +x "$app/Contents/MacOS/TransFlex"
+
+  (
+    cd "$case_dir"
+    VERSION="0.2.0" \
+      SIGNING_LABEL="unsigned" \
+      "$ROOT_DIR/scripts/package-release.sh" "Fake.app" > package.out
+  )
+
+  assert_file_contains "$case_dir/dist/$checksum_name" "$artifact_name"
+  assert_file_not_contains "$case_dir/dist/$checksum_name" "dist/$artifact_name"
+
+  mkdir -p "$case_dir/download"
+  cp "$case_dir/dist/$artifact_name" "$case_dir/dist/$checksum_name" "$case_dir/download/"
+
+  (
+    cd "$case_dir/download"
+    shasum -a 256 -c "$checksum_name" >/dev/null
+  )
+}
+
 test_release_create_path
 test_release_update_path
 test_regular_release_create_path
 test_regular_release_update_path
 test_invalid_prerelease_versions_are_rejected
+test_package_checksum_uses_downloadable_asset_name
 
 echo "==> Release script tests passed"

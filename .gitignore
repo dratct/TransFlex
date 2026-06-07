@@ -50,7 +50,9 @@ logs/
 screenshots/
 
 # Local tool state
-.codex/
+.codex/*
+!.codex/skills/
+!.codex/skills/**
 .serena/
 .agents
 .gitnexus
