@@ -18,9 +18,12 @@ the answer depends on changing platform behavior.
 
 ## Core Rules
 
-- Answer and coordinate with the user in Vietnamese.
+- Keep this release workflow neutral for open-source use. Do not hard-code
+  natural language, locale, personal tone, or maintainer coordination
+  preferences in this skill.
 - Do not create tags, push tags, publish releases, edit GitHub Releases, or run
-  destructive git commands unless the user explicitly approves that exact action.
+  destructive git commands unless the release operator explicitly approves that
+  exact action.
 - Do not use `make release-plan-ai` or any script that calls an AI API as the
   release authority. If such a script exists, treat it as legacy or advisory.
 - Do not release from uncommitted local changes. Dirty worktrees are useful for
@@ -32,7 +35,7 @@ the answer depends on changing platform behavior.
   models/APIs, or any other time-sensitive release dependency.
 - Keep generated release notes grounded in commits, changed files, and diff
   evidence. Do not invent shipped features.
-- Preserve user changes. If the worktree is dirty, identify which changes are
+- Preserve local changes. If the worktree is dirty, identify which changes are
   relevant and avoid reverting unrelated files.
 
 ## Evidence To Gather
@@ -75,8 +78,8 @@ git diff --color=never --no-ext-diff
 
 ## Version Decision
 
-Use the latest SemVer tag merged into `HEAD` as the baseline unless the user
-explicitly chooses another tag.
+Use the latest SemVer tag merged into `HEAD` as the baseline unless the release
+operator explicitly chooses another tag.
 
 Recommend:
 
@@ -110,8 +113,23 @@ Return concise Markdown with these sections:
    - Commands/checks to run before tagging.
    - CI or GitHub Release checks that cannot be verified locally.
 5. `Approval Commands`
-   - Exact tag commands only after making clear they require user approval.
+   - Exact tag commands only after making clear they require release operator
+     approval.
    - Never imply the release has already been created.
+
+## Release Artifact Writing
+
+When drafting release notes, approval comments, workflow comments, or GitHub
+Release text:
+
+- Write for a public open-source audience, not for a specific maintainer.
+- Match the structure and terminology of existing project release artifacts
+  when they are available.
+- Keep claims factual, evidence-backed, and scoped to committed changes.
+- Separate shipped changes from verification status, unresolved risks, and
+  required operator actions.
+- Avoid personal voice, private coordination preferences, and conversational
+  filler in release artifacts.
 
 ## Verification Gates
 
@@ -126,7 +144,30 @@ scripts/verify-release-app.sh \
 ```
 
 If these cannot run locally, state why and treat GitHub Actions as the build
-authority only if the user explicitly accepts that.
+authority only if the release operator explicitly accepts that.
+
+When checking CI with GitHub CLI, resolve the release commit to its full
+40-character SHA first. Do not rely on a short hash with `gh run list --commit`;
+it can return an empty result even when the branch run exists.
+
+```bash
+release_sha="$(git rev-parse HEAD)"
+gh run list \
+  --commit "$release_sha" \
+  --limit 5 \
+  --json databaseId,headSha,status,conclusion,workflowName,createdAt,url
+```
+
+If the commit filter returns no runs, cross-check the latest branch run and only
+accept it when `headSha` exactly matches the full release SHA:
+
+```bash
+branch="$(git branch --show-current)"
+gh run list \
+  --branch "$branch" \
+  --limit 10 \
+  --json databaseId,headSha,status,conclusion,workflowName,createdAt,url
+```
 
 For release assets, require:
 
@@ -160,5 +201,5 @@ If docs, scripts, workflow files, README, and this skill disagree:
 
 1. Name the mismatch.
 2. Identify the most authoritative source for the specific behavior.
-3. Ask whether to update the stale source, or update it directly if the user's
-   request clearly includes maintaining release workflow documentation.
+3. Ask whether to update the stale source, or update it directly if the release
+   task clearly includes maintaining release workflow documentation.
