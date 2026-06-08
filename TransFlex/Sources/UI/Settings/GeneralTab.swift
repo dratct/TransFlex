@@ -3,11 +3,36 @@ import SwiftUI
 @MainActor
 struct GeneralTab: View {
     @State private var policy: PopupResetPolicy = PopupResetPolicyStore.load()
+    @StateObject private var launchManager = LaunchAtLoginManager.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 22) {
                 heroHeader
+
+                SettingsSection(
+                    "Startup Options",
+                    footer: "Automatically starts the application when you log into your Mac."
+                ) {
+                    SettingsRow(
+                        icon: "play.square.stack",
+                        iconTint: .brandAccent,
+                        label: "Start at login",
+                        caption: "Launch TransFlex when you start your session."
+                    ) {
+                        Toggle("", isOn: Binding(
+                            get: { launchManager.isEnabled },
+                            set: { launchManager.setEnabled($0) }
+                        ))
+                        .toggleStyle(.switch)
+                        .labelsHidden()
+                    }
+
+                    if launchManager.needsApproval {
+                        SettingsRowDivider()
+                        approvalRequiredRow
+                    }
+                }
 
                 SettingsSection(
                     "Popup Behavior",
@@ -40,6 +65,12 @@ struct GeneralTab: View {
             .padding(.vertical, 22)
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .onAppear {
+            launchManager.refreshStatus()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
+            launchManager.refreshStatus()
+        }
     }
 
     private var heroHeader: some View {
@@ -60,6 +91,22 @@ struct GeneralTab: View {
                     .foregroundStyle(.secondary)
             }
             Spacer()
+        }
+    }
+
+    private var approvalRequiredRow: some View {
+        SettingsRow(
+            icon: "exclamationmark.triangle.fill",
+            iconTint: .orange,
+            label: "Needs approval",
+            caption: "Allow TransFlex in Login Items to finish enabling startup."
+        ) {
+            Button {
+                launchManager.openApprovalSettings()
+            } label: {
+                Label("Open Login Items", systemImage: "arrow.up.forward.app")
+            }
+            .controlSize(.small)
         }
     }
 }
