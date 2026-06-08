@@ -272,6 +272,8 @@ final class ProvidersStore: ObservableObject {
             logger.error("application support lookup failed: \(error.localizedDescription, privacy: .private)")
             base = FileManager.default.temporaryDirectory
         }
-        return base.appendingPathComponent("TransFlex/providers.json")
+        return AppIdentity.current
+            .applicationSupportDirectory(baseURL: base)
+            .appendingPathComponent("providers.json")
     }
 }

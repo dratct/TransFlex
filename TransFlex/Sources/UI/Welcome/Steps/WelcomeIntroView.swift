@@ -13,7 +13,7 @@ struct WelcomeIntroView: View {
                     .frame(width: 72, height: 72)
                     .shadow(color: Color.brandAccent.opacity(0.28), radius: 16, y: 8)
 
-                Text("TransFlex")
+                Text(AppIdentity.current.displayName)
                     .font(.system(.largeTitle, design: .rounded).weight(.bold))
 
                 Text("Quick translation, anywhere on macOS.")

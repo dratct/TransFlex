@@ -64,6 +64,8 @@ actor ModelCatalogCache {
             appropriateFor: nil,
             create: true
         )) ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("TransFlex/model-catalog-cache.json")
+        return AppIdentity.current
+            .applicationSupportDirectory(baseURL: base)
+            .appendingPathComponent("model-catalog-cache.json")
     }
 }

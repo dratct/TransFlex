@@ -18,7 +18,7 @@ struct GeneralTab: View {
                         icon: "play.square.stack",
                         iconTint: .brandAccent,
                         label: "Start at login",
-                        caption: "Launch TransFlex when you start your session."
+                        caption: "Launch \(AppIdentity.current.displayName) when you start your session."
                     ) {
                         Toggle("", isOn: Binding(
                             get: { launchManager.isEnabled },
@@ -99,7 +99,7 @@ struct GeneralTab: View {
             icon: "exclamationmark.triangle.fill",
             iconTint: .orange,
             label: "Needs approval",
-            caption: "Allow TransFlex in Login Items to finish enabling startup."
+            caption: "Allow \(AppIdentity.current.displayName) in Login Items to finish enabling startup."
         ) {
             Button {
                 launchManager.openApprovalSettings()

@@ -128,7 +128,12 @@ else
   "${BUILD_CMD[@]}"
 fi
 
-APP_PATH="$ROOT_DIR/DerivedData/Build/Products/$CONFIG/$SCHEME.app"
+APP_NAME="$SCHEME"
+if [[ "$SCHEME" == "TransFlex" && "$CONFIG" == "Debug" ]]; then
+  APP_NAME="TransFlexDev"
+fi
+
+APP_PATH="$ROOT_DIR/DerivedData/Build/Products/$CONFIG/$APP_NAME.app"
 if [ -d "$APP_PATH" ]; then
   echo "==> Built: $APP_PATH"
 fi

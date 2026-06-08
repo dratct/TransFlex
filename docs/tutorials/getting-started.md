@@ -38,10 +38,10 @@ This runs the `TransFlex` scheme against the macOS destination with ad-hoc signi
 
 ```bash
 scripts/build.sh
-open DerivedData/Build/Products/Debug/TransFlex.app
+open DerivedData/Build/Products/Debug/TransFlexDev.app
 ```
 
-The app is a menu-bar utility. It has no Dock icon. Use the menu-bar item or press `Option+Q` to open the translation popup.
+The Debug app is `TransFlex Dev` (`TransFlexDev.app`) so it stays separate from the Release app. It is a menu-bar utility with no Dock icon. Use the menu-bar item or press `Option+Q` to open the translation popup.
 
 ## 5. Configure a Provider
 

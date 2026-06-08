@@ -37,7 +37,7 @@ final class SettingsWindowController {
             .tint(.brandAccent)
         let host = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: host)
-        win.title = "TransFlex Settings"
+        win.title = "\(AppIdentity.current.displayName) Settings"
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         win.isReleasedWhenClosed = false
         win.level = .floating

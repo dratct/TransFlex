@@ -35,11 +35,13 @@ targets:
       path: TransFlex/Info.plist
       properties:
         LSUIElement: true
-        CFBundleDisplayName: TransFlex
+        CFBundleDisplayName: "$(TRANSFLEX_DISPLAY_NAME)"
         CFBundleShortVersionString: "$(MARKETING_VERSION)"
         CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSHumanReadableCopyright: "Copyright © 2026 TransFlex Contributors."
         LSMinimumSystemVersion: "13.0"
+        TransFlexApplicationSupportDirectoryName: "$(TRANSFLEX_APP_SUPPORT_DIR)"
+        TransFlexKeychainService: "$(TRANSFLEX_KEYCHAIN_SERVICE)"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSPrincipalClass: NSApplication
@@ -49,8 +51,6 @@ targets:
         com.apple.security.app-sandbox: false
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: io.aiaz.transflex
-        PRODUCT_NAME: TransFlex
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         CODE_SIGN_STYLE: Manual
         CODE_SIGN_IDENTITY: "-"
@@ -61,6 +61,20 @@ targets:
         COMBINE_HIDPI_IMAGES: YES
         MARKETING_VERSION: "0.1.0"
         CURRENT_PROJECT_VERSION: "1"
+        PRODUCT_MODULE_NAME: TransFlex
+      configs:
+        Debug:
+          PRODUCT_BUNDLE_IDENTIFIER: io.aiaz.transflex.dev
+          PRODUCT_NAME: TransFlexDev
+          TRANSFLEX_DISPLAY_NAME: TransFlex Dev
+          TRANSFLEX_APP_SUPPORT_DIR: TransFlexDev
+          TRANSFLEX_KEYCHAIN_SERVICE: io.aiaz.transflex.dev
+        Release:
+          PRODUCT_BUNDLE_IDENTIFIER: io.aiaz.transflex
+          PRODUCT_NAME: TransFlex
+          TRANSFLEX_DISPLAY_NAME: TransFlex
+          TRANSFLEX_APP_SUPPORT_DIR: TransFlex
+          TRANSFLEX_KEYCHAIN_SERVICE: io.aiaz.transflex
     dependencies:
       - package: GRDB
         product: GRDB
@@ -79,7 +93,11 @@ targets:
         PRODUCT_NAME: TransFlexTests
         GENERATE_INFOPLIST_FILE: YES
         BUNDLE_LOADER: "$(TEST_HOST)"
-        TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TransFlex.app/Contents/MacOS/TransFlex"
+      configs:
+        Debug:
+          TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TransFlexDev.app/Contents/MacOS/TransFlexDev"
+        Release:
+          TEST_HOST: "$(BUILT_PRODUCTS_DIR)/TransFlex.app/Contents/MacOS/TransFlex"
     dependencies:
       - target: TransFlex
 

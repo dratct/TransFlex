@@ -140,6 +140,8 @@ public final class PresetStore: ObservableObject {
             appropriateFor: nil,
             create: true
         )) ?? FileManager.default.temporaryDirectory
-        return base.appendingPathComponent("TransFlex/presets.json")
+        return AppIdentity.current
+            .applicationSupportDirectory(baseURL: base)
+            .appendingPathComponent("presets.json")
     }
 }

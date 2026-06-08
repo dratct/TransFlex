@@ -27,7 +27,7 @@ struct WelcomeView: View {
                 .frame(width: 34, height: 34)
                 .shadow(color: Color.brandAccent.opacity(0.18), radius: 8, y: 3)
             VStack(alignment: .leading, spacing: 2) {
-                Text("TransFlex")
+                Text(AppIdentity.current.displayName)
                     .font(.system(size: 15, weight: .semibold))
                 Text(step.subtitle)
                     .font(.system(size: 12))

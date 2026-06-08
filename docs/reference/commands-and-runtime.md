@@ -5,14 +5,14 @@
 | Command | Purpose |
 |---|---|
 | `xcodegen generate` | Generate `TransFlex.xcodeproj` from `project.yml`. |
-| `scripts/build.sh` | Generate and build Debug app. |
+| `scripts/build.sh` | Generate and build Debug app (`TransFlexDev.app`). |
 | `scripts/build.sh --no-gen` | Build using an already generated project. |
 | `scripts/build.sh --release` | Build Release app. |
 | `MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release` | Build Release app with CI-style bundle versions. |
 | `scripts/verify-release-app.sh --app DerivedData/Build/Products/Release/TransFlex.app` | Verify release app minimum macOS, bundle versions, and architectures. |
 | `VERSION=0.2.0 SIGNING_LABEL=unsigned scripts/package-release.sh DerivedData/Build/Products/Release/TransFlex.app` | Create release zip and checksum under `dist/`. |
 | `make test` | Run unit tests. |
-| `make run` | Kill running app, build fast, open Debug app. |
+| `make run` | Kill `TransFlexDev`, build fast, open Debug app. |
 | `make xcode` | Generate and open the Xcode project. |
 | `make log` | Stream OSLog for `io.aiaz.transflex`. |
 | `make clean` | Remove generated project and build artifacts. |

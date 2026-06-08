@@ -6,7 +6,7 @@ import Security
 /// Items are written with `kSecAttrAccessibleAfterFirstUnlock` so they are
 /// readable in background launches without prompting.
 public final class KeychainStore {
-    public static let defaultService = "io.aiaz.transflex"
+    public static var defaultService: String { AppIdentity.current.keychainService }
 
     private let service: String
 

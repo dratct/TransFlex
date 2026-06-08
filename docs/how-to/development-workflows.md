@@ -27,7 +27,7 @@ If Xcode or SwiftPM cache writes fail in a sandbox, rerun the same command in a 
 make run
 ```
 
-This kills a running TransFlex instance, builds without regenerating the project, and opens the Debug app.
+This kills a running `TransFlexDev` instance, builds without regenerating the project, and opens `DerivedData/Build/Products/Debug/TransFlexDev.app`.
 
 ## Open the Project in Xcode
 
@@ -71,7 +71,7 @@ make welcome-reset
 make welcome-test
 ```
 
-`welcome-test` clears onboarding flags, builds, and opens the app so the welcome flow appears again.
+`welcome-test` clears Debug onboarding flags, builds, and opens `TransFlexDev.app` so the welcome flow appears again.
 
 ## Stream Logs
 

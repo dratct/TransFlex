@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
-	<string>TransFlex</string>
+	<string>$(TRANSFLEX_DISPLAY_NAME)</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -33,5 +33,9 @@
 	<string>Copyright © 2026 TransFlex Contributors.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>TransFlexApplicationSupportDirectoryName</key>
+	<string>$(TRANSFLEX_APP_SUPPORT_DIR)</string>
+	<key>TransFlexKeychainService</key>
+	<string>$(TRANSFLEX_KEYCHAIN_SERVICE)</string>
 </dict>
 </plist>

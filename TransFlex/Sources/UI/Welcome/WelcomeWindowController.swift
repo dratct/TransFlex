@@ -34,7 +34,7 @@ final class WelcomeWindowController {
 
         let host = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: host)
-        win.title = "Welcome to TransFlex"
+        win.title = "Welcome to \(AppIdentity.current.displayName)"
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
         win.setContentSize(NSSize(width: 620, height: 460))

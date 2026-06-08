@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum AboutInfo {
-    static let appName = "TransFlex"
+    static var appName: String { AppIdentity.current.displayName }
     static let repositoryURL = URL(string: "https://github.com/dratct/transflex")!
     static let licenseURL = URL(string: "https://github.com/dratct/transflex/blob/main/LICENSE")!
     static let donateURL = URL(string: "https://paypal.me/truongtc1109")!

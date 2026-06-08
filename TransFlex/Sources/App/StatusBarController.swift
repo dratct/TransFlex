@@ -20,21 +20,23 @@ final class StatusBarController: NSObject {
 
     private func configureButton() {
         guard let button = statusItem.button else { return }
+        let appName = AppIdentity.current.displayName
         let image = NSImage(named: "MenuBarIcon")
-            ?? NSImage(systemSymbolName: "sparkle", accessibilityDescription: "TransFlex")
+            ?? NSImage(systemSymbolName: "sparkle", accessibilityDescription: appName)
         image?.isTemplate = true
         image?.size = NSSize(width: 18, height: 18)
         button.image = image
-        button.toolTip = "TransFlex"
+        button.toolTip = appName
     }
 
     private func configureMenu() {
+        let appName = AppIdentity.current.displayName
         let menu = NSMenu()
         menu.addItem(makeItem("Open Popup", action: #selector(openPopup), key: ""))
         menu.addItem(makeItem("Settings…", action: #selector(openSettings), key: ","))
         menu.addItem(makeItem("History", action: #selector(openHistory), key: ""))
         menu.addItem(.separator())
-        menu.addItem(makeItem("Quit TransFlex", action: #selector(quit), key: "q"))
+        menu.addItem(makeItem("Quit \(appName)", action: #selector(quit), key: "q"))
         statusItem.menu = menu
     }
 

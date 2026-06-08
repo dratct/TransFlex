@@ -40,7 +40,7 @@ struct WelcomeFinishView: View {
                     .renderingMode(.template)
                     .scaledToFit()
                     .frame(width: 12, height: 12)
-                Text("Look for the TransFlex icon in the menu bar.")
+                Text("Look for the \(AppIdentity.current.displayName) icon in the menu bar.")
                     .font(.system(size: 12))
             }
             .foregroundStyle(.secondary)

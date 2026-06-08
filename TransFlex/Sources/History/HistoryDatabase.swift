@@ -36,7 +36,7 @@ final class HistoryDatabase {
 
     private static func databaseDirectory() -> URL {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
-        return base.appendingPathComponent("TransFlex", isDirectory: true)
+        return AppIdentity.current.applicationSupportDirectory(baseURL: base)
     }
 
     static func databasePath() -> URL {

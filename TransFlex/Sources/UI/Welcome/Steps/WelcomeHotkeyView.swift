@@ -8,7 +8,7 @@ struct WelcomeHotkeyView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Set your global hotkey")
                     .font(.system(size: 17, weight: .semibold))
-                Text("Press this anywhere to open TransFlex.")
+                Text("Press this anywhere to open \(AppIdentity.current.displayName).")
                     .font(.system(size: 13))
                     .foregroundStyle(.secondary)
             }
@@ -18,7 +18,7 @@ struct WelcomeHotkeyView: View {
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundStyle(Color.brandAccent)
                     .frame(width: 28)
-                Text("Open TransFlex")
+                Text("Open \(AppIdentity.current.displayName)")
                     .font(.system(size: 13))
                 Spacer()
                 KeyboardShortcuts.Recorder(for: .openPopup)

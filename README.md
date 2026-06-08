@@ -19,10 +19,10 @@ brew install xcodegen
 xcodegen generate
 make test
 scripts/build.sh
-open DerivedData/Build/Products/Debug/TransFlex.app
+open DerivedData/Build/Products/Debug/TransFlexDev.app
 ```
 
-TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` to open the popup. Use **Quit TransFlex** or `Command+Q` from the status menu to exit.
+TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
 
 ## Build
 
@@ -32,7 +32,14 @@ scripts/build.sh --release # Release build
 scripts/build.sh --no-gen  # Skip XcodeGen when project is already current
 ```
 
-The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default, and outputs `DerivedData/Build/Products/Debug/TransFlex.app`. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
+The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default, and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
+
+Debug and Release use separate app identities so you can run both without mixing data:
+
+| Build | Display name | App bundle | Bundle ID |
+|---|---|---|---|
+| Debug | `TransFlex Dev` | `DerivedData/Build/Products/Debug/TransFlexDev.app` | `io.aiaz.transflex.dev` |
+| Release | `TransFlex` | `DerivedData/Build/Products/Release/TransFlex.app` | `io.aiaz.transflex` |
 
 Release version values can be injected for CI-built bundles:
 
@@ -69,8 +76,8 @@ If a sandboxed automation cannot write Xcode or SwiftPM caches under `~/Library`
 ## Useful Make Targets
 
 ```bash
-make run          # kill running app, build-fast, open Debug app
-make build        # full build, then open Debug app
+make run          # kill TransFlexDev, build-fast, open Debug app
+make build        # full build, then open TransFlexDev.app
 make release      # Release build only
 make welcome-test # reset onboarding flags, build, open app
 make clean        # remove generated Xcode/build artifacts
