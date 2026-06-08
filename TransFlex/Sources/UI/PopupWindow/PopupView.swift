@@ -162,7 +162,7 @@ struct PopupView: View {
                                 HStack(spacing: 6) {
                                     Image(systemName: "paperclip")
                                         .font(.system(size: 11))
-                                    Text("Attach ảnh  ·  ⌘⇧V để dán")
+                                    Text("Attach an image  ·  ⌘⇧V to paste")
                                         .font(.system(size: 11))
                                 }
                                 .foregroundStyle(.tertiary)

@@ -14,9 +14,9 @@ enum ImageTranslationError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .providerUnavailable:
-            return "Provider không khả dụng cho ảnh này"
+            return "This provider cannot process this image."
         case .processingFailed:
-            return "Không thể xử lý ảnh"
+            return "Could not process the image."
         }
     }
 }
@@ -34,13 +34,13 @@ final class ImageTranslationCoordinator {
         fileSizeBytes: Int? = nil
     ) -> ValidationResult {
         if let bytes = fileSizeBytes, bytes > maxFileSizeBytes {
-            return .tooLarge(reason: "Ảnh quá lớn (max 20 MB)")
+            return .tooLarge(reason: "Image is too large (max 20 MB).")
         }
 
         let pixelSize = ImageMetadata.pixelSize(of: image)
         let pixels = (pixelSize?.width ?? Int(image.size.width)) * (pixelSize?.height ?? Int(image.size.height))
         if pixels > maxPixelCount {
-            return .tooLarge(reason: "Ảnh quá lớn (max 50 megapixel)")
+            return .tooLarge(reason: "Image is too large (max 50 megapixels).")
         }
 
         return .ok(ImageInput(source: image, sourceType: source))

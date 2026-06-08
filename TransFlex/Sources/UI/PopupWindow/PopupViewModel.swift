@@ -96,7 +96,7 @@ final class PopupViewModel: ObservableObject {
             handleAttach(image: image, source: .paste, fileSizeBytes: nil)
             return
         }
-        state = .error(message: "Clipboard không có ảnh", partial: nil)
+        state = .error(message: "Clipboard does not contain an image.", partial: nil)
     }
 
     private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) {
@@ -110,7 +110,7 @@ final class PopupViewModel: ObservableObject {
         case .tooLarge(let reason):
             state = .error(message: reason, partial: nil)
         case .unsupportedFormat:
-            state = .error(message: "Định dạng ảnh không hỗ trợ", partial: nil)
+            state = .error(message: "Unsupported image format.", partial: nil)
         }
     }
 

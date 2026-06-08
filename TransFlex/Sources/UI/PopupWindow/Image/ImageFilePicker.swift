@@ -23,7 +23,7 @@ enum ImageFilePicker {
         panel.allowsMultipleSelection = false
         panel.canChooseDirectories = false
         panel.canChooseFiles = true
-        panel.message = "Chọn ảnh để dịch (max 20 MB)"
+        panel.message = "Choose an image to translate (max 20 MB)"
 
         let response = panel.runModal()
         guard response == .OK, let url = panel.url else { return nil }
@@ -31,14 +31,14 @@ enum ImageFilePicker {
         do {
             size = try ImageMetadata.fileSizeBytes(of: url)
         } catch {
-            return Picked(image: nil, fileSizeBytes: 0, errorMessage: "Không đọc được file ảnh")
+            return Picked(image: nil, fileSizeBytes: 0, errorMessage: "Could not read the image file.")
         }
         if size > ImageTranslationCoordinator.maxFileSizeBytes {
-            return Picked(image: nil, fileSizeBytes: size, errorMessage: "Ảnh quá lớn (max 20 MB)")
+            return Picked(image: nil, fileSizeBytes: size, errorMessage: "Image is too large (max 20 MB).")
         }
         if let pixels = ImageMetadata.pixelSize(of: url),
            pixels.width * pixels.height > ImageTranslationCoordinator.maxPixelCount {
-            return Picked(image: nil, fileSizeBytes: size, errorMessage: "Ảnh quá lớn (max 50 megapixel)")
+            return Picked(image: nil, fileSizeBytes: size, errorMessage: "Image is too large (max 50 megapixels).")
         }
         guard let image = NSImage(contentsOf: url) else { return nil }
         return Picked(image: image, fileSizeBytes: size, errorMessage: nil)

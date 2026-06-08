@@ -10,14 +10,14 @@ struct AttachButton: View {
             Button {
                 onChooseFile()
             } label: {
-                Label("Chọn file…", systemImage: "folder")
+                Label("Choose File…", systemImage: "folder")
             }
             .keyboardShortcut("o", modifiers: [.command, .shift])
 
             Button {
                 onPaste()
             } label: {
-                Label("Dán từ clipboard", systemImage: "doc.on.clipboard")
+                Label("Paste from Clipboard", systemImage: "doc.on.clipboard")
             }
             .keyboardShortcut("v", modifiers: [.command, .shift])
         } label: {
@@ -30,7 +30,7 @@ struct AttachButton: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .foregroundStyle(.secondary)
-        .help("Đính kèm ảnh")
+        .help("Attach image")
         .background {
             // Menu buttons register shortcuts only after the menu opens.
             Button("", action: onChooseFile)
