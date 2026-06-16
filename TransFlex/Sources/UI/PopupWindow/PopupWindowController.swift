@@ -57,10 +57,10 @@ public final class PopupWindowController {
 
     public var isVisible: Bool { panel.isVisible }
 
-    /// Activates a preset by index (0-based). Cancels any in-flight stream.
-    public func activatePreset(at index: Int) {
-        guard let vm = viewModel, vm.presets.indices.contains(index) else { return }
-        vm.switchPreset(vm.presets[index].id)
+    /// Activates a preset by ID. Cancels any in-flight stream.
+    public func activatePreset(id: UUID) {
+        guard let vm = viewModel else { return }
+        vm.switchPreset(id)
     }
 
     /// Toggles popup visibility. If shown, brings to front and focuses.

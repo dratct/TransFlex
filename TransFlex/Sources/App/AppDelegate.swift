@@ -1,4 +1,6 @@
 import AppKit
+import Combine
+import KeyboardShortcuts
 import OSLog
 
 @MainActor
@@ -23,6 +25,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let providersStore = ProvidersStore()
     private(set) lazy var settingsWindowController = SettingsWindowController(presetStore: presetStore)
     private var historyStore: HistoryStore?
+    private var presetCancellable: AnyCancellable?
+    private var registeredPresetIDs: Set<UUID> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -60,16 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             popup?.toggle()
         }
 
-        // Register preset hotkeys (Option+1..9)
-        for (index, preset) in presetStore.presets.prefix(9).enumerated() {
-            let action = HotkeyAction.preset(preset.id)
-            hotkey.register(action) { [weak popup] in
-                popup?.activatePreset(at: index)
-                if !(popup?.isVisible ?? false) {
-                    popup?.show()
-                }
+        // Observe preset changes to dynamically register/unregister hotkeys
+        self.presetCancellable = presetStore.$presets
+            .receive(on: RunLoop.main)
+            .sink { [weak self, weak popup] presets in
+                guard let self else { return }
+                self.updatePresetHotkeys(presets, hotkey: hotkey, popup: popup)
             }
-        }
 
         self.popupWindowController = popup
         self.hotkeyManager = hotkey
@@ -91,6 +92,30 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         let elapsedMs = (ProcessInfo.processInfo.systemUptime - launchStart) * 1000
         Self.logger.info("Launch finished in \(elapsedMs, privacy: .public) ms")
+    }
+
+    private func updatePresetHotkeys(_ presets: [Preset], hotkey: GlobalHotkeyManager, popup: PopupWindowController?) {
+        let newIDs = Set(presets.map { $0.id })
+        
+        let toRemove = registeredPresetIDs.subtracting(newIDs)
+        for id in toRemove {
+            let name = KeyboardShortcuts.Name.preset(id)
+            KeyboardShortcuts.setShortcut(nil, for: name)
+            hotkey.unregister(.preset(id))
+        }
+
+        let toAdd = newIDs.subtracting(registeredPresetIDs)
+        let presetsToAdd = presets.filter { toAdd.contains($0.id) }
+        for preset in presetsToAdd {
+            let action = HotkeyAction.preset(preset.id)
+            hotkey.register(action) { [weak popup] in
+                popup?.activatePreset(id: preset.id)
+                if !(popup?.isVisible ?? false) {
+                    popup?.show()
+                }
+            }
+        }
+        registeredPresetIDs = newIDs
     }
 
     func applicationWillTerminate(_ notification: Notification) {

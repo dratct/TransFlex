@@ -6,7 +6,7 @@ final class HotkeyActionTests: XCTestCase {
     func testOpenPopupNameStable() {
         XCTAssertEqual(KeyboardShortcuts.Name.openPopup.rawValue, "openPopup")
     }
-
+    
     func testPresetNameEmbedsUUID() {
         let id = UUID()
         let name = KeyboardShortcuts.Name.preset(id)

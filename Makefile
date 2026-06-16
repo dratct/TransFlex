@@ -60,12 +60,14 @@ log:
 welcome-reset:
 	@defaults delete $(DEBUG_BUNDLE_ID) hasShownWelcome 2>/dev/null || true
 	@defaults delete $(DEBUG_BUNDLE_ID) hasCompletedFirstRun 2>/dev/null || true
-	@echo "==> debug welcome flags cleared (hasShownWelcome, hasCompletedFirstRun)"
+	@rm -f "$(HOME)/Library/Application Support/TransFlexDev/presets.json" 2>/dev/null || true
+	@echo "==> debug welcome flags and presets cleared (hasShownWelcome, hasCompletedFirstRun, presets.json)"
 
 welcome-reset-release:
 	@defaults delete $(RELEASE_BUNDLE_ID) hasShownWelcome 2>/dev/null || true
 	@defaults delete $(RELEASE_BUNDLE_ID) hasCompletedFirstRun 2>/dev/null || true
-	@echo "==> release welcome flags cleared (hasShownWelcome, hasCompletedFirstRun)"
+	@rm -f "$(HOME)/Library/Application Support/TransFlex/presets.json" 2>/dev/null || true
+	@echo "==> release welcome flags and presets cleared (hasShownWelcome, hasCompletedFirstRun, presets.json)"
 
 welcome-reset-all: welcome-reset welcome-reset-release
 

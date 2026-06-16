@@ -1,4 +1,5 @@
 import SwiftUI
+import KeyboardShortcuts
 
 @MainActor
 struct PresetEditor: View {
@@ -34,6 +35,15 @@ struct PresetEditor: View {
                         TextField("Preset name", text: $draft.name)
                             .textFieldStyle(.roundedBorder)
                             .frame(maxWidth: 320)
+                    }
+                }
+
+                SettingsSection("Shortcut") {
+                    formRow(
+                        label: "Global Shortcut",
+                        caption: "Press this key combination from anywhere to select this preset."
+                    ) {
+                        KeyboardShortcuts.Recorder(for: .preset(draft.id))
                     }
                 }
 
@@ -184,12 +194,20 @@ struct PresetEditor: View {
 
     private func formRow<Control: View>(
         label: String,
+        caption: String? = nil,
         trailingExtra: AnyView? = nil,
         @ViewBuilder control: () -> Control
     ) -> some View {
         HStack(alignment: .center, spacing: 12) {
-            Text(label)
-                .font(.system(size: 12))
+            VStack(alignment: .leading, spacing: 2) {
+                Text(label)
+                    .font(.system(size: 12))
+                if let caption {
+                    Text(caption)
+                        .font(.system(size: 10))
+                        .foregroundStyle(.secondary)
+                }
+            }
             
             Spacer(minLength: 16)
             

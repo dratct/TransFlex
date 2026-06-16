@@ -1,0 +1,52 @@
+{
+  "version": 1,
+  "areas": [
+    {
+      "globs": ["TransFlex/Sources/*"],
+      "docs": [
+        { "path": "docs/explanations/architecture.md", "summary": "Architecture: layer split (App/Core/Providers/Translation/Presets/History/UI), provider flow, persistence, security boundaries" },
+        { "path": "docs/reference/code-standards.md", "summary": "Project conventions / code standards" }
+      ],
+      "note": "Đọc architecture + code-standards trước khi sửa source. Ranh giới phải giữ: Providers chỉ emit stream events, KHÔNG biết tới UI/History/Clipboard."
+    },
+    {
+      "globs": ["TransFlex/Sources/Providers/*"],
+      "docs": [
+        { "path": "docs/explanations/architecture.md", "summary": "Translation Flow + hợp đồng provider (LLMProvider/LLMEvent, request builder, HeaderApplicator, EventSource)" }
+      ],
+      "note": "Provider adapter chỉ build request + stream LLMEvent; không gây side effect UI/history/clipboard."
+    },
+    {
+      "globs": [
+        "TransFlex/Sources/Core/Security/*",
+        "TransFlex/Sources/Core/Keychain/*"
+      ],
+      "docs": [
+        { "path": "docs/explanations/architecture.md", "summary": "Security Model: Keychain cho API key + header OpenAI-compatible; providers.json chỉ giữ metadata/tên header" }
+      ],
+      "note": "Mọi error/URL phải qua secret redaction trước khi log. Transport HTTPS-only, trừ localhost HTTP cho endpoint OpenAI-compatible dev."
+    },
+    {
+      "globs": ["TransFlex/Sources/UI/*"],
+      "docs": [
+        { "path": "docs/reference/macos-platform-gotchas.md", "summary": "Ghi chú macOS: non-activating panel, LSUIElement, Settings routing, global hotkey" }
+      ],
+      "note": "Lớp UI cố ý trộn AppKit/SwiftUI vì cần control point của AppKit — đừng 'thuần SwiftUI hoá'."
+    },
+    {
+      "globs": ["scripts/*"],
+      "docs": [
+        { "path": "docs/how-to/release.md", "summary": "Release: tag build, manual dispatch, review prerelease, ký/notarize" },
+        { "path": "docs/reference/commands-and-runtime.md", "summary": "Lệnh chính xác, file layout, artifact sinh ra, đường dẫn runtime, provider ID, troubleshooting" }
+      ],
+      "note": "Sửa script build/release: theo how-to/release + commands-and-runtime."
+    },
+    {
+      "globs": ["project.yml"],
+      "docs": [
+        { "path": "docs/explanations/architecture.md", "summary": "Generated Project: project.yml là nguồn sự thật, .xcodeproj sinh bằng XcodeGen (git-ignored)" }
+      ],
+      "note": "Sửa cấu hình build ở project.yml, KHÔNG sửa .xcodeproj (bị regenerate)."
+    }
+  ]
+}
