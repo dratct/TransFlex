@@ -1,4 +1,5 @@
 import SwiftUI
+import AppKit
 
 @MainActor
 struct ProvidersTab: View {
@@ -20,6 +21,18 @@ struct ProvidersTab: View {
                 OpenAICompatList(store: store)
             }
             .padding(20)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                dismissFocus()
+            }
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            dismissFocus()
+        }
+        .onAppear {
+            dismissFocusAsync()
         }
     }
 
@@ -36,6 +49,16 @@ struct ProvidersTab: View {
                     icon: provider.icon
                 )
             }
+        }
+    }
+
+    private func dismissFocus() {
+        NSApp.keyWindow?.makeFirstResponder(nil)
+    }
+
+    private func dismissFocusAsync() {
+        DispatchQueue.main.async {
+            NSApp.keyWindow?.makeFirstResponder(nil)
         }
     }
 }

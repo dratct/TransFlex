@@ -9,7 +9,6 @@ struct CloudProviderRow: View {
     @State private var apiKey = ""
     @State private var hasStoredKey: Bool
     @State private var saveError: String?
-    @State private var debounceTask: Task<Void, Never>?
 
     init(store: ProvidersStore, providerID: String, displayName: String, icon: String) {
         self.store = store
@@ -21,60 +20,94 @@ struct CloudProviderRow: View {
     }
 
     var body: some View {
-        HStack(spacing: 12) {
-            // Asset-catalog brand icon (template-rendered SVG); tints with
-            // `.foregroundStyle`. Resizable so the SVG scales to a fixed box.
-            Image(icon)
-                .resizable()
-                .renderingMode(.template)
-                .aspectRatio(contentMode: .fit)
-                .foregroundStyle(.primary)
-                .frame(width: 22, height: 22)
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 12) {
+                // Asset-catalog brand icon (template-rendered SVG); tints with
+                // `.foregroundStyle`. Resizable so the SVG scales to a fixed box.
+                Image(icon)
+                    .resizable()
+                    .renderingMode(.template)
+                    .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(.primary)
+                    .frame(width: 22, height: 22)
 
-            Text(displayName)
-                .font(.system(size: 13, weight: .medium))
-                .frame(width: 80, alignment: .leading)
+                Text(displayName)
+                    .font(.system(size: 13, weight: .medium))
+                    .frame(width: 80, alignment: .leading)
 
-            SecureField(hasStoredKey ? "Configured — enter new key to replace" : "API Key", text: $apiKey)
-                .textFieldStyle(.roundedBorder)
-                .font(.system(size: 12, design: .monospaced))
-                .onChange(of: apiKey) { newValue in
-                    scheduleSave(newValue)
+                SecureField(hasStoredKey ? "Configured — enter new key to replace" : "API Key", text: $apiKey)
+                    .textFieldStyle(.roundedBorder)
+                    .font(.system(size: 12, design: .monospaced))
+                    .onSubmit {
+                        saveKey()
+                    }
+
+                HStack(spacing: 8) {
+                    if !apiKey.isEmpty {
+                        Button(action: { apiKey = "" }) {
+                            Image(systemName: "xmark.circle.fill")
+                                .foregroundStyle(.secondary)
+                        }
+                        .buttonStyle(.plain)
+                        .help("Cancel")
+
+                        Button("Save") {
+                            saveKey()
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .controlSize(.small)
+                    } else {
+                        if hasStoredKey {
+                            HStack(spacing: 6) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .foregroundStyle(.green)
+                                    .font(.system(size: 14))
+
+                                Button(action: deleteKey) {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                        .font(.system(size: 13))
+                                }
+                                .buttonStyle(.plain)
+                                .help("Clear API Key")
+                            }
+                        }
+                    }
                 }
-
-            if hasStoredKey {
-                Image(systemName: "checkmark.circle.fill")
-                    .foregroundStyle(.green)
-                    .font(.system(size: 14))
-            } else {
-                Image(systemName: "xmark.circle")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 14))
+                .frame(width: 80, alignment: .trailing)
             }
-        }
-        .padding(.vertical, 4)
+            .padding(.vertical, 4)
 
-        if let saveError {
-            Text(saveError)
-                .font(.system(size: 11))
-                .foregroundStyle(.red)
-                .padding(.leading, 114)
+            if let saveError {
+                Text(saveError)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.red)
+                    .padding(.leading, 114)
+            }
         }
     }
 
-    private func scheduleSave(_ newValue: String) {
-        debounceTask?.cancel()
-        debounceTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            guard !Task.isCancelled else { return }
-            do {
-                try store.setCloudAPIKey(newValue, for: providerID)
-                hasStoredKey = !newValue.isEmpty || KeychainStore().exists("provider.\(providerID).apiKey")
-                saveError = nil
-            } catch {
-                hasStoredKey = KeychainStore().exists("provider.\(providerID).apiKey")
-                saveError = error.localizedDescription
-            }
+    private func saveKey() {
+        let trimmed = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        do {
+            try store.setCloudAPIKey(trimmed, for: providerID)
+            hasStoredKey = true
+            apiKey = ""
+            saveError = nil
+        } catch {
+            saveError = error.localizedDescription
+        }
+    }
+
+    private func deleteKey() {
+        do {
+            try store.setCloudAPIKey("", for: providerID)
+            hasStoredKey = false
+            apiKey = ""
+            saveError = nil
+        } catch {
+            saveError = error.localizedDescription
         }
     }
 }
