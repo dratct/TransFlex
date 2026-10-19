@@ -66,6 +66,7 @@ public struct ProviderConfig: Sendable {
     public let temperature: Double
     public let topP: Double?
     public let maxTokens: Int?
+    public let effort: String?
     public let timeoutSeconds: TimeInterval
     public let baseURL: URL?
     public let extraHeaders: [String: String]
@@ -78,6 +79,7 @@ public struct ProviderConfig: Sendable {
         temperature: Double = 0.3,
         topP: Double? = nil,
         maxTokens: Int? = nil,
+        effort: String? = nil,
         timeoutSeconds: TimeInterval = 60,
         baseURL: URL? = nil,
         extraHeaders: [String: String] = [:],
@@ -88,6 +90,7 @@ public struct ProviderConfig: Sendable {
         self.temperature = temperature
         self.topP = topP
         self.maxTokens = maxTokens
+        self.effort = effort
         self.timeoutSeconds = timeoutSeconds
         self.baseURL = baseURL
         self.extraHeaders = extraHeaders

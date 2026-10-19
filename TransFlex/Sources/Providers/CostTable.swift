@@ -21,9 +21,9 @@ public enum CostTable {
         "gpt-4o":              .init(inputPer1k: 0.0025,  outputPer1k: 0.01,    imagePer1k: 0.003),
         "gpt-4-turbo":         .init(inputPer1k: 0.01,    outputPer1k: 0.03,    imagePer1k: 0.003),
 
-        "claude-3-5-sonnet-latest": .init(inputPer1k: 0.003,  outputPer1k: 0.015,  imagePer1k: 0.0048),
-        "claude-3-5-haiku-latest":  .init(inputPer1k: 0.0008, outputPer1k: 0.004,  imagePer1k: 0.0008),
-        "claude-3-opus-latest":     .init(inputPer1k: 0.015,  outputPer1k: 0.075,  imagePer1k: 0.024),
+        "claude-opus-5-5":   .init(inputPer1k: 0.004, outputPer1k: 0.02,  imagePer1k: 0.0064),
+        "claude-sonnet-5-5": .init(inputPer1k: 0.002, outputPer1k: 0.01,  imagePer1k: 0.0032),
+        "claude-haiku-4-5":  .init(inputPer1k: 0.001, outputPer1k: 0.005, imagePer1k: 0.0016),
 
         "gemini-2.0-flash":    .init(inputPer1k: 0.0001,  outputPer1k: 0.0004,  imagePer1k: 0.0001),
         "gemini-1.5-pro":      .init(inputPer1k: 0.00125, outputPer1k: 0.005,   imagePer1k: 0.00125),

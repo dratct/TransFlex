@@ -66,6 +66,7 @@ public final class TranslationService: Sendable {
                         temperature: preset.temperature,
                         topP: preset.topP,
                         maxTokens: preset.maxTokens,
+                        effort: preset.effort,
                         extraBodyJSON: preset.extraBody ?? ""
                     )
 

@@ -12,6 +12,8 @@ public struct Preset: Codable, Identifiable, Equatable, Sendable {
     public var temperature: Double
     public var topP: Double?
     public var maxTokens: Int?
+    /// Anthropic `output_config.effort`; `nil` sends `AnthropicModelSupport.defaultEffort`.
+    public var effort: String?
     public var supportsVision: Bool
     public var extraBody: String?
     public var createdAt: Date
@@ -27,6 +29,7 @@ public struct Preset: Codable, Identifiable, Equatable, Sendable {
         temperature: Double = 0.3,
         topP: Double? = nil,
         maxTokens: Int? = nil,
+        effort: String? = nil,
         supportsVision: Bool = false,
         extraBody: String? = nil,
         createdAt: Date = Date(),
@@ -41,6 +44,7 @@ public struct Preset: Codable, Identifiable, Equatable, Sendable {
         self.temperature = temperature
         self.topP = topP
         self.maxTokens = maxTokens
+        self.effort = effort
         self.supportsVision = supportsVision
         self.extraBody = extraBody
         self.createdAt = createdAt

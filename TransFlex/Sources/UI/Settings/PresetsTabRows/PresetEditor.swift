@@ -124,6 +124,21 @@ struct PresetEditor: View {
                         .frame(maxWidth: 100, alignment: .trailing)
                     }
 
+                    if !effortLevels.isEmpty {
+                        rowDivider
+
+                        formRow(label: "Effort") {
+                            Picker("", selection: $draft.effort) {
+                                Text("Default (\(AnthropicModelSupport.defaultEffort))").tag(String?.none)
+                                ForEach(effortLevels, id: \.self) { level in
+                                    Text(level).tag(String?.some(level))
+                                }
+                            }
+                            .labelsHidden()
+                            .frame(maxWidth: 160, alignment: .trailing)
+                        }
+                    }
+
                     rowDivider
 
                     formRow(label: "Supports Vision") {
@@ -149,6 +164,12 @@ struct PresetEditor: View {
         }
         .onChange(of: draft.providerID) { newID in
             loadModels(for: newID)
+        }
+        .onChange(of: draft.modelID) { newModel in
+            // Show the level actually sent instead of a blank picker.
+            if let effort = draft.effort, !effortLevels.isEmpty, !effortLevels.contains(effort) {
+                draft.effort = AnthropicModelSupport.resolvedEffort(effort, for: newModel)
+            }
         }
         .onAppear {
             loadModels(for: draft.providerID)
@@ -361,6 +382,11 @@ struct PresetEditor: View {
                 .monospacedDigit()
                 .frame(width: 36, alignment: .trailing)
         )
+    }
+
+    private var effortLevels: [String] {
+        guard draft.providerID == "anthropic" else { return [] }
+        return AnthropicModelSupport.effortLevels(draft.modelID)
     }
 
     private var topPDisplay: AnyView? {

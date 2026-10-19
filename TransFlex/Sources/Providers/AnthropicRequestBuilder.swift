@@ -12,8 +12,9 @@ enum AnthropicRequestBuilder {
         system: String?,
         conversation: [ChatMessage],
         image: Data?,
-        temperature: Double,
+        temperature: Double?,
         topP: Double? = nil,
+        effort: String? = nil,
         maxTokens: Int
     ) -> [String: Any] {
         var jsonMessages = messages(conversation: conversation, image: image)
@@ -27,10 +28,11 @@ enum AnthropicRequestBuilder {
             "model": model,
             "messages": jsonMessages,
             "max_tokens": maxTokens,
-            "temperature": temperature,
             "stream": true,
         ]
+        if let temperature { body["temperature"] = temperature }
         if let topP { body["top_p"] = topP }
+        if let effort { body["output_config"] = ["effort": effort] }
         if let system { body["system"] = system }
         return body
     }

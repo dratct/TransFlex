@@ -13,9 +13,9 @@ public final class AnthropicProvider: LLMProvider {
 
     public var localModels: [Model]? {
         [
-            Model(id: "claude-3-5-sonnet-latest", name: "Claude 3.5 Sonnet", supportsVision: true),
-            Model(id: "claude-3-5-haiku-latest", name: "Claude 3.5 Haiku", supportsVision: true),
-            Model(id: "claude-3-opus-latest", name: "Claude 3 Opus", supportsVision: true),
+            Model(id: "claude-sonnet-5-5", name: "Claude Sonnet 5.5", supportsVision: true),
+            Model(id: "claude-haiku-4-5", name: "Claude Haiku 4.5", supportsVision: true),
+            Model(id: "claude-opus-5-5", name: "Claude Opus 5.5", supportsVision: true),
         ]
     }
 
@@ -118,14 +118,18 @@ public final class AnthropicProvider: LLMProvider {
         )
 
         let (system, conversation) = AnthropicRequestBuilder.split(messages: messages)
+        // Claude 4.x rejects temperature and top_p together; an explicit top_p wins.
+        let sampling = AnthropicModelSupport.acceptsSampling(config.model)
         var body = AnthropicRequestBuilder.body(
             model: config.model,
             system: system,
             conversation: conversation,
             image: image,
-            temperature: config.temperature,
-            topP: config.topP,
-            maxTokens: config.maxTokens ?? 4096
+            temperature: sampling && config.topP == nil ? config.temperature : nil,
+            topP: sampling ? config.topP : nil,
+            effort: AnthropicModelSupport.resolvedEffort(config.effort, for: config.model),
+            // Thinking on current models shares this budget with the answer.
+            maxTokens: config.maxTokens ?? 16000
         )
         ExtraBodyMerger.merge(&body, withJSON: config.extraBodyJSON)
         request.httpBody = try JSONSerialization.data(withJSONObject: body, options: [])
