@@ -85,6 +85,16 @@ struct CloudProviderRow: View {
                     .padding(.leading, 114)
             }
         }
+        // The Settings window outlives this row's init; a key saved from the
+        // welcome flow or the popup wizard must show up when Settings returns.
+        .onAppear(perform: refreshStoredKey)
+        .onReceive(NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification)) { _ in
+            refreshStoredKey()
+        }
+    }
+
+    private func refreshStoredKey() {
+        hasStoredKey = KeychainStore().exists("provider.\(providerID).apiKey")
     }
 
     private func saveKey() {
