@@ -34,6 +34,12 @@ struct WelcomeProviderView: View {
             }
             .labelsHidden()
             .pickerStyle(.segmented)
+            // One field serves every tab; a key typed for one provider must not
+            // be saved under another.
+            .onChange(of: selectedProvider) { _ in
+                apiKey = ""
+                saveError = nil
+            }
 
             SecureField(selectedOption.placeholder, text: $apiKey)
                 .textFieldStyle(.roundedBorder)
