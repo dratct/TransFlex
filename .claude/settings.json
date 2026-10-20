@@ -1,0 +1,17 @@
+{
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/xcodegen-on-new-swift.sh",
+            "timeout": 60,
+            "statusMessage": "Regenerating Xcode project"
+          }
+        ]
+      }
+    ]
+  }
+}
