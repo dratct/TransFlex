@@ -24,6 +24,8 @@ This layout is appropriate for the current app size. The main boundary to preser
 4. The provider adapter builds a request and streams `LLMEvent` values.
 5. The popup updates UI state, records history, estimates cost, and copies the completed result.
 
+Each preset can also bind two selection shortcuts. Both copy the frontmost app's selection through `SelectionCapture` (synthesized ⌘C, clipboard restored). *Translate Selection* opens the popup in output-only mode; *Replace Selection* runs `QuickReplaceCoordinator`, which waits for the full result, pastes it with ⌘V and records history without showing the popup. Failures in either path open the output-only popup with the error. See `docs/decisions/2026-10-19-selection-shortcuts-a7c1.md`.
+
 Provider adapters share a small contract through `LLMProvider`, `LLMEvent`, request builders, `HeaderApplicator`, and `EventSource`.
 
 ## Security Model

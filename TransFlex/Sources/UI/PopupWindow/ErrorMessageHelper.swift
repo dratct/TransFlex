@@ -16,6 +16,17 @@ enum ErrorMessageHelper {
             case .providerMessage(let msg): return msg
             }
         }
+        if let failure = error as? SelectionCapture.Failure {
+            switch failure {
+            case .accessibilityNotGranted:
+                return "Allow \(AccessibilityPermission.listedAppName) in System Settings → Privacy & Security → \(AccessibilityPermission.settingsPaneName), then press the shortcut again."
+            case .noSelection:
+                return "No text selected. Select some text, then press the shortcut again."
+            }
+        }
+        if error is QuickReplaceCoordinator.EmptyResult {
+            return "The provider returned an empty translation. Nothing was replaced."
+        }
         if let te = error as? TranslationError {
             return te.localizedDescription
         }

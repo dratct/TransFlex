@@ -18,6 +18,13 @@ final class PopupViewModel: ObservableObject {
     /// counter (rather than Bool) avoids the "already true → no event" trap
     /// when the view should re-focus on a subsequent reopen.
     @Published var inputFocusRequest: Int = 0
+    /// Selection-translate mode: the popup shows only the result. Cleared by
+    /// `reset()`, `showInput()` and `leaveOutputOnly()`.
+    @Published private(set) var isOutputOnly: Bool = false
+    /// Natural height of the output content and the height it is given,
+    /// reported by the view so the controller can grow the panel to fit.
+    @Published var outputContentHeight: CGFloat = 0
+    @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
 
@@ -29,7 +36,12 @@ final class PopupViewModel: ObservableObject {
         didSet { historyRecorder.historyStore = historyStore }
     }
     var onDismissRequest: (() -> Void)?
+    var onShowInput: (() -> Void)?
     private let historyRecorder = HistoryRecorder()
+
+    private let isAccessibilityGranted: () -> Bool
+    private let openAccessibilitySettingsAction: () -> Void
+    private var accessibilityPoll: Task<Void, Never>?
 
     private var activeTask: Task<Void, Never>?
     private var translationStart: Date?
@@ -39,8 +51,12 @@ final class PopupViewModel: ObservableObject {
         translationService: TranslationService,
         presetStore: PresetStore,
         pasteboard: PasteboardHelper = PasteboardHelper(),
-        keychain: KeychainStore = KeychainStore()
+        keychain: KeychainStore = KeychainStore(),
+        isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
+        openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings
     ) {
+        self.isAccessibilityGranted = isAccessibilityGranted
+        self.openAccessibilitySettingsAction = openAccessibilitySettings
         self.translationService = translationService
         self.presetStore = presetStore
         self.pasteboard = pasteboard
@@ -243,6 +259,7 @@ final class PopupViewModel: ObservableObject {
     /// requests focus (the auto-reset path runs before the popup is key, where
     /// requesting focus would no-op).
     func startNewTranslation() {
+        showInput()
         reset()
         requestInputFocus()
     }
@@ -253,6 +270,8 @@ final class PopupViewModel: ObservableObject {
     /// results into the next session.
     func reset() {
         cancelStream()
+        accessibilityPoll?.cancel()
+        accessibilityPoll = nil
         inputText = ""
         attachedImage = nil
         pendingImageTranslation = nil
@@ -260,7 +279,67 @@ final class PopupViewModel: ObservableObject {
         showToast = false
         costEstimate = nil
         translationStart = nil
+        isOutputOnly = false
+        outputContentHeight = 0
+        outputVisibleHeight = 0
         state = .idle
+    }
+
+    /// Translates text captured from another app and shows only the result.
+    func startQuickTranslation(text: String, presetID: UUID) {
+        reset()
+        selectedPresetID = presetID
+        inputText = text
+        isOutputOnly = true
+        translate()
+    }
+
+    /// Surfaces a selection-translate failure in the output-only popup.
+    func presentQuickError(_ message: String, presetID: UUID) {
+        reset()
+        selectedPresetID = presetID
+        isOutputOnly = true
+        state = .error(message: message, partial: nil)
+    }
+
+    /// User asked to see the source text: back to the normal two-pane popup.
+    /// Shows the permission card and watches for the grant, so the card can
+    /// confirm without the user pressing anything. Keeps watching while the
+    /// popup is hidden behind System Settings; gives up after `maxPolls`.
+    func presentAccessibilityRequired(
+        presetID: UUID,
+        pollInterval: UInt64 = 1_000_000_000,
+        maxPolls: Int = 300
+    ) {
+        reset()
+        selectedPresetID = presetID
+        isOutputOnly = true
+        state = .accessibilityRequired(granted: false)
+        accessibilityPoll = Task { [weak self] in
+            for _ in 0..<maxPolls {
+                try? await Task.sleep(nanoseconds: pollInterval)
+                guard let self, !Task.isCancelled else { return }
+                if self.isAccessibilityGranted() {
+                    self.state = .accessibilityRequired(granted: true)
+                    return
+                }
+            }
+        }
+    }
+
+    func openAccessibilitySettings() {
+        openAccessibilitySettingsAction()
+    }
+
+    func showInput() {
+        guard isOutputOnly else { return }
+        isOutputOnly = false
+        onShowInput?()
+    }
+
+    /// Normal popup open: drop output-only mode without resizing.
+    func leaveOutputOnly() {
+        isOutputOnly = false
     }
 
     func switchPreset(_ id: UUID) {
@@ -274,6 +353,8 @@ final class PopupViewModel: ObservableObject {
         if case let .error(_, partial?) = state {
             state = .done(result: partial)
         } else {
+            // Idle needs the input editor, which output-only mode hides.
+            showInput()
             state = .idle
         }
     }
@@ -341,4 +422,7 @@ enum PopupState: Equatable {
     case streaming(accumulated: String)
     case done(result: String)
     case error(message: String, partial: String?)
+    /// A selection shortcut needs the Accessibility grant; `granted` flips
+    /// once the user enables it in System Settings.
+    case accessibilityRequired(granted: Bool)
 }

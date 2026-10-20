@@ -99,9 +99,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         let toRemove = registeredPresetIDs.subtracting(newIDs)
         for id in toRemove {
-            let name = KeyboardShortcuts.Name.preset(id)
-            KeyboardShortcuts.setShortcut(nil, for: name)
+            for name in KeyboardShortcuts.Name.allPresetNames(id) {
+                KeyboardShortcuts.setShortcut(nil, for: name)
+            }
             hotkey.unregister(.preset(id))
+            hotkey.unregister(.presetQuickPopup(id))
+            hotkey.unregister(.presetQuickReplace(id))
         }
 
         let toAdd = newIDs.subtracting(registeredPresetIDs)
@@ -113,6 +116,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 if !(popup?.isVisible ?? false) {
                     popup?.show()
                 }
+            }
+            hotkey.register(.presetQuickPopup(preset.id)) { [weak popup] in
+                popup?.quickTranslate(presetID: preset.id)
+            }
+            hotkey.register(.presetQuickReplace(preset.id)) { [weak popup] in
+                popup?.quickReplace(presetID: preset.id)
             }
         }
         registeredPresetIDs = newIDs

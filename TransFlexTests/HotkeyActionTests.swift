@@ -20,3 +20,16 @@ final class HotkeyActionTests: XCTestCase {
         XCTAssertNotEqual(HotkeyAction.preset(id), HotkeyAction.preset(UUID()))
     }
 }
+
+final class PresetQuickHotkeyNameTests: XCTestCase {
+    func testQuickNamesAreDistinctPerPresetAndEmbedUUID() {
+        let id = UUID()
+        let names = KeyboardShortcuts.Name.allPresetNames(id).map(\.rawValue)
+        XCTAssertEqual(Set(names).count, 3)
+        XCTAssertTrue(names.allSatisfy { $0.contains(id.uuidString) })
+        XCTAssertNotEqual(
+            KeyboardShortcuts.Name.presetQuickPopup(id),
+            KeyboardShortcuts.Name.presetQuickPopup(UUID())
+        )
+    }
+}

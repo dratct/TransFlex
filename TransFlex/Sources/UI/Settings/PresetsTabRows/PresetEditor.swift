@@ -45,6 +45,24 @@ struct PresetEditor: View {
                     ) {
                         KeyboardShortcuts.Recorder(for: .preset(draft.id))
                     }
+
+                    rowDivider
+
+                    formRow(
+                        label: "Translate Selection",
+                        caption: "Translate the selected text and show only the result."
+                    ) {
+                        KeyboardShortcuts.Recorder(for: .presetQuickPopup(draft.id))
+                    }
+
+                    rowDivider
+
+                    formRow(
+                        label: "Replace Selection",
+                        caption: "Translate the selected text and paste the result over it."
+                    ) {
+                        KeyboardShortcuts.Recorder(for: .presetQuickReplace(draft.id))
+                    }
                 }
 
                 SettingsSection("Backend") {

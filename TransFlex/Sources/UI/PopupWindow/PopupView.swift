@@ -29,7 +29,10 @@ struct PopupView: View {
                 GeometryReader { geo in
                     let isWide = geo.size.width >= 720
                     Group {
-                        if isWide {
+                        if viewModel.isOutputOnly {
+                            PopupOutputSection(viewModel: viewModel)
+                                .frame(maxHeight: .infinity)
+                        } else if isWide {
                             HStack(alignment: .top, spacing: 10) {
                                 inputSection
                                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
@@ -96,6 +99,11 @@ struct PopupView: View {
         } message: {
             Text("Image translation may cost more than $0.05. Continue?")
         }
+    }
+
+    private var isAccessibilityCard: Bool {
+        if case .accessibilityRequired = viewModel.state { return true }
+        return false
     }
 
     private var isIdle: Bool {
@@ -224,6 +232,12 @@ struct PopupView: View {
 
     private var footerActions: some View {
         HStack(spacing: 10) {
+            if viewModel.isOutputOnly, !isAccessibilityCard {
+                actionButton("Show Input", keys: ["⌘", "I"], tint: .gray) {
+                    viewModel.showInput()
+                }
+                .keyboardShortcut("i", modifiers: .command)
+            }
             switch viewModel.state {
             case .idle:
                 actionButton("Translate", keys: ["⌘", "⏎"], tint: .brandAccent) {
@@ -260,6 +274,18 @@ struct PopupView: View {
                 .keyboardShortcut(".", modifiers: .command)
                 actionButton("Retry", keys: ["⌘", "⏎"], tint: .brandAccent) {
                     viewModel.translate()
+                }
+                .keyboardShortcut(.return, modifiers: .command)
+            case .accessibilityRequired(granted: false):
+                // The card's only way forward, so it gets a filled button.
+                actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                    viewModel.openAccessibilitySettings()
+                }
+                .buttonStyle(.borderedProminent)
+                .keyboardShortcut(.return, modifiers: .command)
+            case .accessibilityRequired(granted: true):
+                actionButton("Done", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                    viewModel.onDismissRequest?()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             }

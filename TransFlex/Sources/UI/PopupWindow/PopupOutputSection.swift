@@ -36,6 +36,8 @@ struct PopupOutputSection: View {
                             StreamingTextView(text: result, isStreaming: false)
                         case .error(let message, let partial):
                             errorView(message: message, partial: partial)
+                        case .accessibilityRequired(let granted):
+                            AccessibilityPermissionCard(granted: granted)
                         }
 
                         Color.clear.frame(height: 1).id(bottomAnchor)
@@ -43,7 +45,9 @@ struct PopupOutputSection: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .padding(.horizontal, 12)
                     .padding(.vertical, 10)
+                    .background(HeightReporter { viewModel.outputContentHeight = $0 })
                 }
+                .background(HeightReporter { viewModel.outputVisibleHeight = $0 })
                 .onChange(of: streamingText) { _ in
                     // Pin the latest tokens to the bottom while the model
                     // streams. Animation is short so the cursor feels like a
@@ -103,5 +107,19 @@ struct PopupOutputSection: View {
         }
         .padding(.top, 10)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// Reports its own height on appear and on every change. Preference keys do
+/// not reliably leave the AppKit-backed `ScrollView`, so this writes directly.
+private struct HeightReporter: View {
+    let report: (CGFloat) -> Void
+
+    var body: some View {
+        GeometryReader { proxy in
+            Color.clear
+                .onAppear { report(proxy.size.height) }
+                .onChange(of: proxy.size.height) { report($0) }
+        }
     }
 }
