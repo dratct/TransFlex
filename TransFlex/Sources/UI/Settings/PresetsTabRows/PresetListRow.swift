@@ -13,7 +13,7 @@ struct PresetListRow: View {
                     .lineLimit(1)
 
                 Text(providerSubtitle)
-                    .font(.system(size: 10, design: .monospaced))
+                    .font(.system(size: 10))
                     .foregroundStyle(.tertiary)
                     .lineLimit(1)
             }
@@ -27,15 +27,6 @@ struct PresetListRow: View {
     }
 
     private var providerSubtitle: String {
-        let id = preset.providerID
-        if id.hasPrefix("openai-compatible:") {
-            let instanceId = String(id.dropFirst("openai-compatible:".count))
-            if let displayName = ProviderRegistry.shared.compatInstance(instanceId)?.displayName,
-               !displayName.isEmpty {
-                return displayName
-            }
-            return "Custom Endpoint"
-        }
-        return id
+        ProviderRegistry.shared.displayName(for: preset.providerID)
     }
 }

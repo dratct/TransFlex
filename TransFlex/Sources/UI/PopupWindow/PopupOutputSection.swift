@@ -60,6 +60,9 @@ struct PopupOutputSection: View {
         }
         .frame(minHeight: 80, maxHeight: .infinity)
         .background(Color.brandAccent.opacity(0.06))
+        // Solid base under the tint: the popup's behind-window blur otherwise
+        // lets bright windows underneath show through the result text.
+        .background(Color(nsColor: .windowBackgroundColor).opacity(0.7))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)

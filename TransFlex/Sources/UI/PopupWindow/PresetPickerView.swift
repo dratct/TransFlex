@@ -6,18 +6,18 @@ struct PresetPickerView: View {
 
     var body: some View {
         Menu {
-            ForEach(viewModel.presets) { preset in
-                Button {
-                    viewModel.switchPreset(preset.id)
-                } label: {
-                    HStack {
-                        Text(preset.name)
-                        if viewModel.selectedPresetID == preset.id {
-                            Image(systemName: "checkmark")
-                        }
-                    }
+            // An inline Picker is what draws the native checkmark; a trailing
+            // Image inside a Button label is dropped when the menu is built.
+            Picker("Preset", selection: Binding(
+                get: { viewModel.selectedPresetID },
+                set: { if let id = $0 { viewModel.switchPreset(id) } }
+            )) {
+                ForEach(viewModel.presets) { preset in
+                    Text(preset.name).tag(Optional(preset.id))
                 }
             }
+            .pickerStyle(.inline)
+            .labelsHidden()
 
             Divider()
 

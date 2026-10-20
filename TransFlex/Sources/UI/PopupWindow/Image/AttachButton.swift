@@ -2,6 +2,9 @@ import SwiftUI
 
 /// Header attach menu for file and clipboard images.
 struct AttachButton: View {
+    /// False when the selected preset has Supports Vision off. The menu stays
+    /// usable so picking an item explains why nothing was attached.
+    let canAttach: Bool
     let onChooseFile: () -> Void
     let onPaste: () -> Void
 
@@ -30,7 +33,8 @@ struct AttachButton: View {
         .menuIndicator(.hidden)
         .fixedSize()
         .foregroundStyle(.secondary)
-        .help("Attach image")
+        .opacity(canAttach ? 1 : 0.45)
+        .help(canAttach ? "Attach image" : "This preset can't read images. Turn on Supports Vision in Settings → Presets.")
         .background {
             // Menu buttons register shortcuts only after the menu opens.
             Button("", action: onChooseFile)

@@ -54,6 +54,22 @@ public final class ProviderRegistry: @unchecked Sendable {
         throw ProviderError.unknownProvider(id: id)
     }
 
+    /// Name shown to the user for a `providerID`; never the raw id for a known provider.
+    public func displayName(for id: String) -> String {
+        switch id {
+        case "openai": return "OpenAI"
+        case "anthropic": return "Anthropic"
+        case "gemini": return "Gemini"
+        default:
+            guard id.hasPrefix("openai-compatible:") else { return id }
+            let instanceId = String(id.dropFirst("openai-compatible:".count))
+            if let name = compatInstance(instanceId)?.displayName, !name.isEmpty {
+                return name
+            }
+            return "Custom Endpoint"
+        }
+    }
+
     public func compatInstance(_ instanceId: String) -> OpenAICompatInstance? {
         lock.lock()
         defer { lock.unlock() }

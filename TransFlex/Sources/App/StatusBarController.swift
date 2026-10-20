@@ -1,4 +1,5 @@
 import AppKit
+import KeyboardShortcuts
 import OSLog
 
 @MainActor
@@ -32,7 +33,10 @@ final class StatusBarController: NSObject {
     private func configureMenu() {
         let appName = AppIdentity.current.displayName
         let menu = NSMenu()
-        menu.addItem(makeItem("Open Popup", action: #selector(openPopup), key: ""))
+        let openItem = makeItem("Open Popup", action: #selector(openPopup), key: "")
+        // Mirrors the user's recorded hotkey and follows later changes to it.
+        openItem.setShortcut(for: .openPopup)
+        menu.addItem(openItem)
         menu.addItem(makeItem("Settings…", action: #selector(openSettings), key: ","))
         menu.addItem(makeItem("History", action: #selector(openHistory), key: ""))
         menu.addItem(.separator())
@@ -55,6 +59,8 @@ final class StatusBarController: NSObject {
     }
 
     @objc private func openHistory() {
+        // The popup floats above normal windows and would cover History.
+        popupWindowController?.hide()
         historyWindowController?.show()
     }
 

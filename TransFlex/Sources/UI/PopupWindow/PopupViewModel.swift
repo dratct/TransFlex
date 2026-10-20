@@ -27,6 +27,15 @@ final class PopupViewModel: ObservableObject {
     @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
+    /// What the user was typing when a selection shortcut took over the popup;
+    /// handed back on the next normal open.
+    private var keptDraft: Draft?
+
+    private struct Draft {
+        let text: String
+        let image: ImageInput?
+        let presetID: UUID?
+    }
 
     private let translationService: TranslationService
     private let presetStore: PresetStore
@@ -116,6 +125,10 @@ final class PopupViewModel: ObservableObject {
     }
 
     private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) {
+        if let preset = selectedPreset, !preset.supportsVision {
+            state = .error(message: Self.visionOffMessage, partial: nil)
+            return
+        }
         switch ImageTranslationCoordinator.validateAndWrap(image, source: source, fileSizeBytes: fileSizeBytes) {
         case .ok(let input):
             attachedImage = input
@@ -129,6 +142,11 @@ final class PopupViewModel: ObservableObject {
             state = .error(message: "Unsupported image format.", partial: nil)
         }
     }
+
+    static let visionOffMessage =
+        "This preset can't read images. Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
+
+    var canAttachImages: Bool { selectedPreset?.supportsVision ?? false }
 
     func translate() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -282,12 +300,28 @@ final class PopupViewModel: ObservableObject {
         isOutputOnly = false
         outputContentHeight = 0
         outputVisibleHeight = 0
+        keptDraft = nil
         state = .idle
+    }
+
+    /// Resets for a selection shortcut, keeping a non-empty draft from the
+    /// normal popup so `leaveOutputOnly()` can hand it back.
+    private func resetKeepingDraft() {
+        let draft: Draft?
+        if isOutputOnly {
+            draft = keptDraft
+        } else if !inputText.isEmpty || attachedImage != nil {
+            draft = Draft(text: inputText, image: attachedImage, presetID: selectedPresetID)
+        } else {
+            draft = nil
+        }
+        reset()
+        keptDraft = draft
     }
 
     /// Translates text captured from another app and shows only the result.
     func startQuickTranslation(text: String, presetID: UUID) {
-        reset()
+        resetKeepingDraft()
         selectedPresetID = presetID
         inputText = text
         isOutputOnly = true
@@ -296,7 +330,7 @@ final class PopupViewModel: ObservableObject {
 
     /// Surfaces a selection-translate failure in the output-only popup.
     func presentQuickError(_ message: String, presetID: UUID) {
-        reset()
+        resetKeepingDraft()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .error(message: message, partial: nil)
@@ -311,7 +345,7 @@ final class PopupViewModel: ObservableObject {
         pollInterval: UInt64 = 1_000_000_000,
         maxPolls: Int = 300
     ) {
-        reset()
+        resetKeepingDraft()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .accessibilityRequired(granted: false)
@@ -334,11 +368,23 @@ final class PopupViewModel: ObservableObject {
     func showInput() {
         guard isOutputOnly else { return }
         isOutputOnly = false
+        keptDraft = nil
         onShowInput?()
     }
 
-    /// Normal popup open: drop output-only mode without resizing.
+    /// Normal popup open: drop output-only mode without resizing, and bring
+    /// back the draft a selection shortcut set aside. The permission card
+    /// belongs to the shortcut, so with no draft the popup starts clean.
     func leaveOutputOnly() {
+        guard isOutputOnly else { return }
+        if let draft = keptDraft {
+            reset()
+            inputText = draft.text
+            attachedImage = draft.image
+            selectedPresetID = draft.presetID ?? selectedPresetID
+        } else if case .accessibilityRequired = state {
+            reset()
+        }
         isOutputOnly = false
     }
 
@@ -357,6 +403,15 @@ final class PopupViewModel: ObservableObject {
             showInput()
             state = .idle
         }
+    }
+
+    /// ⌘C while a translation is shown copies the whole result. Returns false
+    /// otherwise, so the key goes on to the editor's own copy.
+    @discardableResult
+    func copyResultIfShown() -> Bool {
+        guard case .done(let result) = state else { return false }
+        copyToClipboard(result)
+        return true
     }
 
     func copyToClipboard(_ text: String) {

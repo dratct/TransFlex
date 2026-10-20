@@ -52,7 +52,7 @@ struct HistoryDetailView: View {
     @ViewBuilder
     private func metaSection(_ entry: HistoryEntry) -> some View {
         HStack {
-            Label(entry.providerID, systemImage: "server.rack")
+            Label(ProviderRegistry.shared.displayName(for: entry.providerID), systemImage: "server.rack")
             Spacer()
             if let tokens = entry.tokenCount {
                 Label("\(tokens) tokens", systemImage: "number")

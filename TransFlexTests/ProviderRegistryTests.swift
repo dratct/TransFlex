@@ -33,6 +33,28 @@ final class ProviderRegistryTests: XCTestCase {
         XCTAssertThrowsError(try registry.provider(for: "openai-compatible:ollama-local"))
     }
 
+    func testDisplayNameIsHumanReadable() throws {
+        let registry = ProviderRegistry()
+        XCTAssertEqual(registry.displayName(for: "openai"), "OpenAI")
+        XCTAssertEqual(registry.displayName(for: "anthropic"), "Anthropic")
+        XCTAssertEqual(registry.displayName(for: "gemini"), "Gemini")
+        XCTAssertEqual(registry.displayName(for: "openai-compatible:missing"), "Custom Endpoint")
+
+        try registry.registerCompatInstance(OpenAICompatInstance(
+            instanceId: "ollama-local",
+            displayName: "Ollama",
+            baseURL: URL(string: "http://localhost:11434/v1")!
+        ))
+        XCTAssertEqual(registry.displayName(for: "openai-compatible:ollama-local"), "Ollama")
+    }
+
+    func testVisionErrorNamesProviderAndFix() {
+        let message = TranslationError.visionUnsupported(providerID: "openai", modelID: "gpt-4o").localizedDescription
+        XCTAssertTrue(message.contains("OpenAI"), message)
+        XCTAssertFalse(message.contains("openai"), message)
+        XCTAssertTrue(message.contains("Supports Vision"), message)
+    }
+
     func testRegisterRejectsNonHTTPScheme() {
         let registry = ProviderRegistry()
         let instance = OpenAICompatInstance(

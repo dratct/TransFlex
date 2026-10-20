@@ -368,7 +368,7 @@ struct PresetEditor: View {
             VStack(spacing: 0) {
                 TextEditor(text: $draft.systemPrompt)
                     .font(.system(size: 12, design: .monospaced))
-                    .frame(minHeight: 140)
+                    .frame(height: 200)
                     .scrollContentBackground(.hidden)
                     .padding(8)
                     .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
@@ -398,9 +398,12 @@ struct PresetEditor: View {
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: Self.valueColumnWidth, alignment: .trailing)
         )
     }
+
+    /// Shared by Temperature and Top P so both sliders end at the same edge.
+    private static let valueColumnWidth: CGFloat = 52
 
     private var effortLevels: [String] {
         guard draft.providerID == "anthropic" else { return [] }
@@ -408,13 +411,12 @@ struct PresetEditor: View {
     }
 
     private var topPDisplay: AnyView? {
-        guard draft.topP != nil else { return nil }
-        return AnyView(
-            Text(String(format: "%.2f", draft.topP ?? 1.0))
+        AnyView(
+            Text(draft.topP.map { String(format: "%.2f", $0) } ?? "Default")
                 .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(.secondary)
                 .monospacedDigit()
-                .frame(width: 36, alignment: .trailing)
+                .frame(width: Self.valueColumnWidth, alignment: .trailing)
         )
     }
 
@@ -445,6 +447,15 @@ struct PresetEditor: View {
                 .font(.system(size: 12, design: .monospaced))
                 .frame(minHeight: 80)
                 .scrollContentBackground(.hidden)
+                .overlay(alignment: .topLeading) {
+                    if (draft.extraBody ?? "").isEmpty {
+                        Text(#"{ "reasoning_effort": "low" }"#)
+                            .font(.system(size: 12, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
                 .padding(8)
                 .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
                 .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
@@ -460,6 +471,9 @@ struct PresetEditor: View {
                 .font(.system(size: 10, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .tracking(0.6)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+                .onTapGesture { isAdvancedExpanded.toggle() }
         }
         .padding(.horizontal, 4)
     }
@@ -472,21 +486,7 @@ struct PresetEditor: View {
     // MARK: - Provider helpers
 
     private func providerLabel(for id: String) -> String {
-        switch id {
-        case "openai": return "OpenAI"
-        case "anthropic": return "Anthropic"
-        case "gemini": return "Gemini"
-        default:
-            if id.hasPrefix("openai-compatible:") {
-                let instanceId = String(id.dropFirst("openai-compatible:".count))
-                if let displayName = ProviderRegistry.shared.compatInstance(instanceId)?.displayName,
-                   !displayName.isEmpty {
-                    return displayName
-                }
-                return "Custom Endpoint"
-            }
-            return id
-        }
+        ProviderRegistry.shared.displayName(for: id)
     }
 
     private func allProviderIDs() -> [String] {

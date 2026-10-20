@@ -13,21 +13,30 @@ struct HistorySplitView: View {
     var body: some View {
         NavigationSplitView {
             listPane
+                .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
         } detail: {
-            HistoryDetailView(
-                entry: currentEntry,
-                onRetranslate: nil,
-                onDelete: { id in deleteEntry(id) }
-            )
+            if hasNoHistory {
+                emptyState
+            } else {
+                HistoryDetailView(
+                    entry: currentEntry,
+                    onRetranslate: nil,
+                    onDelete: { id in deleteEntry(id) }
+                )
+            }
         }
+        .frame(minWidth: 640, minHeight: 400)
+        .tint(.brandAccent)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 ToolbarButton(title: "Export", systemImage: "square.and.arrow.up") {
                     showExportSheet = true
                 }
+                .disabled(hasNoHistory)
                 ToolbarButton(title: "Delete All", systemImage: "trash") {
                     showDeleteConfirm = true
                 }
+                .disabled(hasNoHistory)
             }
         }
         .sheet(isPresented: $showExportSheet) {
@@ -57,6 +66,23 @@ struct HistorySplitView: View {
         .onChange(of: searchQuery) { _ in
             performSearch(searchQuery)
         }
+    }
+
+    private var hasNoHistory: Bool {
+        entries.isEmpty && searchResults == nil
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "clock.arrow.circlepath")
+                .font(.system(size: 28))
+                .foregroundStyle(.tertiary)
+            Text("No translations yet")
+                .font(.headline)
+            Text("Translations you make in the popup show up here.")
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     private var currentEntry: HistoryEntry? {

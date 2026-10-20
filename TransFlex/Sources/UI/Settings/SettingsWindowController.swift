@@ -22,6 +22,9 @@ final class SettingsWindowController {
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
         win.orderFrontRegardless()
+        // On first show AppKit gives the tab bar initial focus and draws its
+        // ring at a stale position beside the first tab.
+        DispatchQueue.main.async { win.makeFirstResponder(nil) }
 
         if autoDismisser == nil {
             autoDismisser = WindowAutoDismisser(window: win, label: "settings") {

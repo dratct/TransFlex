@@ -62,6 +62,7 @@ struct CloudProviderRow: View {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
                                     .font(.system(size: 14))
+                                    .help("API key saved in Keychain")
 
                                 Button(action: deleteKey) {
                                     Image(systemName: "minus.circle")

@@ -88,7 +88,22 @@ struct PopupView: View {
         }
         .onChange(of: viewModel.inputFocusRequest) { _ in
             // Wait for state-driven view swaps before focusing TextEditor.
-            DispatchQueue.main.async { inputFocused = true }
+            DispatchQueue.main.async {
+                if viewModel.attachedImage == nil {
+                    inputFocused = true
+                } else {
+                    // No editor behind an image preview: AppKit would otherwise
+                    // focus the preset picker, which then swallows ⌘⏎.
+                    NSApp.keyWindow?.makeFirstResponder(nil)
+                }
+            }
+        }
+        .onChange(of: viewModel.inputText) { _ in
+            // Typing into the editor left up by a pre-send error (nothing was
+            // sent) means the user moved on: drop the banner so the editor stays.
+            if case .error(_, nil) = viewModel.state, viewModel.attachedImage == nil {
+                viewModel.dismissError()
+            }
         }
         .sheet(isPresented: $showFirstRun) {
             FirstRunWizardView(viewModel: viewModel)
@@ -111,11 +126,25 @@ struct PopupView: View {
         return false
     }
 
+    private var hasInput: Bool {
+        !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || viewModel.attachedImage != nil
+    }
+
+    /// An error raised before anything was sent (e.g. an image the preset
+    /// can't read) leaves nothing to echo, so keep the editor usable.
+    private var showsEditor: Bool {
+        if isIdle { return true }
+        if case .error = viewModel.state { return !hasInput }
+        return false
+    }
+
     private var headerBar: some View {
         HStack(spacing: 8) {
             PresetPickerView(viewModel: viewModel)
             Spacer()
             AttachButton(
+                canAttach: viewModel.canAttachImages,
                 onChooseFile: { viewModel.chooseImageFile() },
                 onPaste: { viewModel.pasteImageFromClipboard() }
             )
@@ -152,7 +181,7 @@ struct PopupView: View {
 
     private var inputEditor: some View {
         Group {
-            if case .idle = viewModel.state {
+            if showsEditor {
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $viewModel.inputText)
                         .font(.system(size: 14))
@@ -166,7 +195,7 @@ struct PopupView: View {
                                 .font(.system(size: 14))
                                 .foregroundStyle(.tertiary)
 
-                            if viewModel.attachedImage == nil {
+                            if viewModel.attachedImage == nil, viewModel.canAttachImages {
                                 HStack(spacing: 6) {
                                     Image(systemName: "paperclip")
                                         .font(.system(size: 11))
@@ -245,17 +274,18 @@ struct PopupView: View {
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             case .streaming:
-                actionButton("Stop", keys: ["⎋"], tint: .orange) { viewModel.cancelStream() }
+                actionButton("Stop", keys: ["esc"], tint: .orange) { viewModel.cancelStream() }
                     .keyboardShortcut(.escape, modifiers: [])
             case .done(let result):
                 actionButton("New", keys: ["⌘", "N"], tint: .blue) {
                     viewModel.startNewTranslation()
                 }
                 .keyboardShortcut("n", modifiers: .command)
-                actionButton("Copy", keys: ["⇧", "⌘", "C"], tint: .purple) {
+                // ⌘C itself is caught by `PopupPanel` so it wins over any
+                // selection in the result; the button is the click path.
+                actionButton("Copy", keys: ["⌘", "C"], tint: .purple) {
                     viewModel.copyToClipboard(result)
                 }
-                .keyboardShortcut("c", modifiers: [.command, .shift])
                 actionButton("Re-translate", keys: ["⌘", "R"], tint: .brandAccent) {
                     viewModel.translate()
                 }
@@ -272,10 +302,12 @@ struct PopupView: View {
                     viewModel.dismissError()
                 }
                 .keyboardShortcut(".", modifiers: .command)
-                actionButton("Retry", keys: ["⌘", "⏎"], tint: .brandAccent) {
-                    viewModel.translate()
+                if hasInput {
+                    actionButton("Retry", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                        viewModel.translate()
+                    }
+                    .keyboardShortcut(.return, modifiers: .command)
                 }
-                .keyboardShortcut(.return, modifiers: .command)
             case .accessibilityRequired(granted: false):
                 // The card's only way forward, so it gets a filled button.
                 actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .brandAccent) {

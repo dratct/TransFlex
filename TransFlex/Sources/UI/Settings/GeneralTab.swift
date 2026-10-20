@@ -10,10 +10,7 @@ struct GeneralTab: View {
             VStack(alignment: .leading, spacing: 22) {
                 heroHeader
 
-                SettingsSection(
-                    "Startup Options",
-                    footer: "Automatically starts the application when you log into your Mac."
-                ) {
+                SettingsSection("Startup Options") {
                     SettingsRow(
                         icon: "play.square.stack",
                         iconTint: .brandAccent,
@@ -34,15 +31,12 @@ struct GeneralTab: View {
                     }
                 }
 
-                SettingsSection(
-                    "Popup Behavior",
-                    footer: "Controls when the popup discards the previous translation, attached image, and result on reopen."
-                ) {
+                SettingsSection("Popup Behavior") {
                     SettingsRow(
                         icon: "clock.arrow.circlepath",
                         iconTint: .brandAccent,
                         label: "Clear previous translation",
-                        caption: "Reset popup state after the popup has been hidden for this long."
+                        caption: "Discard the previous text, image and result once the popup has been hidden this long."
                     ) {
                         Picker("", selection: Binding(
                             get: { policy.rawMinutes },

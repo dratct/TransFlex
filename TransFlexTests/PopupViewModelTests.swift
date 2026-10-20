@@ -134,6 +134,84 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(notified, 2)
     }
 
+    func testQuickErrorKeepsDraftAndPresetForNextNormalOpen() throws {
+        let vm = makeViewModel()
+        let draftPreset = try XCTUnwrap(presetStore.presets.first?.id)
+        let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
+        vm.switchPreset(draftPreset)
+        vm.inputText = "half-typed draft"
+
+        vm.presentQuickError("No text selected.", presetID: shortcutPreset)
+        XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
+
+        vm.leaveOutputOnly()
+
+        XCTAssertFalse(vm.isOutputOnly)
+        XCTAssertEqual(vm.inputText, "half-typed draft")
+        XCTAssertEqual(vm.selectedPresetID, draftPreset)
+        XCTAssertEqual(vm.state, .idle)
+    }
+
+    func testQuickWithoutDraftKeepsQuickResultOnNormalOpen() throws {
+        let vm = makeViewModel()
+        let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
+
+        vm.presentQuickError("No text selected.", presetID: shortcutPreset)
+        vm.leaveOutputOnly()
+
+        XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
+        XCTAssertEqual(vm.state, .error(message: "No text selected.", partial: nil))
+    }
+
+    func testStaleResetDropsKeptDraft() throws {
+        let vm = makeViewModel()
+        vm.inputText = "old draft"
+        vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+
+        vm.reset()
+        vm.leaveOutputOnly()
+
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(vm.selectedPreset)
+        XCTAssertFalse(preset.supportsVision)
+        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+            NSColor.red.setFill()
+            rect.fill()
+            return true
+        }
+
+        vm.attachImage(image, source: .paste)
+
+        XCTAssertNil(vm.attachedImage)
+        guard case .error(let message, nil) = vm.state else {
+            return XCTFail("expected an error, got \(vm.state)")
+        }
+        XCTAssertTrue(message.contains("Supports Vision"), message)
+    }
+
+    func testCopyResultCopiesOnlyWhenATranslationIsShown() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let board = NSPasteboard(name: .init("PopupVMCopy-\(UUID().uuidString)"))
+        let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
+        let vm = PopupViewModel(translationService: service, presetStore: presetStore, pasteboard: PasteboardHelper(pasteboard: board))
+
+        XCTAssertFalse(vm.copyResultIfShown(), "idle popup must leave ⌘C to the text editor")
+
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        board.clearContents()
+
+        XCTAssertTrue(vm.copyResultIfShown())
+        XCTAssertEqual(board.string(forType: .string), "Bonjour")
+    }
+
     func testResetLeavesOutputOnlyWithoutResizeCallback() throws {
         let vm = makeViewModel()
         var notified = false
@@ -204,6 +282,27 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         try await Task.sleep(nanoseconds: 20_000_000)
 
         XCTAssertEqual(vm.state, .idle)
+    }
+
+    func testAccessibilityCardKeepsDraftForNextNormalOpen() throws {
+        let vm = makeViewModel(granted: { false })
+        vm.inputText = "draft"
+
+        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
+        vm.leaveOutputOnly()
+
+        XCTAssertEqual(vm.inputText, "draft")
+        XCTAssertEqual(vm.state, .idle)
+    }
+
+    func testAccessibilityCardWithoutDraftStartsCleanOnNormalOpen() throws {
+        let vm = makeViewModel(granted: { false })
+
+        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
+        vm.leaveOutputOnly()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertFalse(vm.isOutputOnly)
     }
 
     func testOpenSettingsButtonCallsSystemOpener() {

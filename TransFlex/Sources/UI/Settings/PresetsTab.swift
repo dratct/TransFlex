@@ -15,6 +15,11 @@ struct PresetsTab: View {
             editorPane
                 .frame(minWidth: 340)
         }
+        .onAppear {
+            if selectedPreset == nil {
+                selectedPresetID = presetStore.presets.first?.id
+            }
+        }
     }
 
     private var presetList: some View {

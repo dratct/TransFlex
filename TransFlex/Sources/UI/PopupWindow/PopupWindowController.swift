@@ -52,6 +52,7 @@ public final class PopupWindowController {
             self?.autoDismisser?.stop()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
+        self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
         self.viewModel = vm
 
         let popupView = PopupView(viewModel: vm)
@@ -120,10 +121,6 @@ public final class PopupWindowController {
         let start = mach_absolute_time()
 
         resetIfStale()
-        if case .accessibilityRequired = viewModel?.state {
-            // The card belongs to a selection shortcut; a plain open starts clean.
-            viewModel?.reset()
-        }
         viewModel?.leaveOutputOnly()
 
         let reference = point ?? NSEvent.mouseLocation

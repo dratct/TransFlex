@@ -35,6 +35,9 @@ final class HistoryWindowController {
         )
         newWindow.title = "Translation History"
         newWindow.contentViewController = hosting
+        // Assigning the controller shrinks the window to the view's fitting
+        // size, so set the intended size afterwards.
+        newWindow.setContentSize(frame.size)
         newWindow.center()
         newWindow.isReleasedWhenClosed = false
         let delegate = HistoryWindowDelegate { [weak self] in

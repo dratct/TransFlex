@@ -16,6 +16,7 @@ struct ProvidersTab: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
+                heroHeader
                 cloudSection
                 Divider()
                 OpenAICompatList(store: store)
@@ -33,6 +34,27 @@ struct ProvidersTab: View {
         }
         .onAppear {
             dismissFocusAsync()
+        }
+    }
+
+    private var heroHeader: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.brandAccent.gradient)
+                .frame(width: 36, height: 36)
+                .overlay(
+                    Image(systemName: "server.rack")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Providers")
+                    .font(.system(size: 16, weight: .semibold))
+                Text("API keys and custom endpoints")
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+            }
+            Spacer()
         }
     }
 

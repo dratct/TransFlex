@@ -12,6 +12,8 @@ final class PopupPanel: NSPanel {
     /// `lastHiddenAt` clock so the user-configured `PopupResetPolicy` sees
     /// an accurate "time since last hide".
     var onHide: (() -> Void)?
+    /// ⌘C handler; returns true when it consumed the key.
+    var onCopyCommand: (() -> Bool)?
 
     init(contentRect: NSRect) {
         // Borderless panel — no `.titled`, so AppKit draws no titlebar, no
@@ -65,6 +67,11 @@ final class PopupPanel: NSPanel {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if mods == .command, event.charactersIgnoringModifiers == "," {
             AppCommands.openSettings()
+            return true
+        }
+        // Checked before the responder chain, so a text selection in the
+        // result cannot turn ⌘C into a partial copy.
+        if mods == .command, event.charactersIgnoringModifiers == "c", onCopyCommand?() == true {
             return true
         }
         return super.performKeyEquivalent(with: event)

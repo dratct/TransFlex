@@ -5,7 +5,8 @@ import SwiftUI
 struct AccessibilityPermissionCard: View {
     let granted: Bool
 
-    private var appName: String { AppIdentity.current.displayName }
+    /// The name System Settings lists, so the card and the pane read the same.
+    private var appName: String { AccessibilityPermission.listedAppName }
     private var paneName: String { AccessibilityPermission.settingsPaneName }
 
     var body: some View {
