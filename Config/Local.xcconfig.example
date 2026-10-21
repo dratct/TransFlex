@@ -1,0 +1,10 @@
+// Copy to Config/Local.xcconfig (git-ignored) to sign local builds with your Apple team.
+// Team-signed builds keep API keys in the data protection keychain, so macOS stops asking for the
+// login password after each rebuild. Run `make provision` once per machine first.
+
+DEVELOPMENT_TEAM = YOUR_TEAM_ID
+CODE_SIGN_STYLE = Automatic
+CODE_SIGN_IDENTITY = Apple Development
+CODE_SIGNING_REQUIRED = YES
+CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.signed.entitlements
+TRANSFLEX_KEYCHAIN_BACKEND = dataProtection
