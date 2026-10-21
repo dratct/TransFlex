@@ -220,10 +220,35 @@ Signed releases require these GitHub Secrets:
 | `APPLE_NOTARY_KEY_ID` | App Store Connect API key ID. |
 | `APPLE_NOTARY_ISSUER_ID` | App Store Connect issuer ID. |
 | `APPLE_NOTARY_KEY_BASE64` | Base64 encoded `.p8` API key. |
+| `APPLE_DEVELOPER_ID_PROFILE_BASE64` | Base64 encoded Developer ID provisioning profile for `io.aiaz.transflex`. |
+
+Signed builds keep API keys in the data protection keychain, so the app claims
+`keychain-access-groups`, and macOS only accepts that entitlement with an
+embedded provisioning profile. Create the signing material once, as the Account
+Holder, on a trusted Mac:
+
+1. Keychain Access → Certificate Assistant → Request a Certificate From a
+   Certificate Authority, saved to disk.
+2. developer.apple.com → Certificates → Developer ID Application (G2 Sub-CA),
+   upload the request, download and open the certificate, then export it with
+   its private key as a password-protected `.p12`.
+3. Identifiers → register the explicit App ID `io.aiaz.transflex`.
+4. Profiles → Developer ID → that App ID and certificate; download the profile.
+5. App Store Connect → Users and Access → Integrations → Team Keys → a key with
+   the Developer role for notarization.
+6. Set the secrets, then delete the local `.p12` and `.p8` files:
+
+   ```bash
+   base64 -i developer_id.p12 | gh secret set APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64
+   base64 -i TransFlex_Developer_ID.provisionprofile | gh secret set APPLE_DEVELOPER_ID_PROFILE_BASE64
+   base64 -i AuthKey_ABC123.p8 | gh secret set APPLE_NOTARY_KEY_BASE64
+   ```
 
 When the secrets are configured, run the `Release` workflow with `signed=true`.
-The workflow imports the certificate into a temporary keychain, builds with
-Developer ID signing and hardened runtime, verifies the signature, submits the
+The workflow imports the certificate into a temporary keychain, installs the
+profile, builds with Developer ID signing and hardened runtime,
+verifies the signature, the embedded profile and the keychain access group
+(`scripts/verify-release-app.sh --signed-team`), submits the
 app to Apple notarization, staples the ticket, verifies Gatekeeper assessment,
 and uploads:
 
@@ -233,7 +258,13 @@ TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 ```
 
 Do not print decoded certificate or API key material in logs. The workflow
-cleanup step removes temporary signing files and the temporary keychain.
+cleanup step removes temporary signing files, the installed profile and the
+temporary keychain.
+
+A new Developer ID certificate needs a new profile: regenerate the profile for
+the new certificate and update both secrets together. Users of an unsigned alpha
+enter their API keys again after moving to a signed release, because the two
+builds use different keychains.
 
 ## Hotfix Flow
 

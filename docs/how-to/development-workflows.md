@@ -13,6 +13,32 @@ scripts/build.sh --release
 scripts/build.sh --no-gen
 ```
 
+## Sign Local Builds with Your Team
+
+Ad-hoc builds keep API keys in the login keychain, and macOS asks for the login password after every rebuild. Signing with an Apple Developer team moves the keys to the data protection keychain and stops the prompts.
+
+1. Copy the example and set your team ID:
+
+   ```bash
+   cp Config/Local.xcconfig.example Config/Local.xcconfig
+   ```
+
+2. Provision this Mac once. With an Apple Account signed in to Xcode (Settings → Accounts):
+
+   ```bash
+   make provision
+   ```
+
+   On a machine without an Xcode account, pass an App Store Connect team API key (role Developer) instead, and revoke the key afterwards:
+
+   ```bash
+   make provision ASC_KEY_PATH=/path/AuthKey_ABC123.p8 ASC_KEY_ID=ABC123 ASC_ISSUER_ID=<issuer-uuid>
+   ```
+
+3. Build and test as usual; `scripts/build.sh`, `make build` and `make test` sign with the team while `Config/Local.xcconfig` exists. Enter your API keys again in Settings once, because the new keychain starts empty.
+
+Later builds reuse the cached profile and need no account or key. Over SSH the login keychain is locked, so codesign fails with "User interaction is not allowed" until you unlock the keychain that holds the signing identity (`security unlock-keychain <keychain>`) in the same session.
+
 ## Run Tests
 
 ```bash

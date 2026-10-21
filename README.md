@@ -32,7 +32,7 @@ scripts/build.sh --release # Release build
 scripts/build.sh --no-gen  # Skip XcodeGen when project is already current
 ```
 
-The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default, and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
+The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default (or with your Apple team when `Config/Local.xcconfig` exists; see [docs/how-to/development-workflows.md](docs/how-to/development-workflows.md)), and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
 
 Debug and Release use separate app identities so you can run both without mixing data:
 

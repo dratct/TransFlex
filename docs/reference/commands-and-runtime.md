@@ -11,7 +11,8 @@
 | `MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release` | Build Release app with CI-style bundle versions. |
 | `scripts/verify-release-app.sh --app DerivedData/Build/Products/Release/TransFlex.app` | Verify release app minimum macOS, bundle versions, and architectures. |
 | `VERSION=0.2.0 SIGNING_LABEL=unsigned scripts/package-release.sh DerivedData/Build/Products/Release/TransFlex.app` | Create release zip and checksum under `dist/`. |
-| `make test` | Run unit tests. |
+| `make test` | Run unit tests (team-signed when `Config/Local.xcconfig` exists, otherwise ad-hoc). |
+| `make provision` | Once per Mac with `Config/Local.xcconfig`: development certificate, device registration, profile. |
 | `make run` | Kill `TransFlexDev`, build fast, open Debug app. |
 | `make xcode` | Generate and open the Xcode project. |
 | `make log` | Stream OSLog for `io.aiaz.transflex`. |
@@ -65,8 +66,8 @@ Expected output contains `x86_64` and `arm64`.
 
 | Data | Location |
 |---|---|
-| Provider keys | macOS Keychain service `io.aiaz.transflex`. |
-| OpenAI-compatible secrets | macOS Keychain service `io.aiaz.transflex`. |
+| Provider keys | macOS Keychain service `io.aiaz.transflex`: data protection keychain for team-signed builds, login keychain for ad-hoc builds. |
+| OpenAI-compatible secrets | Same Keychain service as provider keys. |
 | Provider metadata | Application Support `TransFlex/providers.json`. |
 | Presets | Application Support `TransFlex/presets.json`. |
 | History | Application Support `TransFlex/history.sqlite`. |
@@ -93,9 +94,9 @@ The app target is configured in `project.yml`:
 - Bundle ID: `io.aiaz.transflex`
 - Minimum macOS: `13.0`
 - Swift version setting: `5.0`
-- Code signing: ad-hoc local signing
+- Code signing: `Config/Signing.xcconfig`, ad-hoc unless `Config/Local.xcconfig` sets a team; Developer ID for signed releases
 - App sandbox: disabled
-- Hardened runtime: disabled
+- Hardened runtime: disabled, except Developer ID releases
 
 Release build output is verified to contain both `arm64` and `x86_64` executable slices.
 
