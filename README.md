@@ -1,6 +1,6 @@
 # TransFlex
 
-Native macOS quick-translation app: global hotkey `Option+Q` opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
+Native macOS quick-translation app: global hotkey `Option+T` (`Option+Q` in the Debug build) opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
 
 > **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Unsigned alpha releases are the default; signed/notarized release mode is wired for GitHub Actions when Apple Developer ID and notary secrets are configured.
 
@@ -22,7 +22,7 @@ scripts/build.sh
 open DerivedData/Build/Products/Debug/TransFlexDev.app
 ```
 
-TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
+TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` (`Option+T` in Release builds) to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
 
 ## Build
 
