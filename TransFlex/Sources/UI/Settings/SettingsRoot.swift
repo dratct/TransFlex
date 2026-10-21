@@ -14,34 +14,49 @@ struct SettingsRoot: View {
     @StateObject private var providersStore = ProvidersStore()
     @EnvironmentObject var presetStore: PresetStore
     @ObservedObject var tabState: SettingsTabState
+    // The segmented Picker writes its binding while SwiftUI updates the view, which must not
+    // publish an ObservableObject; `tabState` only carries the tab requested by `show(tab:)`.
+    @State private var selected: SettingsTab
+
+    init(tabState: SettingsTabState) {
+        self.tabState = tabState
+        self._selected = State(initialValue: tabState.selected)
+    }
 
     var body: some View {
-        TabView(selection: $tabState.selected) {
-            GeneralTab()
-                .tabItem { Label("General", systemImage: "gearshape") }
-                .tag(SettingsTab.general)
+        // A segmented Picker instead of `TabView`: AppKit centers the
+        // NSTabView tab bar at half-point offsets, which blurs its labels on
+        // non-Retina displays. SwiftUI rounds this layout to whole pixels.
+        VStack(spacing: 0) {
+            Picker("Settings", selection: $selected) {
+                Text("General").tag(SettingsTab.general)
+                Text("Providers").tag(SettingsTab.providers)
+                Text("Presets").tag(SettingsTab.presets)
+                Text("Hotkeys").tag(SettingsTab.hotkeys)
+                Text("About").tag(SettingsTab.about)
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
+            .fixedSize()
+            .padding(.vertical, 10)
 
-            ProvidersTab(store: providersStore)
-                .tabItem { Label("Providers", systemImage: "server.rack") }
-                .tag(SettingsTab.providers)
+            Divider()
 
-            PresetsTab(providersStore: providersStore)
-                .tabItem { Label("Presets", systemImage: "text.badge.star") }
-                .tag(SettingsTab.presets)
-                .environmentObject(presetStore)
-
-            HotkeysTab()
-                .tabItem { Label("Hotkeys", systemImage: "keyboard") }
-                .tag(SettingsTab.hotkeys)
-
-            AboutTab()
-                .tabItem { Label("About", systemImage: "info.circle") }
-                .tag(SettingsTab.about)
+            Group {
+                switch selected {
+                case .general: GeneralTab()
+                case .providers: ProvidersTab(store: providersStore)
+                case .presets: PresetsTab(providersStore: providersStore).environmentObject(presetStore)
+                case .hotkeys: HotkeysTab()
+                case .about: AboutTab()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
-        .padding(.top, 10)
         .frame(minWidth: 620, minHeight: 480)
         .onAppear {
             providersStore.registerAllWithRegistry()
         }
+        .onReceive(tabState.$selected) { selected = $0 }
     }
 }
