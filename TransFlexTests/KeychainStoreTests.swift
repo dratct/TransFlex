@@ -60,6 +60,15 @@ final class KeychainStoreTests: XCTestCase {
         XCTAssertNil(try store.get("k"))
     }
 
+    func testDeleteAllRemovesEveryItemUnderService() throws {
+        // The file-based keychain deletes only one match per SecItemDelete call.
+        try store.set("a", forKey: "first")
+        try store.set("b", forKey: "second")
+        try store.deleteAll()
+        XCTAssertFalse(store.exists("first"))
+        XCTAssertFalse(store.exists("second"))
+    }
+
     func testDataRoundTrip() throws {
         let blob = Data([0x00, 0xff, 0x42, 0x13])
         try store.setData(blob, forKey: "blob")

@@ -109,8 +109,12 @@ public final class KeychainStore {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
         ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
+        // The file-based keychain deletes one match per call, so repeat until none is left.
+        var status = SecItemDelete(query as CFDictionary)
+        while status == errSecSuccess {
+            status = SecItemDelete(query as CFDictionary)
+        }
+        guard status == errSecItemNotFound else {
             throw KeychainError.unhandled(status)
         }
     }
