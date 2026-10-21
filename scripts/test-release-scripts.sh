@@ -186,11 +186,87 @@ test_package_checksum_uses_downloadable_asset_name() {
   )
 }
 
+# An ad-hoc signed bundle shaped like TransFlex.app; /usr/bin/true stands in for the binary.
+make_fixture_app() {
+  local app="$1" backend="$2" entitlements="${3:-}"
+
+  mkdir -p "$app/Contents/MacOS"
+  cp /usr/bin/true "$app/Contents/MacOS/TransFlex"
+  local plist="$app/Contents/Info.plist"
+  /usr/libexec/PlistBuddy \
+    -c "Add :CFBundleIdentifier string io.aiaz.transflex" \
+    -c "Add :CFBundleExecutable string TransFlex" \
+    -c "Add :LSMinimumSystemVersion string 13.0" \
+    -c "Add :CFBundleShortVersionString string 0.2.0" \
+    -c "Add :CFBundleVersion string 7" \
+    -c "Add :TransFlexKeychainBackend string $backend" \
+    "$plist" >/dev/null
+  if [[ -n "$entitlements" ]]; then
+    codesign -f -s - --entitlements "$entitlements" "$app" 2>/dev/null
+  else
+    codesign -f -s - "$app" 2>/dev/null
+  fi
+}
+
+# Runs verify-release-app.sh on the fixture; sets verify_status and verify_err.
+run_verify() {
+  local app="$1"
+  shift
+  verify_err="$(dirname "$app")/verify.err"
+  set +e
+  scripts/verify-release-app.sh --app "$app" --expected-archs x86_64 "$@" > /dev/null 2> "$verify_err"
+  verify_status=$?
+  set -e
+}
+
+test_verify_accepts_unsigned_app_on_file_keychain() {
+  local app="$TEST_TMP/verify-unsigned/TransFlex.app"
+  make_fixture_app "$app" file
+  run_verify "$app"
+  [[ "$verify_status" -eq 0 ]] || { cat "$verify_err" >&2; fail "unsigned app on the file keychain should verify"; }
+}
+
+test_verify_rejects_unsigned_app_on_data_protection_keychain() {
+  local app="$TEST_TMP/verify-unsigned-dp/TransFlex.app"
+  make_fixture_app "$app" dataProtection
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "unsigned app on the data protection keychain should be rejected"
+  assert_file_contains "$verify_err" "must use TransFlexKeychainBackend 'file'"
+}
+
+test_verify_rejects_unsigned_app_with_access_group() {
+  local case_dir="$TEST_TMP/verify-unsigned-group"
+  mkdir -p "$case_dir"
+  cat > "$case_dir/app.entitlements" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>keychain-access-groups</key><array><string>TEAM123.io.aiaz.transflex</string></array>
+</dict></plist>
+PLIST
+  make_fixture_app "$case_dir/TransFlex.app" file "$case_dir/app.entitlements"
+  run_verify "$case_dir/TransFlex.app"
+  [[ "$verify_status" -ne 0 ]] || fail "unsigned app claiming a keychain access group should be rejected"
+  assert_file_contains "$verify_err" "must not claim keychain-access-groups"
+}
+
+test_verify_rejects_signed_app_without_profile() {
+  local app="$TEST_TMP/verify-signed-no-profile/TransFlex.app"
+  make_fixture_app "$app" dataProtection
+  run_verify "$app" --signed-team TEAM123
+  [[ "$verify_status" -ne 0 ]] || fail "signed app without an embedded profile should be rejected"
+  assert_file_contains "$verify_err" "no embedded.provisionprofile"
+}
+
 test_release_create_path
 test_release_update_path
 test_regular_release_create_path
 test_regular_release_update_path
 test_invalid_prerelease_versions_are_rejected
 test_package_checksum_uses_downloadable_asset_name
+test_verify_accepts_unsigned_app_on_file_keychain
+test_verify_rejects_unsigned_app_on_data_protection_keychain
+test_verify_rejects_unsigned_app_with_access_group
+test_verify_rejects_signed_app_without_profile
 
 echo "==> Release script tests passed"
