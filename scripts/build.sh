@@ -12,8 +12,11 @@
 #   MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
 #
 # Signing modes:
-#   TRANSFLEX_SIGNING_MODE=adhoc        # default local/CI unsigned alpha build
-#   TRANSFLEX_SIGNING_MODE=developer-id # requires DEVELOPER_ID_APPLICATION and APPLE_TEAM_ID
+#   TRANSFLEX_SIGNING_MODE=auto         # default: team signing from Config/Local.xcconfig when it
+#                                       # exists, otherwise ad-hoc (CI, unsigned alpha builds)
+#   TRANSFLEX_SIGNING_MODE=adhoc        # ad-hoc only; refuses to run while Local.xcconfig exists
+#   TRANSFLEX_SIGNING_MODE=developer-id # requires DEVELOPER_ID_APPLICATION, APPLE_TEAM_ID and
+#                                       # DEVELOPER_ID_PROFILE_NAME (an installed Developer ID profile)
 
 set -euo pipefail
 
@@ -23,7 +26,9 @@ cd "$ROOT_DIR"
 CONFIG="${CONFIG:-Debug}"
 SCHEME="${SCHEME:-TransFlex}"
 GENERATE=true
-SIGNING_MODE="${TRANSFLEX_SIGNING_MODE:-adhoc}"
+SIGNING_MODE="${TRANSFLEX_SIGNING_MODE:-auto}"
+LOCAL_XCCONFIG="Config/Local.xcconfig"
+GENERATED_XCCONFIG="Config/DeveloperID.generated.xcconfig"
 
 for arg in "$@"; do
   case "$arg" in
@@ -68,13 +73,29 @@ if [[ -n "${CURRENT_PROJECT_VERSION:-}" ]]; then
   VERSION_SETTINGS+=(CURRENT_PROJECT_VERSION="$CURRENT_PROJECT_VERSION")
 fi
 
+ADHOC_SETTINGS=(
+  CODE_SIGN_IDENTITY=-
+  CODE_SIGNING_REQUIRED=NO
+  CODE_SIGNING_ALLOWED=YES
+)
+
 case "$SIGNING_MODE" in
+  auto)
+    if [[ -f "$LOCAL_XCCONFIG" ]]; then
+      # Config/Signing.xcconfig includes it; command-line settings would also reach package targets.
+      SIGNING_SETTINGS=()
+      SIGNING_MODE="team ($LOCAL_XCCONFIG)"
+    else
+      SIGNING_SETTINGS=("${ADHOC_SETTINGS[@]}")
+      SIGNING_MODE="adhoc"
+    fi
+    ;;
   adhoc)
-    SIGNING_SETTINGS=(
-      CODE_SIGN_IDENTITY=-
-      CODE_SIGNING_REQUIRED=NO
-      CODE_SIGNING_ALLOWED=YES
-    )
+    if [[ -f "$LOCAL_XCCONFIG" ]]; then
+      echo "error: TRANSFLEX_SIGNING_MODE=adhoc conflicts with $LOCAL_XCCONFIG; move it aside or use auto." >&2
+      exit 1
+    fi
+    SIGNING_SETTINGS=("${ADHOC_SETTINGS[@]}")
     ;;
   developer-id)
     if [[ -z "${DEVELOPER_ID_APPLICATION:-}" ]]; then
@@ -85,6 +106,18 @@ case "$SIGNING_MODE" in
       echo "error: APPLE_TEAM_ID is required when TRANSFLEX_SIGNING_MODE=developer-id." >&2
       exit 1
     fi
+    if [[ -z "${DEVELOPER_ID_PROFILE_NAME:-}" ]]; then
+      echo "error: DEVELOPER_ID_PROFILE_NAME is required when TRANSFLEX_SIGNING_MODE=developer-id." >&2
+      exit 1
+    fi
+    # The profile and the keychain entitlement apply to the app target only, so they go through
+    # the xcconfig that Config/Signing.xcconfig includes last instead of the command line.
+    trap 'rm -f "$GENERATED_XCCONFIG"' EXIT
+    {
+      echo "PROVISIONING_PROFILE_SPECIFIER = $DEVELOPER_ID_PROFILE_NAME"
+      echo "CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.signed.entitlements"
+      echo "TRANSFLEX_KEYCHAIN_BACKEND = dataProtection"
+    } > "$GENERATED_XCCONFIG"
     SIGNING_SETTINGS=(
       CODE_SIGN_STYLE=Manual
       CODE_SIGN_IDENTITY="$DEVELOPER_ID_APPLICATION"
@@ -96,7 +129,7 @@ case "$SIGNING_MODE" in
     )
     ;;
   *)
-    echo "error: TRANSFLEX_SIGNING_MODE must be 'adhoc' or 'developer-id'." >&2
+    echo "error: TRANSFLEX_SIGNING_MODE must be 'auto', 'adhoc' or 'developer-id'." >&2
     exit 1
     ;;
 esac
@@ -120,7 +153,10 @@ BUILD_CMD=(
 if (( ${#VERSION_SETTINGS[@]} > 0 )); then
   BUILD_CMD+=("${VERSION_SETTINGS[@]}")
 fi
-BUILD_CMD+=("${SIGNING_SETTINGS[@]}" build)
+if (( ${#SIGNING_SETTINGS[@]} > 0 )); then
+  BUILD_CMD+=("${SIGNING_SETTINGS[@]}")
+fi
+BUILD_CMD+=(build)
 
 if command -v xcbeautify >/dev/null 2>&1; then
   "${BUILD_CMD[@]}" | xcbeautify

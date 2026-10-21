@@ -7,8 +7,12 @@ RELEASE_PROCESS := TransFlex
 DEBUG_BUNDLE_ID := io.aiaz.transflex.dev
 DEBUG_SUPPORT_DIR := $(HOME)/Library/Application Support/TransFlexDev
 RELEASE_BUNDLE_ID := io.aiaz.transflex
+# Ad-hoc unless Config/Local.xcconfig opts this machine into team signing.
+TEST_SIGNING := $(if $(wildcard Config/Local.xcconfig),,CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES)
+# An App Store Connect team API key for provisioning without an Xcode account.
+ASC_AUTH := $(if $(ASC_KEY_PATH),-authenticationKeyPath "$(ASC_KEY_PATH)" -authenticationKeyID "$(ASC_KEY_ID)" -authenticationKeyIssuerID "$(ASC_ISSUER_ID)")
 
-.PHONY: permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
+.PHONY: permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
 
 build: kill-debug _build permissions-reset open-debug
 	@echo "==> launched $(DEBUG_APP)"
@@ -42,7 +46,13 @@ release:
 	@scripts/build.sh --release
 
 test:
-	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES test
+	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test
+
+# Once per machine after creating Config/Local.xcconfig: creates the development certificate,
+# registers this Mac and fetches the team profile. Later builds reuse the cached profile.
+provision:
+	@test -f Config/Local.xcconfig || { echo "error: create Config/Local.xcconfig first (see Config/Local.xcconfig.example)" >&2; exit 1; }
+	@xcodebuild -scheme TransFlex -configuration Debug -derivedDataPath DerivedData -destination 'platform=macOS' -allowProvisioningUpdates -allowProvisioningDeviceRegistration $(ASC_AUTH) build
 
 kill: kill-debug
 
@@ -106,6 +116,8 @@ help:
 	@echo "make fresh-reset — clear Debug grants, defaults, presets, history, caches (keeps API keys)"
 	@echo "make release    — Release build only (no kill/open)"
 	@echo "make test       — run unit tests"
+	@echo "make provision  — once per machine with Config/Local.xcconfig: certificate, device, profile"
+	@echo "                  (Xcode account, or ASC_KEY_PATH/ASC_KEY_ID/ASC_ISSUER_ID team API key)"
 	@echo "make kill       — alias for kill-debug"
 	@echo "make kill-debug — kill running TransFlexDev"
 	@echo "make kill-release — kill running TransFlex"
