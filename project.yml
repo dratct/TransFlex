@@ -42,6 +42,7 @@ targets:
         LSMinimumSystemVersion: "13.0"
         TransFlexApplicationSupportDirectoryName: "$(TRANSFLEX_APP_SUPPORT_DIR)"
         TransFlexKeychainService: "$(TRANSFLEX_KEYCHAIN_SERVICE)"
+        TransFlexKeychainBackend: "$(TRANSFLEX_KEYCHAIN_BACKEND)"
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
         NSPrincipalClass: NSApplication

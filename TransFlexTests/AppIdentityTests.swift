@@ -47,6 +47,21 @@ final class AppIdentityTests: XCTestCase {
         XCTAssertEqual(identity.keychainService, "io.aiaz.transflex")
     }
 
+    func testKeychainBackendReadsDataProtectionFromInfoDictionary() {
+        let identity = AppIdentity(infoDictionary: ["TransFlexKeychainBackend": "dataProtection"])
+
+        XCTAssertEqual(identity.keychainBackend, .dataProtection)
+    }
+
+    func testKeychainBackendFallsBackToFileKeychain() {
+        XCTAssertEqual(AppIdentity(infoDictionary: [:]).keychainBackend, .file)
+        XCTAssertEqual(AppIdentity(infoDictionary: ["TransFlexKeychainBackend": "file"]).keychainBackend, .file)
+        XCTAssertEqual(
+            AppIdentity(infoDictionary: ["TransFlexKeychainBackend": "$(TRANSFLEX_KEYCHAIN_BACKEND)"]).keychainBackend,
+            .file
+        )
+    }
+
     func testApplicationSupportDirectoryUsesIdentitySpecificFolder() {
         let identity = AppIdentity(infoDictionary: [
             "TransFlexApplicationSupportDirectoryName": "TransFlexDev",

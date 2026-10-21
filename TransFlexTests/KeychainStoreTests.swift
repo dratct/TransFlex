@@ -84,3 +84,34 @@ final class KeychainStoreTests: XCTestCase {
         try other.deleteAll()
     }
 }
+
+/// Query shape per backend; these never touch a keychain.
+final class KeychainStoreQueryTests: XCTestCase {
+    func testFileBackendQueriesTheFileBasedKeychain() {
+        let store = KeychainStore(service: "svc", backend: .file)
+
+        let query = store.addQuery(account: "k", data: Data("v".utf8))
+
+        XCTAssertNil(query[kSecUseDataProtectionKeychain as String])
+        XCTAssertNil(query[kSecAttrAccessible as String])
+        XCTAssertEqual(query[kSecAttrService as String] as? String, "svc")
+        XCTAssertEqual(query[kSecAttrAccount as String] as? String, "k")
+    }
+
+    func testDataProtectionBackendSetsFlagAndAccessibility() {
+        let store = KeychainStore(service: "svc", backend: .dataProtection)
+
+        let query = store.addQuery(account: "k", data: Data("v".utf8))
+
+        XCTAssertEqual(query[kSecUseDataProtectionKeychain as String] as? Bool, true)
+        XCTAssertEqual(
+            query[kSecAttrAccessible as String] as? String,
+            kSecAttrAccessibleAfterFirstUnlock as String
+        )
+    }
+
+    func testMissingEntitlementGetsItsOwnError() {
+        XCTAssertEqual(KeychainError(status: errSecMissingEntitlement), .missingEntitlement)
+        XCTAssertEqual(KeychainError(status: errSecInteractionNotAllowed), .unhandled(errSecInteractionNotAllowed))
+    }
+}
