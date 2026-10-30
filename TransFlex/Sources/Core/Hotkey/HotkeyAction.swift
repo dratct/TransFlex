@@ -12,11 +12,20 @@ public enum HotkeyAction: Hashable {
 }
 
 extension KeyboardShortcuts.Name {
-    /// Default global popup hotkey: ⌥Q. User-rebindable in Settings → Hotkeys.
-    static let openPopup = Self(
-        "openPopup",
-        initial: .init(.q, modifiers: [.option])
-    )
+    /// Default global popup hotkey: ⌥T in Release, ⌥Q in Debug. User-rebindable in Settings → Hotkeys.
+    static let openPopup: Self = {
+        #if DEBUG
+        let debugBuild = true
+        #else
+        let debugBuild = false
+        #endif
+        return Self("openPopup", initial: defaultPopupShortcut(debugBuild: debugBuild))
+    }()
+
+    /// Debug and Release run side by side, so they must not claim the same hotkey.
+    static func defaultPopupShortcut(debugBuild: Bool) -> KeyboardShortcuts.Shortcut {
+        debugBuild ? .init(.q, modifiers: [.option]) : .init(.t, modifiers: [.option])
+    }
 
     /// Per-preset hotkey name. Stable across launches via the UUID string.
     static func preset(_ id: UUID) -> Self {

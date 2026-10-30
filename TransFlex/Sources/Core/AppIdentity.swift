@@ -9,6 +9,7 @@ struct AppIdentity {
     let displayName: String
     let applicationSupportDirectoryName: String
     let keychainService: String
+    let keychainBackend: KeychainBackend
 
     static var current: AppIdentity {
         AppIdentity(infoDictionary: Bundle.main.infoDictionary ?? [:])
@@ -37,6 +38,10 @@ struct AppIdentity {
             for: "TransFlexKeychainService",
             in: infoDictionary
         ) ?? bundleIdentifier
+        self.keychainBackend = Self.value(
+            for: "TransFlexKeychainBackend",
+            in: infoDictionary
+        ) == "dataProtection" ? .dataProtection : .file
     }
 
     func applicationSupportDirectory(baseURL: URL) -> URL {

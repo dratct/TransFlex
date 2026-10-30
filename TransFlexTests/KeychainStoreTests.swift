@@ -60,6 +60,15 @@ final class KeychainStoreTests: XCTestCase {
         XCTAssertNil(try store.get("k"))
     }
 
+    func testDeleteAllRemovesEveryItemUnderService() throws {
+        // The file-based keychain deletes only one match per SecItemDelete call.
+        try store.set("a", forKey: "first")
+        try store.set("b", forKey: "second")
+        try store.deleteAll()
+        XCTAssertFalse(store.exists("first"))
+        XCTAssertFalse(store.exists("second"))
+    }
+
     func testDataRoundTrip() throws {
         let blob = Data([0x00, 0xff, 0x42, 0x13])
         try store.setData(blob, forKey: "blob")
@@ -73,5 +82,36 @@ final class KeychainStoreTests: XCTestCase {
         XCTAssertEqual(try store.get("shared"), "a")
         XCTAssertEqual(try other.get("shared"), "b")
         try other.deleteAll()
+    }
+}
+
+/// Query shape per backend; these never touch a keychain.
+final class KeychainStoreQueryTests: XCTestCase {
+    func testFileBackendQueriesTheFileBasedKeychain() {
+        let store = KeychainStore(service: "svc", backend: .file)
+
+        let query = store.addQuery(account: "k", data: Data("v".utf8))
+
+        XCTAssertNil(query[kSecUseDataProtectionKeychain as String])
+        XCTAssertNil(query[kSecAttrAccessible as String])
+        XCTAssertEqual(query[kSecAttrService as String] as? String, "svc")
+        XCTAssertEqual(query[kSecAttrAccount as String] as? String, "k")
+    }
+
+    func testDataProtectionBackendSetsFlagAndAccessibility() {
+        let store = KeychainStore(service: "svc", backend: .dataProtection)
+
+        let query = store.addQuery(account: "k", data: Data("v".utf8))
+
+        XCTAssertEqual(query[kSecUseDataProtectionKeychain as String] as? Bool, true)
+        XCTAssertEqual(
+            query[kSecAttrAccessible as String] as? String,
+            kSecAttrAccessibleAfterFirstUnlock as String
+        )
+    }
+
+    func testMissingEntitlementGetsItsOwnError() {
+        XCTAssertEqual(KeychainError(status: errSecMissingEntitlement), .missingEntitlement)
+        XCTAssertEqual(KeychainError(status: errSecInteractionNotAllowed), .unhandled(errSecInteractionNotAllowed))
     }
 }

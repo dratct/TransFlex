@@ -1,0 +1,17 @@
+// Code signing for the TransFlex app target only, so Swift package targets keep their own settings.
+// Defaults build ad-hoc with the file-based keychain; a git-ignored Local.xcconfig switches a
+// machine to team signing, and scripts/build.sh writes DeveloperID.generated.xcconfig for releases.
+
+CODE_SIGN_STYLE = Manual
+CODE_SIGN_IDENTITY = -
+CODE_SIGNING_REQUIRED = NO
+CODE_SIGNING_ALLOWED = YES
+DEVELOPMENT_TEAM =
+ENABLE_HARDENED_RUNTIME = NO
+CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.entitlements
+
+// `file` or `dataProtection`; written into Info.plist as TransFlexKeychainBackend.
+TRANSFLEX_KEYCHAIN_BACKEND = file
+
+#include? "Local.xcconfig"
+#include? "DeveloperID.generated.xcconfig"

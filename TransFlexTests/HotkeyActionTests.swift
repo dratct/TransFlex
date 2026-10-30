@@ -7,6 +7,18 @@ final class HotkeyActionTests: XCTestCase {
         XCTAssertEqual(KeyboardShortcuts.Name.openPopup.rawValue, "openPopup")
     }
     
+    func testDefaultPopupShortcutDiffersBetweenDebugAndRelease() {
+        // Debug and Release can run side by side; distinct defaults keep them from sharing a hotkey.
+        XCTAssertEqual(
+            KeyboardShortcuts.Name.defaultPopupShortcut(debugBuild: true),
+            KeyboardShortcuts.Shortcut(.q, modifiers: [.option])
+        )
+        XCTAssertEqual(
+            KeyboardShortcuts.Name.defaultPopupShortcut(debugBuild: false),
+            KeyboardShortcuts.Shortcut(.t, modifiers: [.option])
+        )
+    }
+
     func testPresetNameEmbedsUUID() {
         let id = UUID()
         let name = KeyboardShortcuts.Name.preset(id)

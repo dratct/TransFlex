@@ -3,15 +3,22 @@ import Security
 
 /// Generic-password Keychain wrapper. Single service id; key per item.
 ///
-/// Items are written with `kSecAttrAccessibleAfterFirstUnlock` so they are
-/// readable in background launches without prompting.
+/// The backend comes from the build (see `KeychainBackend`). Data protection items are written
+/// with `kSecAttrAccessibleAfterFirstUnlock` so background launches can read them; the
+/// file-based keychain ignores that attribute.
 public final class KeychainStore {
     public static var defaultService: String { AppIdentity.current.keychainService }
+    public static var defaultBackend: KeychainBackend { AppIdentity.current.keychainBackend }
 
     private let service: String
+    private let backend: KeychainBackend
 
-    public init(service: String = KeychainStore.defaultService) {
+    public init(
+        service: String = KeychainStore.defaultService,
+        backend: KeychainBackend = KeychainStore.defaultBackend
+    ) {
         self.service = service
+        self.backend = backend
     }
 
     // MARK: - String API
@@ -44,11 +51,7 @@ public final class KeychainStore {
         // see "not found", both fall back to add, and the second hits
         // errSecDuplicateItem. Accessibility is set on add only — passing it to
         // SecItemUpdate is not portable across macOS versions.
-        var addQuery = baseQuery(account: key)
-        addQuery[kSecValueData as String] = data
-        addQuery[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
-
-        let addStatus = SecItemAdd(addQuery as CFDictionary, nil)
+        let addStatus = SecItemAdd(addQuery(account: key, data: data) as CFDictionary, nil)
         switch addStatus {
         case errSecSuccess:
             return
@@ -59,10 +62,10 @@ public final class KeychainStore {
                 updateAttrs as CFDictionary
             )
             guard updateStatus == errSecSuccess else {
-                throw KeychainError.unhandled(updateStatus)
+                throw KeychainError(status: updateStatus)
             }
         default:
-            throw KeychainError.unhandled(addStatus)
+            throw KeychainError(status: addStatus)
         }
     }
 
@@ -91,7 +94,7 @@ public final class KeychainStore {
         case errSecItemNotFound:
             return nil
         default:
-            throw KeychainError.unhandled(status)
+            throw KeychainError(status: status)
         }
     }
 
@@ -99,30 +102,49 @@ public final class KeychainStore {
     public func delete(_ key: String) throws {
         let status = SecItemDelete(baseQuery(account: key) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unhandled(status)
+            throw KeychainError(status: status)
         }
     }
 
     /// Test helper: removes every item under `service`.
     public func deleteAll() throws {
-        let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: service,
-        ]
-        let status = SecItemDelete(query as CFDictionary)
-        guard status == errSecSuccess || status == errSecItemNotFound else {
-            throw KeychainError.unhandled(status)
+        let query = serviceQuery()
+        // The file-based keychain deletes one match per call, so repeat until none is left.
+        var status = SecItemDelete(query as CFDictionary)
+        while status == errSecSuccess {
+            status = SecItemDelete(query as CFDictionary)
+        }
+        guard status == errSecItemNotFound else {
+            throw KeychainError(status: status)
         }
     }
 
-    // MARK: - Private
+    // MARK: - Queries
+
+    func addQuery(account: String, data: Data) -> [String: Any] {
+        var query = baseQuery(account: account)
+        query[kSecValueData as String] = data
+        if backend == .dataProtection {
+            query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
+        }
+        return query
+    }
 
     private func baseQuery(account: String) -> [String: Any] {
-        [
+        var query = serviceQuery()
+        query[kSecAttrAccount as String] = account
+        return query
+    }
+
+    private func serviceQuery() -> [String: Any] {
+        var query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
-            kSecAttrAccount as String: account,
         ]
+        if backend == .dataProtection {
+            query[kSecUseDataProtectionKeychain as String] = true
+        }
+        return query
     }
 
 }

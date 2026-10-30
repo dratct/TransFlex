@@ -32,6 +32,13 @@ Provider adapters share a small contract through `LLMProvider`, `LLMEvent`, requ
 
 Provider API keys are stored in Keychain. OpenAI-compatible header values are also kept in Keychain; `providers.json` stores metadata and header names only.
 
+Each build uses one of two keychains, fixed at build time through the `TransFlexKeychainBackend` Info.plist key (see `KeychainBackend` and docs/decisions/2026-10-20-keychain-data-protection-21b6.md):
+
+- Team-signed builds (a local `Config/Local.xcconfig`, or a Developer ID release) use the data protection keychain under the access group `<TEAM_ID>.<bundle id>`. Access follows the team and bundle ID, so rebuilds and updates read the same items without prompts.
+- Ad-hoc builds (CI tests, earlier unsigned releases, contributors without a team) use the file-based login keychain. Its per-item ACL records the app's code hash, so macOS asks for the login password again after each rebuild.
+
+The two keychains do not share items, and nothing migrates between them: switching a build from ad-hoc to team signing, or to another team, means entering the keys again.
+
 Provider errors and URLs pass through secret redaction before being logged or surfaced. Network transport is HTTPS-only except explicit localhost HTTP for OpenAI-compatible development endpoints. The app has no telemetry.
 
 ## Onboarding Flow
@@ -46,4 +53,4 @@ The dedicated welcome window appears on first launch. If the user closes it with
 
 - The UI layer is intentionally AppKit/SwiftUI mixed because non-activating panels, LSUIElement behavior, Settings routing, and global hotkeys need AppKit control points.
 - `PresetEditor.swift` and `PopupView.swift` are the largest files. They are still cohesive, but future feature work should split them only when new behavior creates a clear subcomponent boundary.
-- Release CI/CD is wired for unsigned alpha artifacts by default. Developer ID signing and notarization are available when Apple credentials are configured.
+- Release CI/CD signs every artifact with Developer ID and notarizes it; it fails without the Apple credentials.

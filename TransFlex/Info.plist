@@ -35,6 +35,8 @@
 	<string>NSApplication</string>
 	<key>TransFlexApplicationSupportDirectoryName</key>
 	<string>$(TRANSFLEX_APP_SUPPORT_DIR)</string>
+	<key>TransFlexKeychainBackend</key>
+	<string>$(TRANSFLEX_KEYCHAIN_BACKEND)</string>
 	<key>TransFlexKeychainService</key>
 	<string>$(TRANSFLEX_KEYCHAIN_SERVICE)</string>
 </dict>

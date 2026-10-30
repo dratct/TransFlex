@@ -108,7 +108,7 @@ Return concise Markdown with these sections:
 3. `Release Notes Draft`
    - Highlights grounded in commits/diff.
    - Compatibility notes: macOS 13 Ventura or later, universal Intel/Apple
-     Silicon support, and unsigned vs signed/notarized status.
+     Silicon support, and signed/notarized status.
 4. `Required Gates`
    - Commands/checks to run before tagging.
    - CI or GitHub Release checks that cannot be verified locally.

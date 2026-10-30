@@ -30,6 +30,8 @@ defaults delete io.aiaz.transflex KeyboardShortcuts_openPopup
 
 Use `KeychainStore.exists(_:)` when probing for configuration. Reading a protected item can trigger an authentication prompt.
 
+Ad-hoc builds prompt for the login password after every rebuild because the file-based keychain ties each item to the app's code hash. Team-signed builds use the data protection keychain and do not prompt. A team-signed build without its provisioning profile gets `-34018` (`KeychainError.missingEntitlement`) instead of falling back.
+
 ## XcodeGen
 
 `project.yml` owns project structure. Regenerate after adding source folders, packages, targets, or build settings:

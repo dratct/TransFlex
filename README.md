@@ -1,8 +1,8 @@
 # TransFlex
 
-Native macOS quick-translation app: global hotkey `Option+Q` opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
+Native macOS quick-translation app: global hotkey `Option+T` (`Option+Q` in the Debug build) opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
 
-> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Unsigned alpha releases are the default; signed/notarized release mode is wired for GitHub Actions when Apple Developer ID and notary secrets are configured.
+> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Releases are signed with Developer ID and notarized; the release workflow fails when the Apple secrets are missing.
 
 ## Requirements
 
@@ -22,7 +22,7 @@ scripts/build.sh
 open DerivedData/Build/Products/Debug/TransFlexDev.app
 ```
 
-TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
+TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` (`Option+T` in Release builds) to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
 
 ## Build
 
@@ -32,7 +32,7 @@ scripts/build.sh --release # Release build
 scripts/build.sh --no-gen  # Skip XcodeGen when project is already current
 ```
 
-The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default, and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
+The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default (or with your Apple team when `Config/Local.xcconfig` exists; see [docs/how-to/development-workflows.md](docs/how-to/development-workflows.md)), and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
 
 Debug and Release use separate app identities so you can run both without mixing data:
 
@@ -49,9 +49,9 @@ MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
 
 ## Release
 
-Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The phase 1 artifact is named like `TransFlex-0.2.0-macos-universal-unsigned.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
+Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The artifact is named like `TransFlex-0.2.0-macos-universal-signed-notarized.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
 
-Unsigned alpha artifacts are not notarized, so Gatekeeper can block them on tester machines. Signed and notarized releases require Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
+Signing and notarization need Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
 
 AI-assisted release review is handled by the project skill `transflex-release-manager` for Codex CLI and Claude Code. The skill inspects tags, commits, diffs, release automation, and current platform docs before recommending a version, release notes, gates, and approval commands. It does not tag, push, or publish without explicit approval.
 

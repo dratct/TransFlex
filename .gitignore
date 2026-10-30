@@ -60,3 +60,8 @@ screenshots/
 # Git worktrees
 .worktrees/
 worktrees/
+
+# Per-machine signing (see Config/Local.xcconfig.example)
+Config/Local.xcconfig
+Config/DeveloperID.generated.xcconfig
+*.provisionprofile
