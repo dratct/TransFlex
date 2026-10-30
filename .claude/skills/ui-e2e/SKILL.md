@@ -17,11 +17,13 @@ target text field.
 
 ## 1. Build and launch
 
-- `make build-fast` — rebuild, reset Debug privacy grants, relaunch.
+- `make build-fast` — rebuild, reset Debug privacy grants (ad-hoc builds only), relaunch.
 - `make build-fresh` — first-launch state (defaults, presets, history wiped;
   Keychain API keys kept). Only when the flow under test is onboarding.
 - Ad-hoc signing changes the signature on every build, so Accessibility is
   always off after a build. Expect the permission card on the first shortcut.
+  With `Config/Local.xcconfig` (team signing) the grants survive rebuilds;
+  `make build-fresh` still resets them.
 
 ## 2. Find the bound shortcuts
 

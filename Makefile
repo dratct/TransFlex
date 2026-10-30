@@ -9,15 +9,18 @@ DEBUG_SUPPORT_DIR := $(HOME)/Library/Application Support/TransFlexDev
 RELEASE_BUNDLE_ID := io.aiaz.transflex
 # Ad-hoc unless Config/Local.xcconfig opts this machine into team signing.
 TEST_SIGNING := $(if $(wildcard Config/Local.xcconfig),,CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES)
+# Team-signed builds keep their designated requirement, so macOS keeps honouring the
+# privacy grants across rebuilds; only ad-hoc builds need them reset.
+BUILD_PERMISSIONS_RESET := $(if $(wildcard Config/Local.xcconfig),,permissions-reset)
 # An App Store Connect team API key for provisioning without an Xcode account.
 ASC_AUTH := $(if $(ASC_KEY_PATH),-authenticationKeyPath "$(ASC_KEY_PATH)" -authenticationKeyID "$(ASC_KEY_ID)" -authenticationKeyIssuerID "$(ASC_ISSUER_ID)")
 
 .PHONY: permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
 
-build: kill-debug _build permissions-reset open-debug
+build: kill-debug _build $(BUILD_PERMISSIONS_RESET) open-debug
 	@echo "==> launched $(DEBUG_APP)"
 
-build-fast: kill-debug _build-fast permissions-reset open-debug
+build-fast: kill-debug _build-fast $(BUILD_PERMISSIONS_RESET) open-debug
 	@echo "==> launched $(DEBUG_APP)"
 
 build-fresh: kill-debug _build fresh-reset open-debug
