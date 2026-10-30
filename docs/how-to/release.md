@@ -225,15 +225,35 @@ embedded provisioning profile. Create the signing material once, as the Account
 Holder, on a trusted Mac:
 
 1. Keychain Access → Certificate Assistant → Request a Certificate From a
-   Certificate Authority, saved to disk.
+   Certificate Authority, saved to disk. The private key stays in the login
+   keychain; Apple never receives it.
 2. developer.apple.com → Certificates → Developer ID Application (G2 Sub-CA),
-   upload the request, download and open the certificate, then export it with
-   its private key as a password-protected `.p12`.
-3. Identifiers → register the explicit App ID `io.aiaz.transflex`.
-4. Profiles → Developer ID → that App ID and certificate; download the profile.
-5. App Store Connect → Users and Access → Integrations → Team Keys → a key with
+   upload the request and download the certificate. Open it and add it to the
+   **login** keychain, not iCloud, so it pairs with the private key.
+3. Check that the identity is valid:
+
+   ```bash
+   security find-identity -v -p codesigning | grep "Developer ID Application"
+   ```
+
+   If it only shows up without `-v`, the Mac lacks the Developer ID G2
+   intermediate certificate. Add it, then check again:
+
+   ```bash
+   curl -fsSLo DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+   security add-certificates -k ~/Library/Keychains/login.keychain-db DeveloperIDG2CA.cer
+   ```
+
+   CI runners already trust this intermediate; it is not a secret.
+4. Keychain Access → login → My Certificates → right-click the Developer ID
+   Application certificate → Export as a password-protected `.p12`. The `.p12`
+   holds the certificate and its private key; the downloaded `.cer` alone cannot
+   sign. Back up the `.p12` and its password outside the repository.
+5. Identifiers → register the explicit App ID `io.aiaz.transflex`.
+6. Profiles → Developer ID → that App ID and certificate; download the profile.
+7. App Store Connect → Users and Access → Integrations → Team Keys → a key with
    the Developer role for notarization.
-6. Set the secrets, then delete the local `.p12` and `.p8` files:
+8. Set the secrets, then delete the local `.p12` and `.p8` files:
 
    ```bash
    base64 -i developer_id.p12 | gh secret set APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64
