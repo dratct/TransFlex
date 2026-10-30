@@ -18,10 +18,6 @@ on:
         description: Mark the GitHub Release as a prerelease
         default: true
         type: boolean
-      signed:
-        description: Build, notarize, and publish a signed Developer ID artifact
-        default: false
-        type: boolean
 
 permissions:
   contents: write
@@ -34,7 +30,6 @@ jobs:
 
     env:
       APP_PATH: DerivedData/Build/Products/Release/TransFlex.app
-      SIGNED_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.signed || 'false' }}
       DRAFT_RELEASE: ${{ github.event_name != 'workflow_dispatch' && 'false' || inputs.draft }}
       PRERELEASE_RELEASE: ${{ github.event_name != 'workflow_dispatch' && (contains(github.ref_name, '-') && 'true' || 'false') || inputs.prerelease }}
 
@@ -73,7 +68,6 @@ jobs:
         run: git checkout --force "${{ steps.version.outputs.tag }}"
 
       - name: Require signing secrets
-        if: env.SIGNED_REQUESTED == 'true'
         env:
           APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64 }}
           APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD }}
@@ -81,6 +75,7 @@ jobs:
           APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
           APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
+          APPLE_DEVELOPER_ID_PROFILE_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_PROFILE_BASE64 }}
         run: |
           missing=()
           for name in \
@@ -89,14 +84,15 @@ jobs:
             APPLE_TEAM_ID \
             APPLE_NOTARY_KEY_ID \
             APPLE_NOTARY_ISSUER_ID \
-            APPLE_NOTARY_KEY_BASE64
+            APPLE_NOTARY_KEY_BASE64 \
+            APPLE_DEVELOPER_ID_PROFILE_BASE64
           do
             if [[ -z "${!name}" ]]; then
               missing+=("$name")
             fi
           done
           if [[ "${#missing[@]}" -gt 0 ]]; then
-            printf 'error: signed release requested but missing secrets: %s\n' "${missing[*]}" >&2
+            printf 'error: releases are signed and notarized; missing secrets: %s\n' "${missing[*]}" >&2
             exit 1
           fi
 
@@ -107,11 +103,11 @@ jobs:
         run: make test
 
       - name: Import Developer ID certificate
-        if: env.SIGNED_REQUESTED == 'true'
         id: signing
         env:
           APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64 }}
           APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD: ${{ secrets.APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD }}
+          APPLE_DEVELOPER_ID_PROFILE_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_PROFILE_BASE64 }}
         run: |
           CERTIFICATE_PATH="$RUNNER_TEMP/developer_id_application.p12"
           KEYCHAIN_PATH="$RUNNER_TEMP/transflex-signing.keychain-db"
@@ -127,7 +123,6 @@ jobs:
           security import "$CERTIFICATE_PATH" \
             -P "$APPLE_DEVELOPER_ID_APPLICATION_CERT_PASSWORD" \
             -T /usr/bin/codesign \
-            -T /usr/bin/security \
             -T /usr/bin/xcodebuild \
             -k "$KEYCHAIN_PATH"
           rm -f "$CERTIFICATE_PATH"
@@ -142,37 +137,47 @@ jobs:
 
           echo "developer_id_application=$identity" >> "$GITHUB_OUTPUT"
 
-      - name: Build unsigned Release app
-        if: env.SIGNED_REQUESTED != 'true'
-        env:
-          MARKETING_VERSION: ${{ steps.version.outputs.version }}
-          CURRENT_PROJECT_VERSION: ${{ steps.version.outputs.build_number }}
-        run: scripts/build.sh --release --no-gen
+          # The Developer ID profile authorises the keychain-access-groups entitlement.
+          PROFILE_PATH="$RUNNER_TEMP/developer_id.provisionprofile"
+          printf '%s' "$APPLE_DEVELOPER_ID_PROFILE_BASE64" | base64 --decode > "$PROFILE_PATH"
+          security cms -D -i "$PROFILE_PATH" > "$RUNNER_TEMP/developer_id_profile.plist"
+          profile_uuid="$(/usr/libexec/PlistBuddy -c 'Print :UUID' "$RUNNER_TEMP/developer_id_profile.plist")"
+          profile_name="$(/usr/libexec/PlistBuddy -c 'Print :Name' "$RUNNER_TEMP/developer_id_profile.plist")"
+          # Xcode 16 and later read UserData; older Xcode reads MobileDevice.
+          for dir in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+                     "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            mkdir -p "$dir"
+            cp "$PROFILE_PATH" "$dir/$profile_uuid.provisionprofile"
+          done
+          rm -f "$PROFILE_PATH" "$RUNNER_TEMP/developer_id_profile.plist"
+          echo "profile_uuid=$profile_uuid" >> "$GITHUB_OUTPUT"
+          echo "profile_name=$profile_name" >> "$GITHUB_OUTPUT"
 
       - name: Build signed Release app
-        if: env.SIGNED_REQUESTED == 'true'
         env:
           MARKETING_VERSION: ${{ steps.version.outputs.version }}
           CURRENT_PROJECT_VERSION: ${{ steps.version.outputs.build_number }}
           TRANSFLEX_SIGNING_MODE: developer-id
           DEVELOPER_ID_APPLICATION: ${{ steps.signing.outputs.developer_id_application }}
+          DEVELOPER_ID_PROFILE_NAME: ${{ steps.signing.outputs.profile_name }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: scripts/build.sh --release --no-gen
 
       - name: Verify built app
+        env:
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
         run: |
           scripts/verify-release-app.sh \
             --app "$APP_PATH" \
             --expected-min-macos 13.0 \
             --expected-marketing-version "${{ steps.version.outputs.version }}" \
-            --expected-build-version "${{ steps.version.outputs.build_number }}"
+            --expected-build-version "${{ steps.version.outputs.build_number }}" \
+            --signed-team "$APPLE_TEAM_ID"
 
       - name: Verify code signature
-        if: env.SIGNED_REQUESTED == 'true'
         run: codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
       - name: Notarize and staple
-        if: env.SIGNED_REQUESTED == 'true'
         env:
           APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
@@ -199,7 +204,7 @@ jobs:
         id: package
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          SIGNING_LABEL: ${{ env.SIGNED_REQUESTED == 'true' && 'signed-notarized' || 'unsigned' }}
+          SIGNING_LABEL: signed-notarized
         run: scripts/package-release.sh "$APP_PATH"
 
       - name: Create release notes
@@ -219,11 +224,7 @@ jobs:
             echo
             echo "- Requires macOS 13 Ventura or later."
             echo "- Universal app for Intel and Apple Silicon."
-            if [[ "$SIGNED_REQUESTED" == "true" ]]; then
-              echo "- Signed with Developer ID and notarized by Apple."
-            else
-              echo "- This alpha artifact is unsigned and not notarized."
-            fi
+            echo "- Signed with Developer ID and notarized by Apple."
             echo
             cat "$GENERATED_NOTES"
           } > "$RELEASE_NOTES"
@@ -254,7 +255,12 @@ jobs:
         if: always()
         env:
           APPLE_NOTARY_KEY_ID: ${{ secrets.APPLE_NOTARY_KEY_ID }}
+          PROFILE_UUID: ${{ steps.signing.outputs.profile_uuid }}
         run: |
+          if [[ -n "$PROFILE_UUID" ]]; then
+            rm -f "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$PROFILE_UUID.provisionprofile"
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$PROFILE_UUID.provisionprofile"
+          fi
           security delete-keychain "$RUNNER_TEMP/transflex-signing.keychain-db" 2>/dev/null || true
           rm -f "$RUNNER_TEMP/developer_id_application.p12"
           rm -f "$RUNNER_TEMP/AuthKey_${APPLE_NOTARY_KEY_ID}.p8"
