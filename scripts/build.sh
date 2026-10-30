@@ -13,7 +13,7 @@
 #
 # Signing modes:
 #   TRANSFLEX_SIGNING_MODE=auto         # default: team signing from Config/Local.xcconfig when it
-#                                       # exists, otherwise ad-hoc (CI, unsigned alpha builds)
+#                                       # exists, otherwise ad-hoc (CI tests, contributors without a team)
 #   TRANSFLEX_SIGNING_MODE=adhoc        # ad-hoc only; refuses to run while Local.xcconfig exists
 #   TRANSFLEX_SIGNING_MODE=developer-id # requires DEVELOPER_ID_APPLICATION, APPLE_TEAM_ID and
 #                                       # DEVELOPER_ID_PROFILE_NAME (an installed Developer ID profile)

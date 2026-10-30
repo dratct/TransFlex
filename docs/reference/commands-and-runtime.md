@@ -42,7 +42,7 @@ dist/TransFlex-<version>-macos-universal-signed-notarized.zip
 dist/TransFlex-<version>-macos-universal-signed-notarized.zip.sha256
 ```
 
-The unsigned artifact is the default alpha output. The signed-notarized artifact is produced only when the release workflow runs with `signed: true` and the Apple signing/notarization secrets are configured.
+The release workflow always publishes the signed-notarized artifact and fails when the Apple signing/notarization secrets are missing. The `unsigned` label is for local packaging only.
 
 Verify the built app before packaging:
 

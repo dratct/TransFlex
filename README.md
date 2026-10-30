@@ -2,7 +2,7 @@
 
 Native macOS quick-translation app: global hotkey `Option+T` (`Option+Q` in the Debug build) opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
 
-> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Unsigned alpha releases are the default; signed/notarized release mode is wired for GitHub Actions when Apple Developer ID and notary secrets are configured.
+> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Releases are signed with Developer ID and notarized; the release workflow fails when the Apple secrets are missing.
 
 ## Requirements
 
@@ -49,9 +49,9 @@ MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
 
 ## Release
 
-Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The phase 1 artifact is named like `TransFlex-0.2.0-macos-universal-unsigned.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
+Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The artifact is named like `TransFlex-0.2.0-macos-universal-signed-notarized.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
 
-Unsigned alpha artifacts are not notarized, so Gatekeeper can block them on tester machines. Signed and notarized releases require Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
+Signing and notarization need Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
 
 AI-assisted release review is handled by the project skill `transflex-release-manager` for Codex CLI and Claude Code. The skill inspects tags, commits, diffs, release automation, and current platform docs before recommending a version, release notes, gates, and approval commands. It does not tag, push, or publish without explicit approval.
 

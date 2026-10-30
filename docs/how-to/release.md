@@ -10,9 +10,10 @@ tags after publication; publish a new tag instead.
 
 ## Release Policy
 
-TransFlex is in active alpha. The default public artifact is an unsigned
-unnotarized universal macOS app. Signed and notarized artifacts are supported by
-the workflow, but only when Apple Developer ID and notary secrets are configured.
+TransFlex is in active alpha. Every public artifact is a universal macOS app
+signed with Developer ID and notarized by Apple. The workflow fails when the
+Apple Developer ID and notary secrets are missing; it never falls back to an
+unsigned build.
 
 Release tags must be semantic versions with a leading `v`:
 
@@ -140,18 +141,18 @@ The `Release` GitHub Actions workflow checks out the tag, runs tests, builds
 `13.0`, verifies `arm64` and `x86_64`, packages the app, writes a checksum,
 uploads a 7-day workflow artifact, and creates or updates the GitHub Release.
 
-Unsigned alpha asset names:
+Asset names:
 
 ```text
-TransFlex-0.2.0-macos-universal-unsigned.zip
-TransFlex-0.2.0-macos-universal-unsigned.zip.sha256
+TransFlex-0.2.0-macos-universal-signed-notarized.zip
+TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 ```
 
 Release notes must state:
 
 - Requires macOS 13 Ventura or later.
 - Universal app for Intel and Apple Silicon.
-- The alpha artifact is unsigned and not notarized.
+- Signed with Developer ID and notarized by Apple.
 
 ## Manual Dispatch
 
@@ -165,7 +166,6 @@ Inputs:
 | `version` | Semantic version without leading `v`, such as `0.2.0` or `0.2.0-alpha.1`. |
 | `draft` | Use `true` to review a draft, or `false` to publish immediately. |
 | `prerelease` | Use `false` for stable tags such as `0.1.0`; use `true` for versions such as `0.1.0-alpha.1`. |
-| `signed` | Use `false` for unsigned alpha artifacts; use `true` only after signing secrets are configured. |
 
 Manual dispatch requires the matching remote tag to exist. For
 `version=0.2.0`, the workflow checks for `refs/tags/v0.2.0`. If the GitHub
@@ -182,22 +182,19 @@ publishing or updating a release.
 After the workflow finishes, review the GitHub Release before announcing it:
 
 1. Confirm the release tag matches the approved proposal.
-2. Confirm the asset name includes `macos-universal-unsigned` or
-   `macos-universal-signed-notarized`.
+2. Confirm the asset name includes `macos-universal-signed-notarized`.
 3. Confirm the `.sha256` asset is present.
 4. Confirm release notes state macOS 13 Ventura or later.
 5. Confirm release notes state Intel and Apple Silicon support.
-6. Confirm release notes correctly state whether the artifact is unsigned or
-   signed and notarized.
+6. Confirm release notes state the artifact is signed and notarized.
 7. Download the zip and checksum from the GitHub Release.
 8. Verify the checksum:
 
 ```bash
-shasum -a 256 -c TransFlex-0.2.0-macos-universal-unsigned.zip.sha256
+shasum -a 256 -c TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 ```
 
-For unsigned alpha builds, expect Gatekeeper to warn testers because the app is
-not notarized. For signed/notarized builds, also verify:
+Then verify the signature, the stapled ticket and Gatekeeper:
 
 ```bash
 unzip TransFlex-0.2.0-macos-universal-signed-notarized.zip
@@ -210,7 +207,7 @@ If the release was created as a draft, publish it only after these checks pass.
 
 ## Signed And Notarized Release
 
-Signed releases require these GitHub Secrets:
+Every release requires these GitHub Secrets:
 
 | Secret | Purpose |
 |---|---|
@@ -244,8 +241,7 @@ Holder, on a trusted Mac:
    base64 -i AuthKey_ABC123.p8 | gh secret set APPLE_NOTARY_KEY_BASE64
    ```
 
-When the secrets are configured, run the `Release` workflow with `signed=true`.
-The workflow imports the certificate into a temporary keychain, installs the
+With the secrets configured, every `Release` run (tag push or manual dispatch) imports the certificate into a temporary keychain, installs the
 profile, builds with Developer ID signing and hardened runtime,
 verifies the signature, the embedded profile and the keychain access group
 (`scripts/verify-release-app.sh --signed-team`), submits the
@@ -262,9 +258,9 @@ cleanup step removes temporary signing files, the installed profile and the
 temporary keychain.
 
 A new Developer ID certificate needs a new profile: regenerate the profile for
-the new certificate and update both secrets together. Users of an unsigned alpha
-enter their API keys again after moving to a signed release, because the two
-builds use different keychains.
+the new certificate and update both secrets together. Users of an earlier
+unsigned release enter their API keys again after moving to a signed release,
+because the two builds use different keychains.
 
 ## Hotfix Flow
 
