@@ -9,9 +9,9 @@
 <style>
 /* Tokens mirror docs/design/DESIGN.md. NSColor semantic values are approximated for the browser. */
 :root {
-  --accent: #0F7A5F; --accent-hi: #13906F; --on-accent: #fff; --accent-soft: rgba(15,122,95,.09);
+  --accent: #0F7A5F; --accent-text: #0F7A5F; --accent-hi: #13906F; --on-accent: #fff; --accent-soft: rgba(15,122,95,.09);
   --brand: #21B38C; --brand-deep: #0B5E4A;
-  --window: #ECECEE; --sheet: #FFFFFF; --sheet-2: #F7F7F8; --material: rgba(246,246,248,.86);
+  --window: #ECECEE; --sheet: #FFFFFF; --sheet-2: #F7F7F8; --material: rgba(246,246,248,.94);
   --label: #1D1D1F; --label-2: #6E6E73; --label-3: #8E8E93; --hair: rgba(0,0,0,.09); --hair-2: rgba(0,0,0,.14);
   --control: #FFFFFF; --control-edge: rgba(0,0,0,.13); --fill: rgba(0,0,0,.05); --fill-2: rgba(0,0,0,.08);
   --warn: #B25000; --warn-soft: rgba(255,149,0,.12); --danger: #D70015; --danger-soft: rgba(255,59,48,.10); --ok: #1E8E3E;
@@ -22,8 +22,8 @@
   --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", "Helvetica Neue", sans-serif;
 }
 .dark {
-  --accent: #0E8466; --accent-hi: #12A07B; --accent-soft: rgba(61,214,172,.10);
-  --window: #1C1C1E; --sheet: #232325; --sheet-2: #2A2A2D; --material: rgba(36,36,38,.84);
+  --accent: #0E8466; --accent-text: #3DD6AC; --accent-hi: #12A07B; --accent-soft: rgba(61,214,172,.10);
+  --window: #1C1C1E; --sheet: #232325; --sheet-2: #2A2A2D; --material: rgba(36,36,38,.93);
   --label: #F5F5F7; --label-2: #A1A1A6; --label-3: #7C7C82; --hair: rgba(255,255,255,.08); --hair-2: rgba(255,255,255,.13);
   --control: #3A3A3C; --control-edge: rgba(255,255,255,.10); --fill: rgba(255,255,255,.06); --fill-2: rgba(255,255,255,.10);
   --warn: #FFB340; --warn-soft: rgba(255,159,10,.14); --danger: #FF6961; --danger-soft: rgba(255,69,58,.14); --ok: #30D158;
@@ -207,6 +207,25 @@ figcaption b { color: var(--label); font-weight: 600; }
 .choice div.on { box-shadow: 0 0 0 2px var(--accent); }
 .choice small { color: var(--label-3); font-weight: 400; }
 .progress { display: flex; gap: 6px; } .progress i { width: 22px; height: 4px; border-radius: 2px; background: var(--fill-2); } .progress i.on { background: var(--accent); }
+
+/* Airy columns (chosen 2026-11-01): text sits on the near-opaque popup material, no inner sheet */
+.popup .sheet, .win .sheet { margin: 0; background: none; box-shadow: none; border-radius: 0; padding: 12px 28px 0; }
+.popup .half, .win .half { padding: 0 26px; background: none; position: relative; }
+.popup .half:first-child, .win .half:first-child { padding-left: 0; }
+.popup .half:last-child, .win .half:last-child { padding-right: 0; }
+.popup .half + .half, .win .half + .half { border: 0; }
+.popup .half + .half::before, .win .half + .half::before { content: ""; position: absolute; left: 0; top: 0; bottom: 8px; width: 1px;
+  background: linear-gradient(transparent, var(--hair-2) 18%, var(--hair-2) 82%, transparent); }
+.popup .sheet.stack .half, .win .sheet.stack .half { padding: 0; }
+.popup .sheet.stack .half + .half { padding-top: 16px; }
+.popup .sheet.stack .half + .half::before { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--hair-2) 18%, var(--hair-2) 82%, transparent); }
+.popup .lang, .win .lang { height: auto; padding: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label-3); }
+.popup .lang .muted, .win .lang .muted { text-transform: none; letter-spacing: 0; }
+.popup .out .lang, .win .out .lang { color: var(--accent-text); }
+.popup .text, .win .text { padding: 0 0 12px; font-size: 15px; line-height: 1.6; color: var(--label-2); }
+.popup .out .text, .win .out .text { font-size: 17px; line-height: 1.6; color: var(--label); }
+.popup .text.ph, .win .text.ph { color: var(--label-3); }
 </style>
 </head>
 <body>
@@ -247,7 +266,7 @@ figcaption b { color: var(--label); font-weight: 600; }
 <main>
 
 <section>
-  <header><h2>Popup</h2><p>One sheet, split by a hairline: what you wrote on the left, the translation on the right, each under its language. One filled button per state. Shown at 860 × 470 — 60% of a 1440 × 900 screen.</p></header>
+  <header><h2>Popup</h2><p>Airy columns: what you wrote on the left, the translation on the right in larger type, directly on a near-opaque material and divided by a fading rule. No boxes. One filled button per state. Shown at 860 × 470 — 60% of a 1440 × 900 screen.</p></header>
   <div class="stage">
     <figure>
       <div class="popup" style="width:860px;height:470px">

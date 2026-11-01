@@ -1,10 +1,11 @@
 ---
 colors:
   accent: { light: "#0F7A5F", dark: "#0E8466" }   # AccentColor asset; shown when system accent = Multicolor
+  accent-text: { light: "#0F7A5F", dark: "#3DD6AC" }  # small accent text (the Translation label); 9.1:1 on dark
   on-accent: "#FFFFFF"                              # 5.29:1 light, 4.66:1 dark
   brand: "#21B38C"                                  # logo, app icon, Welcome illustration only
   surface: windowBackgroundColor                    # window and popup body
-  content: textBackgroundColor                      # source and result panes, editors
+  content: textBackgroundColor                      # cards, notices, form groups
   on-surface: labelColor
   on-surface-variant: secondaryLabelColor           # labels, metadata
   faint: tertiaryLabelColor                         # placeholders, key hints, cost
@@ -15,7 +16,7 @@ typography:
   family: "SF Pro (system font through SwiftUI text styles)"
   fallback: ["-apple-system", "Helvetica Neue", "sans-serif"]   # HTML mockups only
   title: ".title3 — 15pt semibold"     # window and sheet titles
-  reading: "14pt regular, line spacing 3"   # source and result text in the popup
+  reading: "15pt original / 17pt translation, line height 1.6"   # popup columns
   body: ".body — 13pt"                 # controls, form rows, list rows
   caption: ".caption — 11pt"           # key hints, cost, footers, metadata
 spacing: [4, 8, 12, 16, 24]
@@ -58,18 +59,19 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 - Accent is used for: the one prominent button of a state, focus rings,
   selection, toggles, and the result pane's 2pt leading rule.
   Never for small text: dark `accent` on `surface` is 3.6:1.
-- A pane is `content` at full opacity on top of the popup material, so text
-  never sits directly on blur.
+- The popup material is near-opaque (94% light, 93% dark) because text sits
+  on it directly; with Reduce transparency it is fully opaque `surface`.
 - `danger` is only for destructive buttons (Delete All) and the error icon.
   `warning` is unused unless a warning state is added.
 
 ## Typography
 
-- SwiftUI text styles only (`.title3`, `.body`, `.caption`). The popup's
-  reading text is `.system(size: 14)`, the one fixed size, so translations
-  stay readable at the popup's distance.
-- At most three sizes per window: popup 14 / 13 / 11; Settings and History
-  15 / 13 / 11.
+- SwiftUI text styles (`.title3`, `.body`, `.caption`) everywhere except the
+  popup's two reading sizes: Original 15pt and Translation 17pt, so the
+  translation leads by size alone, with no box around it.
+- Settings and History use three sizes (15 / 13 / 11). The popup uses four
+  (17 / 15 / 13 / 11) on purpose: the two reading sizes carry the hierarchy
+  that boxes used to.
 - Numbers (cost, token counts, character counts) use `.monospacedDigit()`,
   not a monospaced font.
 - Vietnamese: SF Pro carries every Vietnamese glyph, so no extra font is needed.
@@ -81,7 +83,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
   sections).
 - **Popup frame**
   - Popup: 60% × 60% of the visible screen, centred, minimum 520 × 360.
-    At ≥ 720pt wide the source and result panes sit side by side,
+    At ≥ 720pt wide the Original and Translation columns sit side by side,
     otherwise stacked, with the Original half capped at 38% of the height.
   - Output-only popup: 40% of the screen width, minimum 420pt. Height fits
     the content, clamped to 160pt … 60% of the screen, and grows downward
@@ -102,7 +104,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 
 ## Shapes
 
-- 12pt continuous corners on the popup window; 10pt on panes, cards and
+- 12pt continuous corners on the popup window; 10pt on cards, notices and
   sheets drawn by the app; 6pt on inner controls (search field, key hint chips).
 - System controls keep their own shapes. No radius is invented per view.
 
@@ -110,10 +112,10 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 
 | Component | Rule |
 |---|---|
-| `TranslationSheet` | One `content` sheet (radius 10, 0.5pt `outline` ring) split by a hairline: **Original** on the leading half, **Translation** on the trailing half with a 9% `accent` wash. Each half has a 34pt label row (12pt semibold, `on-surface-variant`) and its text below. Stacks vertically under 720pt wide. |
+| `TranslationColumns` | Airy columns (chosen 2026-11-01): no inner box. **Original** (15pt, `on-surface-variant`) on the leading side, **Translation** (17pt, `on-surface`) on the trailing side, 28pt side margins, 26pt gutter, divided by a 1pt rule that fades out at both ends. Labels are 11pt semibold uppercase with 0.06em tracking: `faint` for Original, `accent-text` for Translation. Under 720pt wide they stack with a horizontal fading rule. |
 | `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. No per-button tint. |
 | `KeyHint` | 10.5pt keycaps on a faint fill, radius 4. Read by VoiceOver as part of the button label ("Command Return"). |
-| `Notice` | Errors and requests never render inside the `TranslationSheet`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
+| `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
 | `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
 | `ReadsImages` | A per-preset switch the user sets. The app does not detect image support: OpenAI and Gemini model lists do not report it (checked 2026-11-01). |
@@ -146,8 +148,8 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
 - Don't put an error inside the translation. It hides the result and reads
   like translated text; use a `Notice` (owner request, 2026-11-01).
 - Don't use emoji as icons. One SF Symbol set, one weight.
-- Don't put text on raw blur; put it in a `content` sheet. Legibility must not
-  depend on what sits behind the window.
+- Don't lower the popup material's opacity below 92%. Text sits on it with no
+  box, so legibility depends on it.
 - Don't use a monospaced font for numbers or URLs in forms. It made rows in
   one form look like they came from different apps (audit D3, D13).
 - Don't let focus land on the preset picker when the popup opens. It draws
