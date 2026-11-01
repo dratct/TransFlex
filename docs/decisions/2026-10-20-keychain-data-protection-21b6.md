@@ -1,6 +1,6 @@
 # Keychain: data protection keychain for team-signed builds
 
-Status: proposed — 2026-10-20
+Status: accepted — 2026-11-01 (proposed 2026-10-20)
 
 ## Context
 
@@ -51,8 +51,9 @@ and contributors without an Apple team build ad-hoc.
 - Changing the signing team changes the access group, so keys saved under the
   previous team are no longer visible and must be entered again.
 - Release needs a paid Apple Developer Program membership and a Developer ID
-  provisioning profile in the release pipeline; unsigned alpha releases keep
-  the file-based keychain.
+  provisioning profile in the release pipeline. Every release is signed and
+  notarized, first verified with `v0.4.0-alpha.4`; users of earlier unsigned
+  releases enter their keys again once.
 - Two backends live in `KeychainStore`; CI exercises only the file-based one.
   A machine with `Config/Local.xcconfig` signs its tests with the team too, so
   the keychain holding its signing identity must be unlocked, which over SSH
