@@ -91,7 +91,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
     content and never from the last height.
   - ⌘I goes from the Output-only popup to the Popup frame. No transition
     keeps the other mode's layout.
-- The header (preset picker, attach, settings) and the footer (cost, actions)
+- The header (preset picker, History, Settings — no attach button) and the footer (cost, actions)
   are identical in both modes.
 
 ## Elevation & Depth
@@ -126,7 +126,7 @@ Popup states (footer primary in **bold**):
 
 | State | Sheet | Footer |
 |---|---|---|
-| idle | Original: editor, focused, 17pt placeholder “Type or paste text”, and at the foot of the column one 12pt `faint` tip “Images work too — drop one here or press ⌘⇧V” (one light keycap, no icon); Translation: empty | **Translate ⌘↩** |
+| idle | Original: editor, focused, 17pt placeholder “Type or paste text”, and at the foot of the column one 12pt `faint` tip “Images work too — drop one here, press ⌘⇧V, or choose a file” (one light keycap, no icon; “choose a file” opens the file picker; shown only when the preset reads images); Translation: empty | **Translate ⌘↩** |
 | streaming | Original dimmed and read-only; Translation streams with a caret | Stop esc (not prominent) |
 | done | both halves; Original editable | New ⌘N · Translate again ⌘↩ · **Copy & Close ⌘C** |
 | error, nothing received | replaced by a `Notice` card | Back to text esc + the card's own actions |
