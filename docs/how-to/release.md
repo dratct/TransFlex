@@ -225,21 +225,48 @@ embedded provisioning profile. Create the signing material once, as the Account
 Holder, on a trusted Mac:
 
 1. Keychain Access → Certificate Assistant → Request a Certificate From a
-   Certificate Authority, saved to disk.
+   Certificate Authority, saved to disk. The private key stays in the login
+   keychain; Apple never receives it.
 2. developer.apple.com → Certificates → Developer ID Application (G2 Sub-CA),
-   upload the request, download and open the certificate, then export it with
-   its private key as a password-protected `.p12`.
-3. Identifiers → register the explicit App ID `io.aiaz.transflex`.
-4. Profiles → Developer ID → that App ID and certificate; download the profile.
-5. App Store Connect → Users and Access → Integrations → Team Keys → a key with
-   the Developer role for notarization.
-6. Set the secrets, then delete the local `.p12` and `.p8` files:
+   upload the request and download the certificate. Open it and add it to the
+   **login** keychain, not iCloud, so it pairs with the private key.
+3. Check that the identity is valid:
+
+   ```bash
+   security find-identity -v -p codesigning | grep "Developer ID Application"
+   ```
+
+   If it only shows up without `-v`, the Mac lacks the Developer ID G2
+   intermediate certificate. Add it, then check again:
+
+   ```bash
+   curl -fsSLo DeveloperIDG2CA.cer https://www.apple.com/certificateauthority/DeveloperIDG2CA.cer
+   security add-certificates -k ~/Library/Keychains/login.keychain-db DeveloperIDG2CA.cer
+   ```
+
+   CI runners already trust this intermediate; it is not a secret.
+4. Keychain Access → login → My Certificates → right-click the Developer ID
+   Application certificate → Export as a password-protected `.p12`. The `.p12`
+   holds the certificate and its private key; the downloaded `.cer` alone cannot
+   sign. Back up the `.p12` and its password outside the repository.
+5. Identifiers → register the explicit App ID `io.aiaz.transflex`.
+6. Profiles → Developer ID → that App ID and certificate; download the profile.
+7. App Store Connect → Users and Access → Integrations → Team Keys → a key with
+   the Developer role for notarization. Note the Key ID and the Issuer ID shown
+   above the key list. Apple lets you download the `.p8` only once: back it up
+   before deleting local files, or a lost key means revoking it, creating a new
+   one and updating `APPLE_NOTARY_KEY_ID` and `APPLE_NOTARY_KEY_BASE64`.
+8. Set the secrets as repository secrets, not environment secrets (the release
+   job declares no environment), then delete the local `.p12` and `.p8` files:
 
    ```bash
    base64 -i developer_id.p12 | gh secret set APPLE_DEVELOPER_ID_APPLICATION_CERT_BASE64
    base64 -i TransFlex_Developer_ID.provisionprofile | gh secret set APPLE_DEVELOPER_ID_PROFILE_BASE64
    base64 -i AuthKey_ABC123.p8 | gh secret set APPLE_NOTARY_KEY_BASE64
    ```
+
+   Without `gh`, pipe each file to `pbcopy` instead and paste it under
+   Settings → Secrets and variables → Actions → New repository secret.
 
 With the secrets configured, every `Release` run (tag push or manual dispatch) imports the certificate into a temporary keychain, installs the
 profile, builds with Developer ID signing and hardened runtime,
@@ -256,6 +283,25 @@ TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 Do not print decoded certificate or API key material in logs. The workflow
 cleanup step removes temporary signing files, the installed profile and the
 temporary keychain.
+
+When notarization ends with `status: Invalid`, the run log shows only the
+submission ID. Read Apple's reasons with the notary key:
+
+```bash
+xcrun notarytool log <submission-id> \
+  --key AuthKey_<KEYID>.p8 --key-id <KEYID> --issuer <ISSUER_ID>
+```
+
+`xcodebuild build` injects `com.apple.security.get-task-allow`, which
+notarization rejects; `scripts/build.sh` turns that off for Developer ID builds
+and `verify-release-app.sh --signed-team` fails before the upload if it returns.
+
+To check a published release on a Mac with Gatekeeper on, download the zip in a
+browser (so it carries the quarantine flag), then:
+
+```bash
+spctl -a -vv -t execute TransFlex.app   # accepted, source=Notarized Developer ID
+```
 
 A new Developer ID certificate needs a new profile: regenerate the profile for
 the new certificate and update both secrets together. Users of an earlier
