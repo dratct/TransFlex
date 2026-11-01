@@ -258,6 +258,36 @@ test_verify_rejects_signed_app_without_profile() {
   assert_file_contains "$verify_err" "no embedded.provisionprofile"
 }
 
+write_get_task_allow_entitlements() {
+  cat > "$1" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>com.apple.security.get-task-allow</key><true/>
+</dict></plist>
+PLIST
+}
+
+test_verify_rejects_signed_app_with_get_task_allow() {
+  local case_dir="$TEST_TMP/verify-signed-get-task-allow"
+  mkdir -p "$case_dir"
+  write_get_task_allow_entitlements "$case_dir/app.entitlements"
+  make_fixture_app "$case_dir/TransFlex.app" dataProtection "$case_dir/app.entitlements"
+  run_verify "$case_dir/TransFlex.app" --signed-team TEAM123
+  [[ "$verify_status" -ne 0 ]] || fail "signed app requesting get-task-allow should be rejected"
+  assert_file_contains "$verify_err" "get-task-allow"
+}
+
+# CI builds an ad-hoc Release app, which xcodebuild gives get-task-allow; it is never notarized.
+test_verify_accepts_unsigned_app_with_get_task_allow() {
+  local case_dir="$TEST_TMP/verify-unsigned-get-task-allow"
+  mkdir -p "$case_dir"
+  write_get_task_allow_entitlements "$case_dir/app.entitlements"
+  make_fixture_app "$case_dir/TransFlex.app" file "$case_dir/app.entitlements"
+  run_verify "$case_dir/TransFlex.app"
+  [[ "$verify_status" -eq 0 ]] || { cat "$verify_err" >&2; fail "unsigned app with get-task-allow should verify"; }
+}
+
 test_release_create_path
 test_release_update_path
 test_regular_release_create_path
@@ -268,5 +298,7 @@ test_verify_accepts_unsigned_app_on_file_keychain
 test_verify_rejects_unsigned_app_on_data_protection_keychain
 test_verify_rejects_unsigned_app_with_access_group
 test_verify_rejects_signed_app_without_profile
+test_verify_rejects_signed_app_with_get_task_allow
+test_verify_accepts_unsigned_app_with_get_task_allow
 
 echo "==> Release script tests passed"

@@ -117,6 +117,8 @@ case "$SIGNING_MODE" in
       echo "PROVISIONING_PROFILE_SPECIFIER = $DEVELOPER_ID_PROFILE_NAME"
       echo "CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.signed.entitlements"
       echo "TRANSFLEX_KEYCHAIN_BACKEND = dataProtection"
+      # xcodebuild build injects get-task-allow, and notarization rejects it.
+      echo "CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO"
     } > "$GENERATED_XCCONFIG"
     SIGNING_SETTINGS=(
       CODE_SIGN_STYLE=Manual
