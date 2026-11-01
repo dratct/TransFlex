@@ -232,7 +232,7 @@ jobs:
           echo "release_notes=$RELEASE_NOTES" >> "$GITHUB_OUTPUT"
 
       - name: Upload release artifact for diagnostics
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: TransFlex-${{ steps.version.outputs.version }}-release-assets
           path: |
