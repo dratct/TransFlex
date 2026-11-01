@@ -82,7 +82,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 - **Popup frame**
   - Popup: 60% × 60% of the visible screen, centred, minimum 520 × 360.
     At ≥ 720pt wide the source and result panes sit side by side,
-    otherwise stacked, with the source pane capped at 40% of the height.
+    otherwise stacked, with the Original half capped at 38% of the height.
   - Output-only popup: 40% of the screen width, minimum 420pt. Height fits
     the content, clamped to 160pt … 60% of the screen, and grows downward
     with a fixed top edge. Each new Translate Selection starts from its own
@@ -110,27 +110,29 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 
 | Component | Rule |
 |---|---|
-| `ContentPane` | `content` fill, 1pt `outline`, radius 10, padding 12. Same for source and result; the result adds a 2pt `accent` leading rule. |
-| `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); the others `.bordered`. No per-button tint. |
-| `KeyHint` | Caption, `faint`, chips at radius 6. Hidden in the button's accessibility label, read as "Command Return". |
-| `ErrorBanner` | Inside the result pane: SF Symbol `exclamationmark.triangle.fill` in `danger`, a one-line title, the provider's reason (≤ 300 chars), and an action button when one fixes it (Open Settings). |
-| `EmptyState` | Centred SF Symbol (32pt, `faint`), a title in `.body` semibold, one line in `on-surface-variant`, an optional action. Used by History and the model picker. |
-| `ModelPicker` | A button showing the current model; opens a popover with a search field (focused), the list filtered to text models, grouped by family, newest first, and a "Use '<typed id>'" row. |
-| `Toast` | Bottom-trailing capsule, `.caption`, 150ms fade. Only "Copied" uses it. |
+| `TranslationSheet` | One `content` sheet (radius 10, 0.5pt `outline` ring) split by a hairline: **Original** on the leading half, **Translation** on the trailing half with a 9% `accent` wash. Each half has a 34pt label row (12pt semibold, `on-surface-variant`) and its text below. Stacks vertically under 720pt wide. |
+| `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. No per-button tint. |
+| `KeyHint` | 10.5pt keycaps on a faint fill, radius 4. Read by VoiceOver as part of the button label ("Command Return"). |
+| `Notice` | Errors and requests never render inside the `TranslationSheet`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
+| `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
+| `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, `Vision` tag where it applies, and a "Use '<typed>' as a custom model ID" row. |
+| `SettingsRow` | Label (+ optional one-line explanation in `faint`) leading, one control trailing; rows grouped in a `content` box with hairline separators. |
+| `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". |
 
 Popup states (footer primary in **bold**):
 
-| State | Source pane | Result pane | Footer |
-|---|---|---|---|
-| idle | editor, focused, placeholder | placeholder, left-aligned, `faint` | **Translate ⌘⏎** |
-| streaming | editor read-only | typing dots → streaming text | **Stop esc** |
-| done | editor, editable | result | New ⌘N · Re-translate ⌘⏎ · **Copy & Close ⌘C** |
-| error | editor, editable | partial text + `ErrorBanner` | New ⌘N · Continue ⌘P (if partial) · **Retry ⌘⏎** |
-| permission | — (Output-only) | permission card | **Open System Settings ⌘⏎** / **Done ⌘⏎** |
+| State | Sheet | Footer |
+|---|---|---|
+| idle | Original: editor, focused, placeholder; Translation: hint text | **Translate ⌘↩** |
+| streaming | Original dimmed and read-only; Translation streams with a caret | Stop esc (not prominent) |
+| done | both halves; Original editable | New ⌘N · Translate again ⌘↩ · **Copy & Close ⌘C** |
+| error, nothing received | replaced by a `Notice` card | Back to text esc + the card's own actions |
+| error, partial received | partial text marked "incomplete" + `Notice` strip | New ⌘N · strip: Continue ⌘P · **Retry ⌘↩** |
 
-The Output-only popup has no source pane and adds Show Input ⌘I to the
-footer. An error raised before anything was sent (no selection) has
-**Close esc** as its primary instead of Retry. Esc always closes the popup, whatever holds focus.
+The Output-only popup shows only the Translation half and adds Show text ⌘I.
+Its failures use the banner window, never an Output-only popup with an empty
+sheet. 4xx errors show the provider's reason; 5xx read "<Provider> is having
+trouble. Try again in a moment." Esc always closes, whatever holds focus.
 
 ## Do's and Don'ts
 
@@ -140,7 +142,10 @@ footer. An error raised before anything was sent (no selection) has
   common correction loop, and ⌘N would lose the text.
 - Don't colour buttons by meaning (blue New, purple Copy, orange Stop).
   Coloured text on glass was unreadable on light backgrounds (audit D6, R3).
-- Don't put text on raw blur; put it in a `content` pane. Legibility must not
+- Don't put an error inside the translation. It hides the result and reads
+  like translated text; use a `Notice` (owner request, 2026-11-01).
+- Don't use emoji as icons. One SF Symbol set, one weight.
+- Don't put text on raw blur; put it in a `content` sheet. Legibility must not
   depend on what sits behind the window.
 - Don't use a monospaced font for numbers or URLs in forms. It made rows in
   one form look like they came from different apps (audit D3, D13).
