@@ -140,11 +140,10 @@ bundle_id="$(plist_value CFBundleIdentifier)"
 keychain_backend="$(plist_value TransFlexKeychainBackend 2>/dev/null || true)"
 entitlements="$(codesign -d --entitlements - --xml "$APP_PATH" 2>/dev/null || true)"
 
-if grep -Fq "com.apple.security.get-task-allow" <<<"$entitlements"; then
-  fail "release app requests com.apple.security.get-task-allow; notarization rejects it."
-fi
-
 if [[ -n "$SIGNED_TEAM" ]]; then
+  if grep -Fq "com.apple.security.get-task-allow" <<<"$entitlements"; then
+    fail "signed release requests com.apple.security.get-task-allow; notarization rejects it."
+  fi
   if [[ "$keychain_backend" != "dataProtection" ]]; then
     fail "signed release must use TransFlexKeychainBackend 'dataProtection' but found '$keychain_backend'."
   fi
