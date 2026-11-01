@@ -151,6 +151,8 @@ test_developer_id_writes_target_xcconfig_and_removes_it() {
     { dump_case; fail "developer-id should use the signed entitlements"; }
   grep -Fq "generated: TRANSFLEX_KEYCHAIN_BACKEND = dataProtection" "$case_log" ||
     { dump_case; fail "developer-id should select the data protection keychain"; }
+  grep -Fq "generated: CODE_SIGN_INJECT_BASE_ENTITLEMENTS = NO" "$case_log" ||
+    { dump_case; fail "developer-id must not inject get-task-allow, which notarization rejects"; }
   if grep -Fq "PROVISIONING_PROFILE_SPECIFIER=" "$case_log"; then
     dump_case
     fail "the profile must not go on the command line, where package targets would get it"
