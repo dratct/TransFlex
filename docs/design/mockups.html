@@ -1,0 +1,477 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TransFlex — screens and states</title>
+<style>
+/* Tokens mirror docs/design/DESIGN.md. Semantic NSColor values are approximated. */
+:root {
+  --accent: #0F7A5F; --on-accent: #FFFFFF; --brand: #21B38C;
+  --surface: rgba(246,246,248,.82); --surface-solid: #F2F2F4;
+  --content: #FFFFFF; --on-surface: #1D1D1F; --on-surface-variant: #6E6E73; --faint: #8E8E93;
+  --outline: rgba(0,0,0,.12); --danger: #D70015; --control: #FFFFFF; --control-border: rgba(0,0,0,.16);
+  --form-row: #FFFFFF; --form-bg: #ECECEE; --selection: rgba(15,122,95,.14);
+  --desk: linear-gradient(135deg,#f7d9b5 0%,#e9eef5 45%,#ffffff 100%);
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px;
+  --r1: 6px; --r2: 10px; --r3: 12px;
+  --font: "SF Pro Text", -apple-system, "Helvetica Neue", sans-serif;
+}
+.dark {
+  --accent: #0E8466; --surface: rgba(40,40,42,.78); --surface-solid: #262628;
+  --content: #1E1E1E; --on-surface: #F5F5F7; --on-surface-variant: #A1A1A6; --faint: #8D8D92;
+  --outline: rgba(255,255,255,.12); --danger: #FF453A; --control: #3A3A3C; --control-border: rgba(255,255,255,.14);
+  --form-row: #2A2A2C; --form-bg: #1E1E1E; --selection: rgba(14,132,102,.35);
+  --desk: linear-gradient(135deg,#3b2a1c 0%,#1d2533 50%,#0d0d0f 100%);
+}
+.solid { --surface: var(--surface-solid); }
+* { box-sizing: border-box; }
+body { margin: 0; font: 13px/1.4 var(--font); color: var(--on-surface); background: var(--form-bg); }
+header.page { position: sticky; top: 0; z-index: 5; display: flex; gap: var(--s3); align-items: center;
+  padding: var(--s3) var(--s5); background: var(--surface-solid); border-bottom: 1px solid var(--outline); }
+header.page h1 { font-size: 15px; margin: 0 auto 0 0; }
+header.page button { font: inherit; padding: 4px 10px; border-radius: var(--r1); border: 1px solid var(--control-border);
+  background: var(--control); color: var(--on-surface); cursor: pointer; }
+header.page button[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+main { padding: var(--s5); display: grid; gap: 40px; }
+section > h2 { font-size: 15px; margin: 0 0 4px; }
+section > p.note { margin: 0 0 var(--s4); color: var(--on-surface-variant); max-width: 70ch; }
+.row { display: flex; flex-wrap: wrap; gap: var(--s5); align-items: flex-start; }
+figure { margin: 0; }
+figcaption { margin-top: var(--s2); color: var(--on-surface-variant); font-size: 11px; max-width: 520px; }
+figcaption b { color: var(--on-surface); }
+.desk { background: var(--desk); padding: var(--s5); border-radius: 8px; }
+.sample { font-size: 11px; color: var(--faint); }
+
+/* Popup */
+.popup { display: flex; flex-direction: column; background: var(--surface); backdrop-filter: blur(30px);
+  border-radius: var(--r3); border: 1px solid var(--outline); box-shadow: 0 18px 50px rgba(0,0,0,.28); overflow: hidden; }
+.popup .bar { display: flex; align-items: center; gap: var(--s2); padding: var(--s3) var(--s4) var(--s2); }
+.picker { display: inline-flex; align-items: center; gap: 6px; padding: 3px 8px; border-radius: var(--r1);
+  font-weight: 600; }
+.picker:hover { background: var(--outline); }
+.icon { width: 22px; height: 22px; display: inline-grid; place-items: center; color: var(--on-surface-variant); }
+.spacer { flex: 1; }
+.panes { flex: 1; display: flex; gap: var(--s2); padding: 0 var(--s4); min-height: 0; }
+.panes.stack { flex-direction: column; }
+.pane { flex: 1; background: var(--content); border: 1px solid var(--outline); border-radius: var(--r2);
+  padding: var(--s3); font-size: 14px; line-height: 1.5; overflow: hidden; position: relative; min-height: 0; }
+.pane.result { box-shadow: inset 2px 0 0 var(--accent); }
+.pane .ph { color: var(--faint); }
+.pane.editing { outline: 3px solid color-mix(in srgb, var(--accent) 45%, transparent); outline-offset: -1px; }
+.pane.readonly { color: var(--on-surface-variant); }
+.caret { display: inline-block; width: 1px; height: 1.1em; background: var(--on-surface); vertical-align: text-bottom; }
+.dots span { display: inline-block; width: 6px; height: 6px; margin-right: 4px; border-radius: 50%; background: var(--faint); }
+.foot { display: flex; align-items: center; gap: var(--s3); padding: var(--s3) var(--s4); }
+.cost { font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+.btn { display: inline-flex; align-items: center; gap: 6px; font: inherit; padding: 4px 10px; border-radius: var(--r1);
+  background: var(--control); color: var(--on-surface); border: 1px solid var(--control-border); white-space: nowrap; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.btn.danger { color: var(--danger); }
+.btn[disabled] { opacity: .45; }
+kbd { font: 11px var(--font); padding: 0 4px; border-radius: 4px; border: 1px solid currentColor; opacity: .7; }
+.banner { display: flex; gap: var(--s2); align-items: flex-start; margin-top: var(--s3); padding: var(--s3);
+  border-radius: var(--r2); background: color-mix(in srgb, var(--danger) 8%, var(--content)); border: 1px solid color-mix(in srgb, var(--danger) 30%, transparent); font-size: 13px; }
+.banner .t { font-weight: 600; }
+.banner .why { color: var(--on-surface-variant); margin: 2px 0 var(--s2); }
+.warn { color: var(--danger); }
+.toast { position: absolute; right: 18px; bottom: 56px; font-size: 11px; padding: 4px 10px; border-radius: 99px;
+  background: var(--on-surface); color: var(--content); }
+.steps { margin: var(--s2) 0 0; padding-left: 20px; font-size: 13px; }
+.steps li { margin: 4px 0; }
+.check { color: var(--accent); }
+
+/* Windows */
+.win { background: var(--form-bg); border-radius: var(--r3); border: 1px solid var(--outline); overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,.22); }
+.titlebar { display: flex; align-items: center; gap: var(--s2); height: 38px; padding: 0 var(--s3); background: var(--surface-solid);
+  border-bottom: 1px solid var(--outline); font-weight: 600; }
+.lights { display: flex; gap: 8px; margin-right: var(--s2); }
+.lights i { width: 12px; height: 12px; border-radius: 50%; background: #ff5f57; }
+.lights i:nth-child(2) { background: #febc2e; } .lights i:nth-child(3) { background: #28c840; }
+.tabs { display: flex; justify-content: center; gap: 2px; padding: var(--s2); background: var(--surface-solid); border-bottom: 1px solid var(--outline); }
+.tabs span { padding: 4px 12px; border-radius: var(--r1); color: var(--on-surface-variant); }
+.tabs span.on { background: var(--selection); color: var(--on-surface); font-weight: 600; }
+.form { padding: var(--s5); display: grid; gap: var(--s5); }
+.group h3 { margin: 0 0 6px 4px; padding: 0; font-size: 13px; font-weight: 600; text-align: left; }
+.group .rows { background: var(--form-row); border-radius: var(--r2); border: 1px solid var(--outline); }
+.group .fr { display: flex; align-items: center; gap: var(--s3); min-height: 38px; padding: 6px var(--s3); }
+.group .fr + .fr { border-top: 1px solid var(--outline); }
+.group .fr .lbl { flex: 1; }
+.group .foot-note { margin: 6px 4px 0; font-size: 11px; color: var(--on-surface-variant); }
+.field { min-width: 220px; padding: 3px 8px; border-radius: var(--r1); border: 1px solid var(--control-border); background: var(--control); }
+.field.ph { color: var(--faint); }
+.sel { padding: 3px 24px 3px 8px; border-radius: var(--r1); border: 1px solid var(--control-border); background: var(--control); }
+.toggle { width: 32px; height: 18px; border-radius: 99px; background: var(--accent); position: relative; }
+.toggle::after { content: ""; position: absolute; right: 2px; top: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; }
+.toggle.off { background: var(--outline); } .toggle.off::after { left: 2px; right: auto; }
+.chip { padding: 2px 8px; border-radius: var(--r1); border: 1px solid var(--control-border); background: var(--control); font-variant-numeric: tabular-nums; }
+.muted { color: var(--on-surface-variant); }
+.split { display: flex; min-height: 0; }
+.side { width: 210px; border-right: 1px solid var(--outline); padding: var(--s2); background: var(--surface-solid); }
+.side .it { padding: 6px var(--s2); border-radius: var(--r1); }
+.side .it.on { background: var(--selection); }
+.side .it small { display: block; color: var(--on-surface-variant); font-size: 11px; }
+.detail { flex: 1; padding: var(--s4); overflow: hidden; }
+.empty { display: grid; place-items: center; align-content: center; text-align: center; gap: 6px; color: var(--on-surface-variant); padding: var(--s5); }
+.empty .sym { font-size: 32px; color: var(--faint); }
+.empty b { color: var(--on-surface); }
+.search { margin: var(--s2); padding: 4px 8px; border-radius: var(--r1); background: var(--control); border: 1px solid var(--control-border); color: var(--faint); }
+.sheet { background: var(--form-bg); border-radius: var(--r2); border: 1px solid var(--outline); box-shadow: 0 18px 50px rgba(0,0,0,.3); }
+.sheet h3 { margin: 0; padding: var(--s4) var(--s5) 0; font-size: 15px; text-align: center; }
+.sheet .actions { display: flex; gap: var(--s3); justify-content: flex-end; padding: 0 var(--s5) var(--s4); }
+.pop { width: 340px; background: var(--surface-solid); border: 1px solid var(--outline); border-radius: var(--r2); box-shadow: 0 12px 30px rgba(0,0,0,.25); overflow: hidden; }
+.pop .search { color: var(--on-surface); }
+.pop .grp { padding: 6px var(--s3) 2px; font-size: 11px; color: var(--on-surface-variant); font-weight: 600; }
+.pop .opt { display: flex; justify-content: space-between; padding: 4px var(--s3); }
+.pop .opt.on { background: var(--accent); color: var(--on-accent); border-radius: var(--r1); margin: 0 4px; }
+.pop .opt small { color: inherit; opacity: .7; font-size: 11px; }
+.menu { width: 230px; padding: 5px; background: var(--surface-solid); border: 1px solid var(--outline); border-radius: var(--r2); box-shadow: 0 12px 30px rgba(0,0,0,.25); }
+.menu div { display: flex; justify-content: space-between; padding: 3px 10px; border-radius: 4px; }
+.menu div.on { background: var(--accent); color: var(--on-accent); }
+.menu hr { border: 0; border-top: 1px solid var(--outline); margin: 5px 6px; }
+.logo { width: 64px; height: 64px; border-radius: 15px; background: var(--brand); display: grid; place-items: center; color: #fff; font-size: 30px; font-weight: 700; }
+.dotsnav { display: flex; gap: 6px; justify-content: center; } .dotsnav i { width: 6px; height: 6px; border-radius: 50%; background: var(--outline); } .dotsnav i.on { background: var(--accent); }
+@media (prefers-reduced-motion: no-preference) { .toast { transition: opacity .15s ease-out; } }
+</style>
+</head>
+<body>
+<header class="page">
+  <h1>TransFlex — every screen, every state</h1>
+  <span class="sample">Sample text throughout</span>
+  <button id="t-light" aria-pressed="true">Light</button>
+  <button id="t-dark" aria-pressed="false">Dark</button>
+  <button id="t-solid" aria-pressed="false">Reduce transparency</button>
+</header>
+<main>
+
+<!-- 1. Popup -->
+<section>
+  <h2>1 · Popup (Open Popup shortcut)</h2>
+  <p class="note">The frame is 60% × 60% of the screen; mockups are scaled to 760 × 380. Source and result share one pane style; the result adds a 2pt accent rule. Each state has exactly one prominent action.</p>
+  <div class="desk row">
+    <figure>
+      <div class="popup" style="width:760px;height:380px">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon" aria-label="Attach image">📎</span><span class="icon" aria-label="Settings">⚙︎</span></div>
+        <div class="panes">
+          <div class="pane editing"><span class="caret"></span><span class="ph">Type or paste text to translate…</span><br><span class="ph" style="font-size:11px">📎 Attach an image · ⌘⇧V to paste</span></div>
+          <div class="pane result"><span class="ph">Translation will appear here</span></div>
+        </div>
+        <div class="foot"><span class="spacer"></span><span class="btn primary">Translate <kbd>⌘</kbd><kbd>⏎</kbd></span></div>
+      </div>
+      <figcaption><b>Idle.</b> Focus is in the source editor, never on the preset picker. Both placeholders are left-aligned.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:760px;height:380px">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">📎</span><span class="icon">⚙︎</span></div>
+        <div class="panes">
+          <div class="pane readonly">Please review the release notes before Friday and flag anything that blocks the launch.</div>
+          <div class="pane result">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và<span class="caret"></span></div>
+        </div>
+        <div class="foot"><span class="spacer"></span><span class="btn primary">Stop <kbd>esc</kbd></span></div>
+      </div>
+      <figcaption><b>Streaming.</b> The source is read-only (secondary text) only while tokens arrive. Before the first token the result pane shows three typing dots.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:760px;height:380px;position:relative">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">📎</span><span class="icon">⚙︎</span></div>
+        <div class="panes">
+          <div class="pane">Please review the release notes before Friday and flag anything that blocks the launch.<span class="caret"></span></div>
+          <div class="pane result">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và báo ngay mọi thứ cản trở việc ra mắt.</div>
+        </div>
+        <div class="foot"><span class="cost">$0.0004 · 212 ms</span><span class="spacer"></span>
+          <span class="btn">New <kbd>⌘</kbd><kbd>N</kbd></span><span class="btn">Re-translate <kbd>⌘</kbd><kbd>⏎</kbd></span><span class="btn primary">Copy &amp; Close <kbd>⌘</kbd><kbd>C</kbd></span></div>
+        <span class="toast">Copied</span>
+      </div>
+      <figcaption><b>Done.</b> The source stays editable: edit, then ⌘⏎ to translate again. Copy &amp; Close says what it does; the toast shows for 150ms before the popup hides.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:760px;height:380px">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">📎</span><span class="icon">⚙︎</span></div>
+        <div class="panes">
+          <div class="pane">Good morning, team.</div>
+          <div class="pane result">
+            <div class="banner"><span class="warn">⚠︎</span><div><div class="t">No OpenAI API key</div><div class="why">Add a key to use the “Natural EN ↔ VI” preset.</div><span class="btn">Open Settings</span></div></div>
+          </div>
+        </div>
+        <div class="foot"><span class="spacer"></span><span class="btn">New <kbd>⌘</kbd><kbd>N</kbd></span><span class="btn primary">Retry <kbd>⌘</kbd><kbd>⏎</kbd></span></div>
+      </div>
+      <figcaption><b>Error — missing key.</b> Says “No key”, not “invalid”, and offers the fix. ⌘N works in every error.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:760px;height:380px">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">📎</span><span class="icon">⚙︎</span></div>
+        <div class="panes">
+          <div class="pane">Please review the release notes before Friday and flag anything that blocks the launch.</div>
+          <div class="pane result">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và
+            <div class="banner"><span class="warn">⚠︎</span><div><div class="t">The provider rejected the request</div><div class="why">Unsupported value: 'temperature' does not support 0.3 with this model. Only the default (1) value is supported.</div></div></div>
+          </div>
+        </div>
+        <div class="foot"><span class="spacer"></span><span class="btn">New <kbd>⌘</kbd><kbd>N</kbd></span><span class="btn">Continue <kbd>⌘</kbd><kbd>P</kbd></span><span class="btn primary">Retry <kbd>⌘</kbd><kbd>⏎</kbd></span></div>
+      </div>
+      <figcaption><b>Error — rejected, with partial result.</b> The provider's reason is shown (4xx). A 5xx error reads “Provider issue. Try again.” Continue appears only when partial text exists.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:460px;height:420px">
+        <div class="bar"><span class="picker">🌐 Natural EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">📎</span><span class="icon">⚙︎</span></div>
+        <div class="panes stack">
+          <div class="pane" style="flex:0 0 40%">Please review the release notes before Friday.</div>
+          <div class="pane result">Vui lòng xem lại ghi chú phát hành trước thứ Sáu.</div>
+        </div>
+        <div class="foot"><span class="spacer"></span><span class="btn">New <kbd>⌘</kbd><kbd>N</kbd></span><span class="btn primary">Copy &amp; Close <kbd>⌘</kbd><kbd>C</kbd></span></div>
+      </div>
+      <figcaption><b>Narrow (&lt; 720pt).</b> Panes stack; the source takes at most 40% of the height. Re-translate drops into the ⌘⏎ shortcut when space is short.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 2. Output-only popup -->
+<section>
+  <h2>2 · Output-only popup (Translate Selection shortcut)</h2>
+  <p class="note">40% of the screen wide. Height fits the content (160pt … 60% of the screen), top edge fixed. Every new selection starts from its own height, never the last one.</p>
+  <div class="desk row">
+    <figure>
+      <div class="popup" style="width:560px">
+        <div class="bar"><span class="picker">🌐 Technical Doc EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">⚙︎</span></div>
+        <div class="panes"><div class="pane result">Hẹn gặp lại vào ngày mai.</div></div>
+        <div class="foot"><span class="spacer"></span><span class="btn">Show Input <kbd>⌘</kbd><kbd>I</kbd></span><span class="btn">Re-translate <kbd>⌘</kbd><kbd>⏎</kbd></span><span class="btn primary">Copy &amp; Close <kbd>⌘</kbd><kbd>C</kbd></span></div>
+      </div>
+      <figcaption><b>Short result.</b> The minimum height; no empty band under one line. The same frame for the first and second open.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:560px;height:330px">
+        <div class="bar"><span class="picker">🌐 Technical Doc EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">⚙︎</span></div>
+        <div class="panes"><div class="pane result" style="overflow-y:auto">Bản phát hành này sửa lỗi lưu lịch sử dịch, cập nhật cách gửi tham số cho các model OpenAI mới và thống nhất giao diện popup.<br><br>Trước khi cập nhật, hãy sao lưu thư mục dữ liệu của ứng dụng. Sau khi cập nhật, mở Settings → Providers để kiểm tra khóa API còn hợp lệ.<br><br>Nếu bạn dùng endpoint tương thích OpenAI, không cần thay đổi gì: các tham số vẫn được gửi như trước.</div></div>
+        <div class="foot"><span class="cost">$0.0011</span><span class="spacer"></span><span class="btn">Show Input <kbd>⌘</kbd><kbd>I</kbd></span><span class="btn primary">Copy &amp; Close <kbd>⌘</kbd><kbd>C</kbd></span></div>
+      </div>
+      <figcaption><b>Long result.</b> Grows down while streaming until 60% of the screen, then the pane scrolls and stays pinned to the newest text.</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:560px">
+        <div class="bar"><span class="picker">🌐 Technical Doc EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">⚙︎</span></div>
+        <div class="panes"><div class="pane result"><div class="banner" style="margin-top:0"><span class="warn">⚠︎</span><div><div class="t">No text selected</div><div class="why">Select some text, then press the shortcut again.</div></div></div></div></div>
+        <div class="foot"><span class="spacer"></span><span class="btn">Show Input <kbd>⌘</kbd><kbd>I</kbd></span><span class="btn primary">Close <kbd>esc</kbd></span></div>
+      </div>
+      <figcaption><b>Error.</b> Never draws the Popup's two-pane layout inside this frame (audit D1).</figcaption>
+    </figure>
+    <figure>
+      <div class="popup" style="width:560px">
+        <div class="bar"><span class="picker">🌐 Technical Doc EN ↔ VI ⌃⌄</span><span class="spacer"></span><span class="icon">⚙︎</span></div>
+        <div class="panes"><div class="pane result">
+          <b>✋ One permission needed</b><div class="muted" style="font-size:13px">TransFlex needs Device Control and Data Access to copy your selection and paste the translation.</div>
+          <ol class="steps"><li>Click <b>Open System Settings</b> below.</li><li>Under Device Control and Data Access, turn on <b>TransFlex</b>.</li><li>This window comes back to confirm once access is on.</li></ol>
+        </div></div>
+        <div class="foot"><span class="spacer"></span><span class="btn primary">Open System Settings <kbd>⌘</kbd><kbd>⏎</kbd></span></div>
+      </div>
+      <figcaption><b>Permission needed.</b> The only state without Show Input. Granted → “✓ Permission granted · Select text and press the shortcut again.” with <b>Done ⌘⏎</b>.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 3. Model picker -->
+<section>
+  <h2>3 · Model picker (Preset editor)</h2>
+  <p class="note">Replaces the long menu. A popover with a focused search field; only text models, grouped by family, newest first; a typed ID can be used as is.</p>
+  <div class="row">
+    <figure>
+      <div class="pop">
+        <div class="search">🔍 gpt</div>
+        <div class="grp">GPT-6</div><div class="opt on"><span>gpt-6-luna</span><small>current</small></div>
+        <div class="grp">GPT-5</div><div class="opt"><span>gpt-5.2</span></div><div class="opt"><span>gpt-5.2-mini</span></div><div class="opt"><span>gpt-5</span></div>
+        <div class="grp">GPT-4</div><div class="opt"><span>gpt-4.1</span></div><div class="opt"><span>gpt-4o</span></div><div class="opt"><span>gpt-4o-mini</span></div>
+        <div class="grp" style="border-top:1px solid var(--outline);margin-top:4px">&nbsp;</div><div class="opt"><span>Use “gpt”</span><small>custom ID</small></div>
+      </div>
+      <figcaption><b>Search.</b> ↑↓ to move, ⏎ to pick, esc to close. whisper, tts, embedding, moderation, image and legacy completion models never appear.</figcaption>
+    </figure>
+    <figure>
+      <div class="pop">
+        <div class="search">🔍 llama-4</div>
+        <div class="empty" style="padding:var(--s4)"><span class="sym">⌕</span><b>No matching model</b><span>Nothing in OpenAI's list matches “llama-4”.</span></div>
+        <div class="opt"><span>Use “llama-4”</span><small>custom ID</small></div>
+      </div>
+      <figcaption><b>No match.</b> Empty state plus the custom-ID row. With no API key: the built-in list, and a footnote “Add a key in Providers to load the full list.”</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 4. Settings -->
+<section>
+  <h2>4 · Settings</h2>
+  <p class="note">A grouped Form on every tab: title-case section headers, rows with labels on the left and controls on the right. 640pt wide; the height fits the tab. Numbers use tabular digits, not a monospaced font.</p>
+  <div class="row">
+    <figure>
+      <div class="win" style="width:640px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>General</div>
+        <div class="tabs"><span class="on">General</span><span>Providers</span><span>Presets</span><span>Hotkeys</span><span>About</span></div>
+        <div class="form">
+          <div class="group"><h3>Popup</h3><div class="rows">
+            <div class="fr"><span class="lbl">Clear previous translation</span><span class="sel">After 2 minutes</span></div></div>
+            <p class="foot-note">How long the popup keeps your last text and result after it hides. A Translate Selection in between does not reset the timer.</p></div>
+          <div class="group"><h3>Startup</h3><div class="rows">
+            <div class="fr"><span class="lbl">Open at login</span><span class="toggle"></span></div></div></div>
+        </div>
+      </div>
+      <figcaption><b>General.</b> No empty half-window: the window height fits the form.</figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:640px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>Providers</div>
+        <div class="tabs"><span>General</span><span class="on">Providers</span><span>Presets</span><span>Hotkeys</span><span>About</span></div>
+        <div class="form">
+          <div class="group"><h3>Cloud providers</h3><div class="rows">
+            <div class="fr"><span class="lbl">OpenAI</span><span class="muted">•••• saved</span><span class="btn">Change…</span></div>
+            <div class="fr"><span class="lbl">Anthropic</span><span class="field ph">sk-ant-…</span><span class="btn" disabled>Save</span></div>
+            <div class="fr"><span class="lbl">Gemini</span><span class="field ph">AIza…</span><span class="btn" disabled>Save</span></div></div>
+            <p class="foot-note">Keys are stored in the macOS Keychain and sent only to their provider.</p></div>
+          <div class="group"><h3>OpenAI-compatible endpoints</h3><div class="rows">
+            <div class="fr"><span class="lbl">Local Ollama <span class="muted">· http://localhost:11434</span></span><span class="btn">Edit…</span></div>
+            <div class="fr"><span class="btn">Add Endpoint…</span></div></div></div>
+        </div>
+      </div>
+      <figcaption><b>Providers.</b> Same group style as the other tabs (audit D12). A saved key shows “saved”, never an empty field.</figcaption>
+    </figure>
+    <figure>
+      <div class="sheet" style="width:480px">
+        <h3>Add Endpoint</h3>
+        <div class="form">
+          <div class="group"><div class="rows">
+            <div class="fr"><span class="lbl">Name</span><span class="field ph">Local Ollama</span></div>
+            <div class="fr"><span class="lbl">Base URL</span><span class="field ph">http://localhost:11434</span></div>
+            <div class="fr"><span class="lbl">API key</span><span class="field ph">Optional</span></div>
+            <div class="fr"><span class="lbl">Default model</span><span class="btn">Choose… ⌃⌄</span></div></div></div>
+          <div class="group"><h3>Custom headers</h3><div class="rows"><div class="fr"><span class="btn">Add Header</span></div></div></div>
+        </div>
+        <div class="actions"><span class="btn" disabled>Fetch Models</span><span class="spacer"></span><span class="btn">Cancel</span><span class="btn primary" disabled>Save</span></div>
+      </div>
+      <figcaption><b>Add Endpoint sheet.</b> Every field shows a placeholder; Save stays disabled until Name and a valid Base URL are filled (audit D3).</figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:760px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>Presets</div>
+        <div class="tabs"><span>General</span><span>Providers</span><span class="on">Presets</span><span>Hotkeys</span><span>About</span></div>
+        <div class="split" style="height:470px">
+          <div class="side">
+            <div class="it on">Natural EN ↔ VI<small>OpenAI · gpt-6-luna</small></div>
+            <div class="it">Technical Doc EN ↔ VI<small>OpenAI · gpt-4o · ⌘⇧D</small></div>
+            <div class="it">Any → English (Natural)<small>OpenAI · gpt-4o-mini</small></div>
+            <div class="it muted">＋ ／ －</div>
+          </div>
+          <div class="detail" style="padding:0"><div class="form" style="padding:var(--s4)">
+            <div class="group"><h3>Preset</h3><div class="rows">
+              <div class="fr"><span class="lbl">Name</span><span class="field">Natural EN ↔ VI</span></div>
+              <div class="fr"><span class="lbl">Provider</span><span class="sel">OpenAI</span></div>
+              <div class="fr"><span class="lbl">Model</span><span class="btn">gpt-6-luna ⌃⌄</span></div></div></div>
+            <div class="group"><h3>System prompt</h3><div class="rows"><div class="fr" style="align-items:flex-start;height:96px;color:var(--on-surface-variant)">Translate between English and Vietnamese. Keep the tone natural…</div></div>
+              <p class="foot-note"><span style="font-variant-numeric:tabular-nums">1,108</span> characters · <a style="color:inherit" href="#">Expand…</a></p></div>
+            <div class="group"><h3>Shortcuts</h3><div class="rows">
+              <div class="fr"><span class="lbl">Translate Selection</span><span class="chip">Record Shortcut</span></div>
+              <div class="fr"><span class="lbl">Replace Selection</span><span class="chip">Record Shortcut</span></div></div></div>
+          </div></div>
+        </div>
+      </div>
+      <figcaption><b>Presets.</b> The prompt has a fixed height inside the form (no nested scroller); Expand opens a sheet at 80% of the window. Sampling rows (Temperature, Top P) show only for models that accept them.</figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:640px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>Hotkeys</div>
+        <div class="tabs"><span>General</span><span>Providers</span><span>Presets</span><span class="on">Hotkeys</span><span>About</span></div>
+        <div class="form"><div class="group"><h3>Global shortcuts</h3><div class="rows">
+          <div class="fr"><span class="lbl">Open Popup</span><span class="chip">⌥V</span></div></div>
+          <p class="foot-note">Per-preset shortcuts live in Presets.</p></div></div>
+      </div>
+      <figcaption><b>Hotkeys.</b></figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:640px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>About</div>
+        <div class="tabs"><span>General</span><span>Providers</span><span>Presets</span><span>Hotkeys</span><span class="on">About</span></div>
+        <div class="form"><div style="display:flex;gap:var(--s4);align-items:center"><span class="logo">T</span><div><b style="font-size:15px">TransFlex</b><div class="muted">AI translation companion · version 1.x</div></div></div>
+          <div class="group"><div class="rows">
+            <div class="fr"><span class="lbl">GitHub repository</span><span class="btn">Open</span></div>
+            <div class="fr"><span class="lbl">License</span><span class="btn">View</span></div>
+            <div class="fr"><span class="lbl">Donate</span><span class="btn">PayPal</span></div></div></div></div>
+      </div>
+      <figcaption><b>About.</b> The brand colour appears only in the logo.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 5. History -->
+<section>
+  <h2>5 · History</h2>
+  <p class="note">Opens in front of Settings and cascades by 24pt. Export and Delete All are enabled only when there are entries.</p>
+  <div class="row">
+    <figure>
+      <div class="win" style="width:720px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>History<span class="spacer"></span><span class="btn" disabled>Export…</span><span class="btn danger" disabled>Delete All</span></div>
+        <div class="split" style="height:300px"><div class="side" style="padding:0"><div class="search">🔍 Search history</div></div>
+          <div class="detail"><div class="empty" style="height:100%"><span class="sym">🕘</span><b>No translations yet</b><span>Translations you make in the popup show up here.</span></div></div></div>
+      </div>
+      <figcaption><b>Empty.</b> One empty state; no stray band at the top of the detail pane (audit D10).</figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:720px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>History<span class="spacer"></span><span class="btn">Export…</span><span class="btn danger">Delete All</span></div>
+        <div class="split" style="height:300px"><div class="side" style="padding:0"><div class="search">🔍 Search history</div>
+            <div style="padding:0 var(--s2)"><div class="it on">Please review the release notes…<small>Natural EN ↔ VI · 10:26</small></div><div class="it">See you tomorrow.<small>Technical Doc · 10:20</small></div></div></div>
+          <div class="detail"><div class="muted" style="font-size:11px">OpenAI · gpt-6-luna · 212 ms · 96 tokens</div>
+            <div class="group" style="margin-top:var(--s3)"><h3>Input</h3><div class="pane" style="font-size:13px">Please review the release notes before Friday.</div></div>
+            <div class="group" style="margin-top:var(--s3)"><h3>Output</h3><div class="pane result" style="font-size:13px">Vui lòng xem lại ghi chú phát hành trước thứ Sáu.</div></div>
+            <div style="display:flex;gap:var(--s3);margin-top:var(--s3)"><span class="btn primary">Copy Output</span><span class="btn">Re-translate</span><span class="spacer"></span><span class="btn danger">Delete</span></div></div></div>
+      </div>
+      <figcaption><b>List and detail.</b> Uses the same pane component as the popup.</figcaption>
+    </figure>
+    <figure>
+      <div class="win" style="width:720px">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span>History<span class="spacer"></span><span class="btn">Export…</span><span class="btn danger">Delete All</span></div>
+        <div class="split" style="height:220px"><div class="side" style="padding:0"><div class="search" style="color:var(--on-surface)">🔍 meeting</div></div>
+          <div class="detail"><div class="empty" style="height:100%"><span class="sym">⌕</span><b>No results for “meeting”</b><span>Try another word, or clear the search.</span></div></div></div>
+      </div>
+      <figcaption><b>No search results.</b> Distinct from “No translations yet”; Export still depends on the whole history, not the search.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 6. Onboarding + menu -->
+<section>
+  <h2>6 · Welcome, First-run, menu bar</h2>
+  <p class="note">Welcome runs once (560 × 440). First-run is the sheet the popup shows when no provider key exists. The status menu has no item icons.</p>
+  <div class="row">
+    <figure>
+      <div class="win" style="width:560px;height:440px;display:flex;flex-direction:column">
+        <div class="titlebar"><span class="lights"><i></i><i></i><i></i></span></div>
+        <div style="flex:1;display:grid;place-items:center;text-align:center;gap:var(--s3);padding:var(--s5)">
+          <span class="logo">T</span><b style="font-size:15px">Quick translation, anywhere on macOS.</b>
+          <div class="muted" style="display:grid;gap:6px">⌨︎ Global hotkey · ☁︎ Multiple AI providers · 🔒 Keys stay in your Keychain</div>
+        </div>
+        <div class="foot"><div class="dotsnav"><i class="on"></i><i></i><i></i><i></i></div><span class="spacer"></span><span class="btn primary">Continue <kbd>⏎</kbd></span></div>
+      </div>
+      <figcaption><b>Welcome — intro.</b> Steps: intro → add provider (Skip / <b>Save &amp; Continue</b>) → set hotkey → all set.</figcaption>
+    </figure>
+    <figure>
+      <div class="sheet" style="width:420px">
+        <h3>Configure a provider</h3>
+        <div class="form"><p class="muted" style="margin:0">Enter an API key to start translating.</p>
+          <div class="group"><div class="rows"><div class="fr"><span class="lbl">Provider</span><span class="sel">OpenAI</span></div><div class="fr"><span class="lbl">API key</span><span class="field ph">sk-…</span></div></div></div></div>
+        <div class="actions"><span class="btn">Skip</span><span class="btn primary" disabled>Save &amp; Start</span></div>
+      </div>
+      <figcaption><b>First-run sheet.</b> Same form rows as Settings → Providers.</figcaption>
+    </figure>
+    <figure>
+      <div class="menu"><div class="on"><span>Open TransFlex</span><span>⌥V</span></div><div><span>Settings…</span><span>⌘,</span></div><div><span>History</span><span></span></div><hr><div><span>Quit TransFlex</span><span>⌘Q</span></div></div>
+      <figcaption><b>Status menu.</b> No icon on one item only (audit D14).</figcaption>
+    </figure>
+  </div>
+</section>
+</main>
+<script>
+const root = document.documentElement;
+const light = document.getElementById('t-light'), dark = document.getElementById('t-dark'), solid = document.getElementById('t-solid');
+function setDark(on) { root.classList.toggle('dark', on); dark.setAttribute('aria-pressed', on); light.setAttribute('aria-pressed', !on); }
+light.onclick = () => setDark(false);
+dark.onclick = () => setDark(true);
+solid.onclick = () => { const on = root.classList.toggle('solid'); solid.setAttribute('aria-pressed', on); };
+if (matchMedia('(prefers-color-scheme: dark)').matches) setDark(true);
+</script>
+</body>
+</html>
