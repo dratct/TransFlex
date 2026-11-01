@@ -126,7 +126,7 @@ Popup states (footer primary in **bold**):
 
 | State | Sheet | Footer |
 |---|---|---|
-| idle | Original: editor, focused, placeholder; Translation: hint text | **Translate ⌘↩** |
+| idle | Original: editor, focused, 17pt placeholder “Type or paste text”, and at the foot of the column one 12pt `faint` tip “Images work too — drop one here or press ⌘⇧V” (one light keycap, no icon); Translation: empty | **Translate ⌘↩** |
 | streaming | Original dimmed and read-only; Translation streams with a caret | Stop esc (not prominent) |
 | done | both halves; Original editable | New ⌘N · Translate again ⌘↩ · **Copy & Close ⌘C** |
 | error, nothing received | replaced by a `Notice` card | Back to text esc + the card's own actions |
