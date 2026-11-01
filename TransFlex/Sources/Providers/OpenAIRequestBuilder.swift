@@ -5,7 +5,7 @@ enum OpenAIRequestBuilder {
         model: String,
         messages: [ChatMessage],
         image: Data?,
-        temperature: Double,
+        temperature: Double?,
         topP: Double? = nil,
         maxTokens: Int?,
         stream: Bool
@@ -13,10 +13,10 @@ enum OpenAIRequestBuilder {
         var body: [String: Any] = [
             "model": model,
             "messages": requestMessages(messages: messages, image: image),
-            "temperature": temperature,
             "stream": stream,
             "stream_options": ["include_usage": true],
         ]
+        if let temperature { body["temperature"] = temperature }
         if let topP { body["top_p"] = topP }
         if let maxTokens { body["max_tokens"] = maxTokens }
         return body
