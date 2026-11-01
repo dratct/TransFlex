@@ -120,6 +120,8 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
 | `ReadsImages` | A per-preset switch the user sets. The app does not detect image support: OpenAI and Gemini model lists do not report it (checked 2026-11-01). |
 | `SettingsRow` | Label (+ optional one-line explanation in `faint`) leading, one control trailing; rows grouped in a `content` box with hairline separators. |
+| `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed. Never takes key focus. |
+| `ProviderLogo` | The provider's own mark from `Assets.xcassets` (`ProviderOpenAI`, `ProviderAnthropic`, `ProviderGemini`) in a 28pt tile; OpenAI-compatible endpoints use initials. Used in Providers, the Provider row of a preset, and Welcome. |
 | `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". |
 
 Popup states (footer primary in **bold**):

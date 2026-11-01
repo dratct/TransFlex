@@ -36,5 +36,10 @@ hidden (always, after 1–5 minutes, never).
 - In the Popup the source text stays editable in every state except while a
   translation streams; the last result stays beside it until ⌘⏎ translates
   again.
+- Replace Selection shows its progress without taking focus from the app
+  being edited: a capsule beside the pointer while it translates and after it
+  pastes; a failure opens a notice that says nothing was changed.
+- While a Replace Selection translates, Esc anywhere cancels it; the app holds
+  Esc system-wide only for that run.
 - Copy (⌘C or the button) copies the result and closes the popup; the button
   says so ("Copy & Close").

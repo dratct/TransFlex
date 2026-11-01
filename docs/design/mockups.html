@@ -228,10 +228,26 @@ figcaption b { color: var(--label); font-weight: 600; }
 .popup .text.ph, .win .text.ph { color: var(--label-3); }
 .lightkc i { background: none; box-shadow: inset 0 0 0 .5px var(--hair-2); color: var(--label-3); }
 .popup .tip { font-size: 12px; color: var(--label-3); padding-bottom: 14px; }
+.prov { width: 28px; height: 28px; border-radius: 7px; display: grid; place-items: center; flex: none; box-shadow: inset 0 0 0 .5px var(--hair-2); }
+.prov svg { width: 17px; height: 17px; fill: currentColor; }
+.prov.openai { background: #000; color: #fff; } .prov.anthropic { background: #F0EEE6; color: #191919; }
+.prov.gemini { background: #fff; color: #4285F4; } .prov.gemini svg { fill: url(#gem-grad); }
+.prov.sm { width: 16px; height: 16px; border-radius: 4px; } .prov.sm svg { width: 11px; height: 11px; }
+.doc { width: 560px; border-radius: 12px; background: #fff; color: #1d1d1f; box-shadow: 0 0 0 .5px rgba(0,0,0,.15), 0 18px 50px rgba(0,0,0,.2); overflow: hidden; position: relative; }
+.dark .doc { background: #1e1e1e; color: #eee; }
+.doc .bar { height: 30px; background: rgba(0,0,0,.04); border-bottom: .5px solid rgba(0,0,0,.1); display:flex; align-items:center; padding: 0 10px; gap: 6px; font-size: 12px; color: #888; }
+.doc .body { padding: 18px 22px 70px; font: 14px/1.6 var(--font); }
+.sel { background: rgba(0,122,255,.25); border-radius: 2px; }
+.hud { position: absolute; display: inline-flex; align-items: center; gap: 8px; height: 30px; padding: 0 12px 0 10px; border-radius: 99px; font-size: 12.5px; font-weight: 500;
+  background: var(--material); backdrop-filter: blur(30px); box-shadow: var(--shadow-win); color: var(--label); white-space: nowrap; }
+.hud .x { color: var(--label-3); margin-left: 4px; }
+.spin { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--fill-2); border-top-color: var(--accent); }
 </style>
 </head>
 <body>
 <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="prov-openai" viewBox="0 0 24 24"><path d="M9.205 8.658v-2.26c0-.19.072-.333.238-.428l4.543-2.616c.619-.357 1.356-.523 2.117-.523 2.854 0 4.662 2.212 4.662 4.566 0 .167 0 .357-.024.547l-4.71-2.759a.797.797 0 00-.856 0l-5.97 3.473zm10.609 8.8V12.06c0-.333-.143-.57-.429-.737l-5.97-3.473 1.95-1.118a.433.433 0 01.476 0l4.543 2.617c1.309.76 2.189 2.378 2.189 3.948 0 1.808-1.07 3.473-2.76 4.163zM7.802 12.703l-1.95-1.142c-.167-.095-.239-.238-.239-.428V5.899c0-2.545 1.95-4.472 4.591-4.472 1 0 1.927.333 2.712.928L8.23 5.067c-.285.166-.428.404-.428.737v6.898zM12 15.128l-2.795-1.57v-3.33L12 8.658l2.795 1.57v3.33L12 15.128zm1.796 7.23c-1 0-1.927-.332-2.712-.927l4.686-2.712c.285-.166.428-.404.428-.737v-6.898l1.974 1.142c.167.095.238.238.238.428v5.233c0 2.545-1.974 4.472-4.614 4.472zm-5.637-5.303l-4.544-2.617c-1.308-.761-2.188-2.378-2.188-3.948A4.482 4.482 0 014.21 6.327v5.423c0 .333.143.571.428.738l5.947 3.449-1.95 1.118a.432.432 0 01-.476 0zm-.262 3.9c-2.688 0-4.662-2.021-4.662-4.519 0-.19.024-.38.047-.57l4.686 2.71c.286.167.571.167.856 0l5.97-3.448v2.26c0 .19-.07.333-.237.428l-4.543 2.616c-.619.357-1.356.523-2.117.523zm5.899 2.83a5.947 5.947 0 005.827-4.756C22.287 18.339 24 15.84 24 13.296c0-1.665-.713-3.282-1.998-4.448.119-.5.19-.999.19-1.498 0-3.401-2.759-5.947-5.946-5.947-.642 0-1.26.095-1.88.31A5.962 5.962 0 0010.205 0a5.947 5.947 0 00-5.827 4.757C1.713 5.447 0 7.945 0 10.49c0 1.666.713 3.283 1.998 4.448-.119.5-.19 1-.19 1.499 0 3.401 2.759 5.946 5.946 5.946.642 0 1.26-.095 1.88-.309a5.96 5.96 0 004.162 1.713z"></path></symbol><symbol id="prov-anthropic" viewBox="0 0 24 24"><path d="M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z"></path></symbol><symbol id="prov-gemini" viewBox="0 0 24 24"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></symbol>
+  <linearGradient id="gem-grad" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#4285F4"/><stop offset=".55" stop-color="#9B72CB"/><stop offset="1" stop-color="#D96570"/></linearGradient>
   <symbol id="globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.5 3.8 5.5 3.8 9s-1.3 6.5-3.8 9c-2.5-2.5-3.8-5.5-3.8-9S9.5 5.5 12 3z"/></symbol>
   <symbol id="translate" viewBox="0 0 24 24"><path d="M4 5h9M8.5 3v2M11 5c-.8 3.6-3.2 6.6-6.5 8.2M6.5 8.5c1.2 2 3 3.6 5 4.6M13 21l4-9 4 9M14.4 18h5.2"/></symbol>
   <symbol id="clip" viewBox="0 0 24 24"><path d="M20.5 11.5l-8.2 8.2a5 5 0 01-7.1-7.1l8.6-8.6a3.4 3.4 0 014.8 4.8l-8.6 8.6a1.7 1.7 0 01-2.4-2.4l7.9-7.9"/></symbol>
@@ -414,6 +430,15 @@ figcaption b { color: var(--label); font-weight: 600; }
 </section>
 
 <section>
+  <header><h2>Replace Selection</h2><p>Replace never takes focus from the app being edited. A capsule beside the mouse pointer shows progress and success; a failure opens the notice banner. While the translation runs, Esc is held system-wide so it cancels; it is released as soon as the run ends.</p></header>
+  <div class="stage">
+    <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so <span class="sel">please hold the release until Friday</span> and keep the team posted.</div><span class="hud" style="left:150px;top:96px"><span class="spin"></span>Translating with Natural EN ↔ VI<span class="x">esc to cancel</span></span></div><figcaption><b>Translating.</b> Appears beside the pointer within 100 ms of the shortcut. Clicking it also cancels.</figcaption></figure>
+    <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so vui lòng hoãn phát hành đến thứ Sáu and keep the team posted.</div><span class="hud" style="left:270px;top:96px"><svg class="i s" style="color:var(--ok)"><use href="#check"/></svg>Replaced · ⌘Z to undo</span></div><figcaption><b>Replaced.</b> Fades after 1.5 s. The other app’s text cannot be highlighted, so the capsule is the only confirmation.</figcaption></figure>
+    <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
+  </div>
+</section>
+
+<section>
   <header><h2>Model picker</h2><p>Opens from the Model row of a preset. Search first; only models that can translate text; grouped by family, newest first.</p></header>
   <div class="plain">
     <figure>
@@ -460,16 +485,16 @@ figcaption b { color: var(--label); font-weight: 600; }
         <div class="ptabs"><span><svg class="i"><use href="#slider"/></svg><b>General</b></span><span class="on"><svg class="i"><use href="#cloud"/></svg><b>Providers</b></span><span><svg class="i"><use href="#presets"/></svg><b>Presets</b></span><span><svg class="i"><use href="#keyboard"/></svg><b>Shortcuts</b></span><span><svg class="i"><use href="#info"/></svg><b>About</b></span></div>
         <div class="form">
           <div class="grp"><h5>Cloud providers</h5><div class="box">
-            <div class="r"><span class="logo-tile" style="background:#10A37F">OA</span><div class="l">OpenAI<small>Key saved</small></div><span class="pill ok"><span class="dot" style="background:currentColor"></span>Connected</span><span class="btn">Edit…</span></div>
-            <div class="r"><span class="logo-tile" style="background:#C96442">A</span><div class="l">Anthropic<small>Claude models</small></div><span class="pill">Not set</span><span class="btn">Add Key…</span></div>
-            <div class="r"><span class="logo-tile" style="background:#4C7BF4">G</span><div class="l">Gemini<small>Google AI Studio key</small></div><span class="pill">Not set</span><span class="btn">Add Key…</span></div></div>
+            <div class="r"><span class="prov openai"><svg><use href="#prov-openai"/></svg></span><div class="l">OpenAI<small>Key saved</small></div><span class="pill ok"><span class="dot" style="background:currentColor"></span>Connected</span><span class="btn">Edit…</span></div>
+            <div class="r"><span class="prov anthropic"><svg><use href="#prov-anthropic"/></svg></span><div class="l">Anthropic<small>Claude models</small></div><span class="pill">Not set</span><span class="btn">Add Key…</span></div>
+            <div class="r"><span class="prov gemini"><svg><use href="#prov-gemini"/></svg></span><div class="l">Gemini<small>Google AI Studio key</small></div><span class="pill">Not set</span><span class="btn">Add Key…</span></div></div>
             <p class="note"><svg class="i s" style="vertical-align:-2px"><use href="#lock"/></svg> Keys live in your Mac’s Keychain and go only to their provider.</p></div>
           <div class="grp"><h5>OpenAI-compatible</h5><div class="box">
             <div class="r"><span class="logo-tile" style="background:var(--label-3)">LO</span><div class="l">Local Ollama<small>localhost:11434</small></div><span class="btn">Edit…</span></div>
             <div class="r" style="color:var(--accent)"><svg class="i s"><use href="#plus"/></svg><span>Add Endpoint…</span></div></div></div>
         </div>
       </div>
-      <figcaption><b>Providers.</b> Each provider shows whether it works, not an empty field. Initials tiles stand in for logos.</figcaption>
+      <figcaption><b>Providers.</b> Each provider shows whether it works, not an empty field, next to its own logo (the SVGs already in Assets.xcassets).</figcaption>
     </figure>
 
     <figure>
@@ -502,7 +527,7 @@ figcaption b { color: var(--label); font-weight: 600; }
           <div class="detail" style="gap:18px">
             <div class="grp"><div class="box">
               <div class="r"><div class="l">Name</div><span class="field" style="min-width:260px">Natural EN ↔ VI</span></div>
-              <div class="r"><div class="l">Provider</div><span class="popbtn"><span class="logo-tile" style="width:16px;height:16px;border-radius:4px;font-size:8px;background:#10A37F">OA</span>OpenAI<span class="chev"><svg class="i s" style="width:10px;height:10px;stroke-width:2"><use href="#chev"/></svg></span></span></div>
+              <div class="r"><div class="l">Provider</div><span class="popbtn"><span class="prov openai sm"><svg><use href="#prov-openai"/></svg></span>OpenAI<span class="chev"><svg class="i s" style="width:10px;height:10px;stroke-width:2"><use href="#chev"/></svg></span></span></div>
               <div class="r"><div class="l">Model</div><span class="popbtn">gpt-6-luna<span class="chev"><svg class="i s" style="width:10px;height:10px;stroke-width:2"><use href="#chev"/></svg></span></span></div></div></div>
             <div class="grp"><div class="box"><div class="r"><div class="l">Reads images<small>Turn on if this model accepts images. Lets you attach screenshots in the popup.</small></div><span class="switch off"></span></div></div></div>
             <div class="grp"><h5 style="display:flex">Instructions<span class="sp"></span><span style="font-weight:400;color:var(--label-3);font-variant-numeric:tabular-nums">1,108 characters · <span style="color:var(--accent)">Expand</span></span></h5>
@@ -537,23 +562,23 @@ figcaption b { color: var(--label); font-weight: 600; }
   <div class="plain">
     <figure>
       <div class="win" style="width:860px;height:440px">
-        <div class="tbar"><span class="lights"><i></i><i></i><i></i></span><span class="title" style="margin-left:8px">History</span><span class="sp"></span><span class="btn">Export…</span><span class="btn ghost" title="Delete all">Delete All…</span></div>
+        <div class="tbar"><span class="lights"><i></i><i></i><i></i></span><span class="title" style="margin-left:8px">History</span><span class="meta" style="margin-left:8px">Today: <b>$0.0005</b></span><span class="sp"></span><span class="btn">Export…</span><span class="btn ghost" title="Delete all">Delete All…</span></div>
         <div class="split">
           <div class="side"><div class="search"><svg class="i s"><use href="#search"/></svg>Search</div>
             <div class="sec">Today</div>
-            <div class="it on"><div class="t">Please review the release notes…</div><small>Natural EN ↔ VI · 10:26</small></div>
-            <div class="it"><div class="t">See you tomorrow.</div><small>Technical Doc · 10:20</small></div>
+            <div class="it on"><div class="t">Please review the release notes…</div><small>Natural EN ↔ VI · 10:26 · $0.0004</small></div>
+            <div class="it"><div class="t">See you tomorrow.</div><small>Technical Doc · 10:20 · $0.0001</small></div>
             <div class="sec">Yesterday</div>
-            <div class="it"><div class="t">Bản phát hành này sửa lỗi…</div><small>Any → English · 18:02</small></div></div>
+            <div class="it"><div class="t">Bản phát hành này sửa lỗi…</div><small>Any → English · 18:02 · price unknown</small></div></div>
           <div class="detail">
-            <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600">Today at 10:26</span><span class="meta">· gpt-6-luna · 0.8 s · 96 tokens</span><span class="sp"></span><span class="btn">Translate again</span><span class="btn primary"><svg class="i s"><use href="#copy"/></svg>Copy</span></div>
+            <div style="display:flex;align-items:center;gap:8px"><span style="font-weight:600">Today at 10:26</span><span class="meta">· gpt-6-luna · 0.8 s · 96 tokens · <b>$0.0004</b></span><span class="sp"></span><span class="btn">Translate again</span><span class="btn primary"><svg class="i s"><use href="#copy"/></svg>Copy</span></div>
             <div class="sheet" style="margin:0;min-height:260px">
               <div class="half"><div class="lang">Original</div><div class="text">Please review the release notes before Friday and flag anything that blocks the launch.</div></div>
               <div class="half out"><div class="lang">Translation</div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và báo ngay những gì đang cản trở việc ra mắt.</div></div></div>
           </div>
         </div>
       </div>
-      <figcaption><b>Browsing.</b> Delete All is a quiet button that confirms first; the red is saved for the confirmation itself.</figcaption>
+      <figcaption><b>Browsing.</b> Each entry shows what it cost, saved at translation time; “price unknown” when the model has no price in the cost table. The toolbar can show today’s total (“Today: $0.0012”). Delete All is a quiet button that confirms first; the red is saved for the confirmation itself.</figcaption>
     </figure>
     <figure>
       <div class="win" style="width:560px;height:340px">
@@ -582,7 +607,7 @@ figcaption b { color: var(--label); font-weight: 600; }
           <h2>Translate anything you select.</h2><p>Press a shortcut in any app. The translation appears right there.</p>
           <div class="mock"><b style="font-size:11px">Natural EN ↔ VI</b><div class="ln" style="width:85%"></div><div class="ln a" style="width:95%"></div><div class="ln a" style="width:60%"></div></div></div>
         <div class="body"><span class="step">Step 2 of 4</span><h3>Connect an AI provider</h3><p class="lead">TransFlex uses your own key. It stays in your Keychain.</p>
-          <div class="choice"><div class="on"><span class="logo-tile" style="background:#10A37F">OA</span>OpenAI<small>GPT models</small></div><div><span class="logo-tile" style="background:#C96442">A</span>Anthropic<small>Claude models</small></div><div><span class="logo-tile" style="background:#4C7BF4">G</span>Gemini<small>Google</small></div></div>
+          <div class="choice"><div class="on"><span class="prov openai"><svg><use href="#prov-openai"/></svg></span>OpenAI<small>GPT models</small></div><div><span class="prov anthropic"><svg><use href="#prov-anthropic"/></svg></span>Anthropic<small>Claude models</small></div><div><span class="prov gemini"><svg><use href="#prov-gemini"/></svg></span>Gemini<small>Google</small></div></div>
           <div style="margin-top:16px;display:grid;gap:6px"><span style="font-weight:500">OpenAI API key</span><span class="field ph focus" style="width:100%">sk-…</span><span style="font-size:12px;color:var(--accent)">Where do I get a key? <svg class="i s" style="vertical-align:-2px"><use href="#arrow"/></svg></span></div>
           <span class="sp"></span>
           <div style="display:flex;align-items:center;gap:8px"><div class="progress"><i class="on"></i><i class="on"></i><i></i><i></i></div><span class="sp"></span><span class="btn ghost">Skip for now</span><span class="btn primary lg" disabled>Continue</span></div></div>
