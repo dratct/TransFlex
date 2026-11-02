@@ -4,6 +4,7 @@ colors:
   accent-text: { light: "#0F7A5F", dark: "#3DD6AC" }  # small accent text (the Translation label); 9.1:1 on dark
   on-accent: "#FFFFFF"                              # 5.29:1 light, 4.66:1 dark
   brand: "#21B38C"                                  # logo, app icon, Welcome illustration only
+  brand-deep: "#0B5E4A"                             # Welcome brand panel behind white text; 7.7:1
   surface: windowBackgroundColor                    # window and popup body
   content: textBackgroundColor                      # cards, notices, form groups
   on-surface: labelColor
@@ -52,8 +53,8 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 ## Colors
 
 - Roles map to `NSColor` semantic colours, so dark mode and increased
-  contrast come from the system. The only custom colours are `accent` and
-  `brand`.
+  contrast come from the system. The only custom colours are `accent`,
+  `brand` and `brand-deep`.
 - `accent` lives in the `AccentColor` asset. A user whose system accent is
   not Multicolor sees their own colour; no view forces `.tint`.
 - Accent is used for: the one prominent button of a state, focus rings,
@@ -125,7 +126,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed. Never takes key focus. |
 | `ProviderLogo` | The provider's own mark from `Assets.xcassets` (`ProviderOpenAI`, `ProviderAnthropic`, `ProviderGemini`) in a 28pt tile; OpenAI-compatible endpoints use initials. Used in Providers, the Provider row of a preset, and Welcome. |
 | `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". |
-| `Welcome` | 720×460, two panes. Left, 290pt: the brand panel, a gradient from `#0B5E4A` at the top (white text there reads at 7.7:1) to `brand` at the bottom, behind a small drawing of the popup; it never changes between steps. Right: "Step N of 4" (12pt, `.tertiary`), a 20pt semibold title and a `.secondary` lead, the step, then a footer with 4 progress bars on the leading side and the buttons trailing. Steps: Intro (Get Started) → Provider (Back · Skip for now · Continue) → Shortcut (Back · Continue) → Done (Back · Open Translator). Back and Skip are text buttons; the primary is the one filled button and takes Return. Continue on Provider saves the key first and stays with the error if it cannot. Shortcut and Done show the shortcut as 22pt keycaps. |
+| `Welcome` | 720×460, two panes. Left, 290pt: the brand panel, `brand-deep` from the top to just past the text (white text reads at 7.7:1), lightening to `brand` at the bottom, behind a small drawing of the popup; it never changes between steps. Right: "Step N of 4" (12pt, `.tertiary`), a 20pt semibold title and a `.secondary` lead, the step, then a footer with 4 progress bars on the leading side and the buttons trailing. Steps: Intro (Get Started) → Provider (Back · Skip for now · Continue) → Shortcut (Back · Continue) → Done (Back · Open Translator). Back and Skip are text buttons; the primary is the one filled button and takes Return. Continue on Provider saves the key first and stays with the error if it cannot. Shortcut and Done show the shortcut as 22pt keycaps. |
 | `ProviderSetupForm` | Shared by Welcome's Provider step and the popup's First-run sheet: three cards (`ProviderLogo`, name, one line in `.tertiary`; the chosen one ringed 2pt in the accent), "<Provider> API key" and a secure field, the error in red under it, then "Where do I get a key? ↗" to the provider's key page. Changing card clears the typed key. First-run: "Skip for now" · **Save & Start**. |
 
 Popup states (footer primary in **bold**):

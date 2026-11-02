@@ -145,9 +145,13 @@ private struct WelcomeTextButtonStyle: ButtonStyle {
 private struct WelcomeArt: View {
     var body: some View {
         ZStack(alignment: .topLeading) {
-            // Dark at the top, where the white text sits; `brand` only lower
-            // down, behind the picture.
-            LinearGradient(colors: [.brandDeep, .brand], startPoint: .topLeading, endPoint: .bottomTrailing)
+            // White text reads 7.7:1 on `brandDeep` but 2.7:1 on `brand`, so
+            // the panel stays deep down past the text and lightens only
+            // behind the picture.
+            LinearGradient(stops: [.init(color: .brandDeep, location: 0),
+                                   .init(color: .brandDeep, location: 0.45),
+                                   .init(color: .brand, location: 1)],
+                           startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 0) {
                 RoundedRectangle(cornerRadius: 11, style: .continuous)
                     .fill(.white.opacity(0.18))
@@ -162,7 +166,6 @@ private struct WelcomeArt: View {
                     .padding(.top, 18)
                     .padding(.bottom, 6)
                 Text("Press a shortcut in any app. The translation appears right there.")
-                    .opacity(0.85)
                     .fixedSize(horizontal: false, vertical: true)
             }
             .foregroundStyle(.white)
