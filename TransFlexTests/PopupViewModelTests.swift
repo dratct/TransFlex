@@ -134,7 +134,9 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(notified, 2)
     }
 
-    func testQuickErrorKeepsDraftAndPresetForNextNormalOpen() throws {
+    // MARK: Draft rule (CONTEXT.md)
+
+    func testPopupDraftComesBackAfterSelectionWhenKept() throws {
         let vm = makeViewModel()
         let draftPreset = try XCTUnwrap(presetStore.presets.first?.id)
         let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
@@ -143,8 +145,9 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.presentQuickError("No text selected.", presetID: shortcutPreset)
         XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
+        XCTAssertEqual(vm.inputText, "", "the Output-only popup never shows the Draft")
 
-        vm.leaveOutputOnly()
+        vm.openPopup(keepingDraft: true)
 
         XCTAssertFalse(vm.isOutputOnly)
         XCTAssertEqual(vm.inputText, "half-typed draft")
@@ -152,26 +155,77 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.state, .idle)
     }
 
-    func testQuickWithoutDraftKeepsQuickResultOnNormalOpen() throws {
+    func testPopupResultComesBackWithItsDraft() throws {
         let vm = makeViewModel()
-        let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
+        vm.inputText = "hello"
+        vm.state = .done(result: "xin chào")
 
-        vm.presentQuickError("No text selected.", presetID: shortcutPreset)
-        vm.leaveOutputOnly()
+        vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: true)
 
-        XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
-        XCTAssertEqual(vm.state, .error(message: "No text selected.", partial: nil))
+        XCTAssertEqual(vm.inputText, "hello")
+        XCTAssertEqual(vm.state, .done(result: "xin chào"))
     }
 
-    func testStaleResetDropsKeptDraft() throws {
+    func testPopupStartsEmptyAfterSelectionWhenCleared() throws {
         let vm = makeViewModel()
+        let draftPreset = try XCTUnwrap(presetStore.presets.first?.id)
+        vm.switchPreset(draftPreset)
         vm.inputText = "old draft"
+        vm.state = .done(result: "cũ")
+
         vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: false)
 
-        vm.reset()
-        vm.leaveOutputOnly()
-
+        XCTAssertFalse(vm.isOutputOnly)
         XCTAssertEqual(vm.inputText, "")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.selectedPresetID, draftPreset, "the preset is a choice, not part of the Draft")
+    }
+
+    func testPopupNeverInheritsTheSelectionResult() throws {
+        let vm = makeViewModel()
+
+        vm.presentQuickError("No text selected.", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    func testTwoSelectionsInARowStillHandBackTheFirstDraft() throws {
+        let vm = makeViewModel()
+        let last = try XCTUnwrap(presetStore.presets.last?.id)
+        vm.inputText = "draft"
+
+        vm.presentQuickError("x", presetID: last)
+        vm.presentQuickError("y", presetID: last)
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "draft")
+    }
+
+    func testReopeningThePopupClearsOnlyWhenTold() {
+        let vm = makeViewModel()
+        vm.inputText = "draft"
+
+        vm.openPopup(keepingDraft: true)
+        XCTAssertEqual(vm.inputText, "draft")
+
+        vm.openPopup(keepingDraft: false)
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    func testShowInputTurnsTheSelectionIntoThePopup() throws {
+        let vm = makeViewModel()
+        vm.inputText = "older draft"
+        vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.inputText = "selected text"
+
+        vm.showInput()
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "selected text")
     }
 
     func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
@@ -284,23 +338,14 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         XCTAssertEqual(vm.state, .idle)
     }
 
-    func testAccessibilityCardKeepsDraftForNextNormalOpen() throws {
+    func testAccessibilityCardKeepsDraftForNextPopupOpen() throws {
         let vm = makeViewModel(granted: { false })
         vm.inputText = "draft"
 
         vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
-        vm.leaveOutputOnly()
+        vm.openPopup(keepingDraft: true)
 
         XCTAssertEqual(vm.inputText, "draft")
-        XCTAssertEqual(vm.state, .idle)
-    }
-
-    func testAccessibilityCardWithoutDraftStartsCleanOnNormalOpen() throws {
-        let vm = makeViewModel(granted: { false })
-
-        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
-        vm.leaveOutputOnly()
-
         XCTAssertEqual(vm.state, .idle)
         XCTAssertFalse(vm.isOutputOnly)
     }
@@ -310,5 +355,30 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         let vm = makeViewModel(granted: { false }, opened: { opened += 1 })
         vm.openAccessibilitySettings()
         XCTAssertEqual(opened, 1)
+    }
+}
+
+final class PopupHideClockTests: XCTestCase {
+    private let twoMinutes = PopupResetPolicy.afterMinutes(2)
+    private let t0 = Date(timeIntervalSince1970: 1_000_000)
+
+    func testDraftKeptWithinThePolicyWindow() {
+        var clock = PopupHideClock()
+        clock.recordHide(outputOnly: false, at: t0)
+        XCTAssertTrue(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(60)))
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(130)))
+    }
+
+    func testOutputOnlyHideDoesNotExtendTheWindow() {
+        var clock = PopupHideClock()
+        clock.recordHide(outputOnly: false, at: t0)
+        clock.recordHide(outputOnly: true, at: t0.addingTimeInterval(90))
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(130)))
+    }
+
+    func testFirstOpenStartsEmptyUnlessNever() {
+        let clock = PopupHideClock()
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0))
+        XCTAssertTrue(clock.keepsDraft(policy: .never, now: t0))
     }
 }

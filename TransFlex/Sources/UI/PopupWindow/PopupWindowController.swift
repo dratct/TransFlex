@@ -12,7 +12,7 @@ public final class PopupWindowController {
     private static let defaultSize = NSSize(width: 480, height: 320)
 
     private var viewModel: PopupViewModel?
-    private var lastHiddenAt: Date?
+    private var hideClock = PopupHideClock()
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
     private let selection = SelectionCapture()
@@ -47,8 +47,8 @@ public final class PopupWindowController {
         vm.historyStore = historyStore
         self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
         self.replaceCoordinator.historyStore = historyStore
-        self.panel.onHide = { [weak self] in
-            self?.lastHiddenAt = Date()
+        self.panel.onHide = { [weak self, weak vm] in
+            self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
@@ -120,8 +120,7 @@ public final class PopupWindowController {
     public func show(at point: NSPoint? = nil) {
         let start = mach_absolute_time()
 
-        resetIfStale()
-        viewModel?.leaveOutputOnly()
+        viewModel?.openPopup(keepingDraft: hideClock.keepsDraft(policy: PopupResetPolicyStore.load()))
 
         let reference = point ?? NSEvent.mouseLocation
         panel.setFrame(frame(.popup, onScreenContaining: reference), display: true)
@@ -212,17 +211,6 @@ public final class PopupWindowController {
         NSScreen.screens.first { NSMouseInRect(point, $0.frame, false) }
             ?? NSScreen.main
             ?? NSScreen.screens.first
-    }
-
-    /// Reset the view-model when the popup is opening fresh, governed by the
-    /// user-configured `PopupResetPolicy`. Read on every show so changes in
-    /// Settings take effect on the next open without requiring an app restart.
-    private func resetIfStale() {
-        guard let vm = viewModel else { return }
-        let policy = PopupResetPolicyStore.load()
-        if policy.shouldReset(lastHiddenAt: lastHiddenAt) {
-            vm.reset()
-        }
     }
 
     /// The mode's frame on the screen containing `point`. Falls back to primary

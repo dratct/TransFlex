@@ -9,7 +9,7 @@ final class PopupPanel: NSPanel {
     /// Called whenever the panel is hidden — covers all paths (controller
     /// `hide()`, ESC via `cancelOperation`, app-activation observer in
     /// `PopupWindowController`). The controller wires this to its
-    /// `lastHiddenAt` clock so the user-configured `PopupResetPolicy` sees
+    /// `PopupHideClock` so the user-configured `PopupResetPolicy` sees
     /// an accurate "time since last hide".
     var onHide: (() -> Void)?
     /// ⌘C handler; returns true when it consumed the key.

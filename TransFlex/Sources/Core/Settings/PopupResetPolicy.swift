@@ -77,3 +77,18 @@ enum PopupResetPolicyStore {
         UserDefaults.standard.set(policy.rawMinutes, forKey: PopupResetPolicy.storageKey)
     }
 }
+
+/// When the Popup itself was last hidden. Hides of the Output-only popup are
+/// ignored, so a Translate Selection neither resets nor extends the time the
+/// Popup's Draft is kept (CONTEXT.md › Rules).
+struct PopupHideClock {
+    private(set) var popupHiddenAt: Date?
+
+    mutating func recordHide(outputOnly: Bool, at date: Date = Date()) {
+        if !outputOnly { popupHiddenAt = date }
+    }
+
+    func keepsDraft(policy: PopupResetPolicy, now: Date = Date()) -> Bool {
+        !policy.shouldReset(lastHiddenAt: popupHiddenAt, now: now)
+    }
+}

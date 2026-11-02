@@ -19,7 +19,7 @@ final class PopupViewModel: ObservableObject {
     /// when the view should re-focus on a subsequent reopen.
     @Published var inputFocusRequest: Int = 0
     /// Selection-translate mode: the popup shows only the result. Cleared by
-    /// `reset()`, `showInput()` and `leaveOutputOnly()`.
+    /// `reset()`, `showInput()` and `openPopup(keepingDraft:)`.
     @Published private(set) var isOutputOnly: Bool = false
     /// Natural height of the output content and the height it is given,
     /// reported by the view so the controller can grow the panel to fit.
@@ -27,14 +27,16 @@ final class PopupViewModel: ObservableObject {
     @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
-    /// What the user was typing when a selection shortcut took over the popup;
-    /// handed back on the next normal open.
-    private var keptDraft: Draft?
+    /// The Popup's Draft and result, set aside while a selection shortcut
+    /// uses the panel; `openPopup(keepingDraft:)` hands it back.
+    private var popupSession: PopupSession?
 
-    private struct Draft {
+    private struct PopupSession {
         let text: String
         let image: ImageInput?
         let presetID: UUID?
+        let state: PopupState
+        let costEstimate: String?
     }
 
     private let translationService: TranslationService
@@ -300,28 +302,34 @@ final class PopupViewModel: ObservableObject {
         isOutputOnly = false
         outputContentHeight = 0
         outputVisibleHeight = 0
-        keptDraft = nil
+        popupSession = nil
         state = .idle
     }
 
-    /// Resets for a selection shortcut, keeping a non-empty draft from the
-    /// normal popup so `leaveOutputOnly()` can hand it back.
-    private func resetKeepingDraft() {
-        let draft: Draft?
+    /// Resets for a selection shortcut. The Popup's own session is set aside
+    /// first; a second shortcut in a row keeps the one already set aside.
+    private func resetForSelection() {
+        let session: PopupSession?
         if isOutputOnly {
-            draft = keptDraft
-        } else if !inputText.isEmpty || attachedImage != nil {
-            draft = Draft(text: inputText, image: attachedImage, presetID: selectedPresetID)
+            session = popupSession
         } else {
-            draft = nil
+            let kept: PopupState
+            switch state {
+            case .done, .error(_, .some): kept = state
+            default: kept = .idle
+            }
+            session = PopupSession(
+                text: inputText, image: attachedImage, presetID: selectedPresetID,
+                state: kept, costEstimate: kept == .idle ? nil : costEstimate
+            )
         }
         reset()
-        keptDraft = draft
+        popupSession = session
     }
 
     /// Translates text captured from another app and shows only the result.
     func startQuickTranslation(text: String, presetID: UUID) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         inputText = text
         isOutputOnly = true
@@ -330,7 +338,7 @@ final class PopupViewModel: ObservableObject {
 
     /// Surfaces a selection-translate failure in the output-only popup.
     func presentQuickError(_ message: String, presetID: UUID) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .error(message: message, partial: nil)
@@ -345,7 +353,7 @@ final class PopupViewModel: ObservableObject {
         pollInterval: UInt64 = 1_000_000_000,
         maxPolls: Int = 300
     ) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .accessibilityRequired(granted: false)
@@ -368,24 +376,30 @@ final class PopupViewModel: ObservableObject {
     func showInput() {
         guard isOutputOnly else { return }
         isOutputOnly = false
-        keptDraft = nil
+        popupSession = nil
         onShowInput?()
     }
 
-    /// Normal popup open: drop output-only mode without resizing, and bring
-    /// back the draft a selection shortcut set aside. The permission card
-    /// belongs to the shortcut, so with no draft the popup starts clean.
-    func leaveOutputOnly() {
-        guard isOutputOnly else { return }
-        if let draft = keptDraft {
+    /// Opening the Popup. After a selection shortcut the Popup gets back its
+    /// own Draft and result when `keepingDraft`, otherwise it starts empty;
+    /// it never shows what the shortcut produced. `keepingDraft` comes from
+    /// Clear previous translation, timed from the Popup's own last hide.
+    func openPopup(keepingDraft: Bool) {
+        if isOutputOnly {
+            let session = popupSession
             reset()
-            inputText = draft.text
-            attachedImage = draft.image
-            selectedPresetID = draft.presetID ?? selectedPresetID
-        } else if case .accessibilityRequired = state {
+            if let session {
+                selectedPresetID = session.presetID ?? selectedPresetID
+                if keepingDraft {
+                    inputText = session.text
+                    attachedImage = session.image
+                    state = session.state
+                    costEstimate = session.costEstimate
+                }
+            }
+        } else if !keepingDraft {
             reset()
         }
-        isOutputOnly = false
     }
 
     func switchPreset(_ id: UUID) {
