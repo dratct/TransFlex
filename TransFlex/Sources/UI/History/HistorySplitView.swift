@@ -1,3 +1,4 @@
+import KeyboardShortcuts
 import SwiftUI
 
 struct HistorySplitView: View {
@@ -5,90 +6,99 @@ struct HistorySplitView: View {
 
     @State private var selectedEntryID: UUID?
     @State private var entries: [HistoryEntry] = []
+    @State private var hasLoaded = false
     @State private var searchQuery = ""
     @State private var searchResults: [HistoryEntry]?
     @State private var showExportSheet = false
     @State private var showDeleteConfirm = false
 
+    private let pageSize = 50
+
     var body: some View {
-        NavigationSplitView {
-            listPane
+        content
+            .frame(minWidth: 560, minHeight: 340)
+            .toolbar {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    // Searching never changes these: they act on the whole history.
+                    Button("Export…") { showExportSheet = true }
+                        .disabled(!hasHistory)
+                    if hasHistory {
+                        Button("Delete All…") { showDeleteConfirm = true }
+                    }
+                }
+            }
+            .sheet(isPresented: $showExportSheet) {
+                HistoryExportSheet(store: store, isPresented: $showExportSheet)
+            }
+            .confirmationDialog("Delete all history?", isPresented: $showDeleteConfirm) {
+                Button("Delete All", role: .destructive) { deleteAll() }
+            } message: {
+                Text("Every saved translation is removed. This can’t be undone.")
+            }
+            .onAppear(perform: loadFirstPage)
+    }
+
+    @ViewBuilder
+    private var content: some View {
+        if hasLoaded && !hasHistory {
+            // No sidebar and no search when there is nothing to search.
+            EmptyState(
+                symbol: "clock.arrow.circlepath",
+                title: "No translations yet",
+                message: emptyMessage
+            )
+        } else {
+            NavigationSplitView {
+                VStack(spacing: 0) {
+                    HistorySearchField(query: $searchQuery)
+                        .padding(Spacing.s)
+                    HistoryListView(
+                        entries: searchResults ?? entries,
+                        selectedEntryID: $selectedEntryID,
+                        onReachEnd: { if searchResults == nil { loadMore() } }
+                    )
+                }
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
-        } detail: {
-            if hasNoHistory {
-                emptyState
-            } else {
-                HistoryDetailView(
-                    entry: currentEntry,
-                    onRetranslate: nil,
-                    onDelete: { id in deleteEntry(id) }
-                )
+                .onChange(of: searchQuery) { performSearch($0) }
+            } detail: {
+                detail
             }
-        }
-        .frame(minWidth: 640, minHeight: 400)
-        .toolbar {
-            ToolbarItemGroup(placement: .primaryAction) {
-                ToolbarButton(title: "Export", systemImage: "square.and.arrow.up") {
-                    showExportSheet = true
-                }
-                .disabled(hasNoHistory)
-                ToolbarButton(title: "Delete All", systemImage: "trash") {
-                    showDeleteConfirm = true
-                }
-                .disabled(hasNoHistory)
-            }
-        }
-        .sheet(isPresented: $showExportSheet) {
-            HistoryExportSheet(store: store, isPresented: $showExportSheet)
-        }
-        .alert("Delete All History?", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete All", role: .destructive) { deleteAll() }
         }
     }
 
     @ViewBuilder
-    private var listPane: some View {
-        VStack(spacing: 0) {
-            HistorySearchField(query: $searchQuery)
-                .padding(8)
-            if let results = searchResults {
-                List(results, selection: $selectedEntryID) { entry in
-                    HistoryRowAdapter(entry: entry)
-                        .tag(entry.id)
-                }
-                .listStyle(.sidebar)
-            } else {
-                HistoryListView(store: store, entries: $entries, selectedEntryID: $selectedEntryID)
-            }
-        }
-        .onChange(of: searchQuery) { _ in
-            performSearch(searchQuery)
+    private var detail: some View {
+        if let results = searchResults, results.isEmpty {
+            EmptyState(
+                symbol: "magnifyingglass",
+                title: "No results for “\(searchQuery.trimmingCharacters(in: .whitespaces))”",
+                message: "Search looks in both the text and its translation."
+            )
+        } else {
+            HistoryDetailView(entry: currentEntry, onDelete: deleteEntry)
         }
     }
 
-    private var hasNoHistory: Bool {
-        entries.isEmpty && searchResults == nil
-    }
+    private var hasHistory: Bool { !entries.isEmpty }
 
-    private var emptyState: some View {
-        VStack(spacing: 6) {
-            Image(systemName: "clock.arrow.circlepath")
-                .font(.system(size: 28))
-                .foregroundStyle(.tertiary)
-            Text("No translations yet")
-                .font(.headline)
-            Text("Translations you make in the popup show up here.")
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+    private var emptyMessage: String {
+        let base = "Everything you translate shows up here, newest first."
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: .openPopup) else { return base }
+        return base + " Press \(shortcut.description) to start."
     }
 
     private var currentEntry: HistoryEntry? {
-        if let results = searchResults {
-            return results.first { $0.id == selectedEntryID }
-        }
-        return entries.first { $0.id == selectedEntryID }
+        (searchResults ?? entries).first { $0.id == selectedEntryID }
+    }
+
+    private func loadFirstPage() {
+        entries = (try? store.fetchPage(offset: 0, limit: pageSize)) ?? []
+        hasLoaded = true
+    }
+
+    private func loadMore() {
+        guard let next = try? store.fetchPage(offset: entries.count, limit: pageSize), !next.isEmpty else { return }
+        entries.append(contentsOf: next)
     }
 
     private func performSearch(_ query: String) {
@@ -96,11 +106,7 @@ struct HistorySplitView: View {
             searchResults = nil
             return
         }
-        do {
-            searchResults = try store.search(query: query)
-        } catch {
-            searchResults = nil
-        }
+        searchResults = (try? store.search(query: query)) ?? []
     }
 
     private func deleteEntry(_ id: UUID) {
@@ -115,46 +121,10 @@ struct HistorySplitView: View {
     private func deleteAll() {
         do {
             try store.deleteAll()
+            searchQuery = ""
             searchResults = nil
             entries = []
             selectedEntryID = nil
         } catch {}
-    }
-}
-
-private struct HistoryRowAdapter: View {
-    let entry: HistoryEntry
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(entry.inputText.flatMap { Self.truncate($0, length: 60) } ?? "Image translation")
-                .lineLimit(1)
-                .font(.body)
-            Text(Self.truncate(entry.outputText, length: 60))
-                .lineLimit(1)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-            Text(entry.createdAt, style: .date)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
-        }
-        .padding(.vertical, 2)
-    }
-
-    private static func truncate(_ text: String, length: Int) -> String {
-        guard text.count > length else { return text }
-        return String(text.prefix(length)) + "..."
-    }
-}
-
-private struct ToolbarButton: View {
-    let title: String
-    let systemImage: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: systemImage)
-        }
     }
 }

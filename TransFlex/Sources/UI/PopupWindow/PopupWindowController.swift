@@ -148,6 +148,19 @@ public final class PopupWindowController {
         panel.orderOut(nil)
     }
 
+    /// Ignores the activation that follows another TransFlex window closing,
+    /// then gives the popup the keyboard back.
+    public func keepThroughOtherWindowClose() {
+        guard panel.isVisible else { return }
+        autoDismisser?.stop()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, self.panel.isVisible else { return }
+            self.panel.orderFrontRegardless()
+            self.panel.makeKey()
+            self.autoDismisser?.start()
+        }
+    }
+
     // MARK: - Private
 
     private func handleEscape() {

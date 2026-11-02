@@ -1,84 +1,76 @@
+import AppKit
 import SwiftUI
 
+/// One past translation, laid out like the popup's two halves.
 struct HistoryDetailView: View {
     let entry: HistoryEntry?
-    let onRetranslate: ((HistoryEntry) -> Void)?
-    let onDelete: ((UUID) -> Void)?
+    let onDelete: (UUID) -> Void
 
     var body: some View {
-        Group {
-            if let entry {
-                detailContent(entry)
-            } else {
-                Text("Select a translation to view details")
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    @ViewBuilder
-    private func detailContent(_ entry: HistoryEntry) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                metaSection(entry)
-
-                if let input = entry.inputText {
-                    section(title: "Input") {
-                        Text(input).textSelection(.enabled)
-                    }
-                }
-
-                section(title: "Output") {
-                    Text(entry.outputText).textSelection(.enabled)
-                }
-
-                HStack(spacing: 12) {
-                    Button("Copy Output") {
-                        NSPasteboard.general.clearContents()
-                        NSPasteboard.general.setString(entry.outputText, forType: .string)
-                    }
-                    if let onRetranslate {
-                        Button("Re-translate") { onRetranslate(entry) }
-                    }
-                    Button("Delete", role: .destructive) { onDelete?(entry.id) }
-                }
-                .padding(.top, 8)
-            }
-            .padding()
-        }
-    }
-
-    @ViewBuilder
-    private func metaSection(_ entry: HistoryEntry) -> some View {
-        HStack {
-            Label(ProviderRegistry.shared.displayName(for: entry.providerID), systemImage: "server.rack")
-            Spacer()
-            if let tokens = entry.tokenCount {
-                Label("\(tokens) tokens", systemImage: "number")
-            }
-            if let ms = entry.durationMs {
-                Label("\(ms) ms", systemImage: "clock")
-            }
-            if entry.hadImage {
-                Label("Image", systemImage: "photo")
-            }
-        }
-        .font(.caption)
-        .foregroundStyle(.secondary)
-    }
-
-    @ViewBuilder
-    private func section<Content: View>(title: String, @ViewBuilder content: () -> Content) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.headline)
+        if let entry {
+            detailContent(entry)
+        } else {
+            Text("Select a translation to see it here.")
                 .foregroundStyle(.secondary)
-            content()
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(8)
-                .background(Color(nsColor: .textBackgroundColor))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+    }
+
+    private func detailContent(_ entry: HistoryEntry) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.l) {
+            header(entry)
+            ScrollView {
+                VStack(alignment: .leading, spacing: Spacing.xl) {
+                    if let input = entry.inputText {
+                        half(label: ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor)),
+                             text: input, font: ReadingType.original, lineSpacing: ReadingType.originalLineSpacing)
+                    }
+                    half(label: ColumnLabel(title: "Translation", color: .accentText),
+                         text: entry.outputText, font: ReadingType.translation, lineSpacing: ReadingType.translationLineSpacing)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(Spacing.xl)
+    }
+
+    private func header(_ entry: HistoryEntry) -> some View {
+        HStack(spacing: Spacing.s) {
+            Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
+                .font(.headline)
+            Text(meta(entry))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .lineLimit(1)
+            Spacer(minLength: Spacing.s)
+            Button("Delete") { onDelete(entry.id) }
+            Button("Copy") {
+                NSPasteboard.general.clearContents()
+                NSPasteboard.general.setString(entry.outputText, forType: .string)
+            }
+            .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func half(label: ColumnLabel, text: String, font: Font, lineSpacing: CGFloat) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            label
+            Text(text)
+                .font(font)
+                .lineSpacing(lineSpacing)
+                .textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private func meta(_ entry: HistoryEntry) -> String {
+        var parts = [entry.modelID]
+        if let ms = entry.durationMs {
+            parts.append((Double(ms) / 1000).formatted(.number.precision(.fractionLength(1))) + " s")
+        }
+        if let tokens = entry.tokenCount { parts.append("\(tokens.formatted()) tokens") }
+        if entry.hadImage { parts.append("image") }
+        return "· " + parts.joined(separator: " · ")
     }
 }

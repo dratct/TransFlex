@@ -33,17 +33,18 @@ final class HistoryWindowController {
             backing: .buffered,
             defer: false
         )
-        newWindow.title = "Translation History"
+        newWindow.title = "History"
         newWindow.contentViewController = hosting
         // Assigning the controller shrinks the window to the view's fitting
         // size, so set the intended size afterwards.
         newWindow.setContentSize(frame.size)
-        newWindow.center()
+        UtilityWindowPlacement.place(newWindow)
         newWindow.isReleasedWhenClosed = false
         let delegate = HistoryWindowDelegate { [weak self] in
             self?.window = nil
             self?.windowDelegate = nil
             DockVisibilityController.shared.hideDockIcon(for: .history)
+            AppCommands.keepPopupAfterWindowClose()
         }
         newWindow.delegate = delegate
         windowDelegate = delegate

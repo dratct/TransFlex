@@ -16,8 +16,10 @@ final class SettingsWindowController {
 
     func show(tab: SettingsTab = .general) {
         tabState.selected = tab
+        let isNew = window == nil
         let win = window ?? makeWindow()
         window = win
+        if isNew || !win.isVisible { UtilityWindowPlacement.place(win) }
         DockVisibilityController.shared.showDockIcon(for: .settings)
         NSApp.activate(ignoringOtherApps: true)
         win.makeKeyAndOrderFront(nil)
@@ -42,12 +44,11 @@ final class SettingsWindowController {
         win.title = "\(AppIdentity.current.displayName) Settings"
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         win.isReleasedWhenClosed = false
-        win.level = .floating
         win.setContentSize(NSSize(width: 720, height: 520))
-        win.center()
         let delegate = SettingsWindowDelegate { [weak self] in
             self?.autoDismisser?.stop()
             DockVisibilityController.shared.hideDockIcon(for: .settings)
+            AppCommands.keepPopupAfterWindowClose()
         }
         win.delegate = delegate
         windowDelegate = delegate

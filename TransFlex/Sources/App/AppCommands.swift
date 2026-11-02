@@ -21,4 +21,10 @@ enum AppCommands {
         }
         controller.show()
     }
+
+    /// Closing Settings or History hands activation back to the app that was
+    /// in front, which would otherwise read as "the user left" and hide the popup.
+    static func keepPopupAfterWindowClose() {
+        AppDelegate.shared?.popupWindowController?.keepThroughOtherWindowClose()
+    }
 }

@@ -19,7 +19,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var statusBarController: StatusBarController?
-    private var popupWindowController: PopupWindowController?
+    private(set) var popupWindowController: PopupWindowController?
     private var hotkeyManager: GlobalHotkeyManager?
     let presetStore = PresetStore()
     let providersStore = ProvidersStore()

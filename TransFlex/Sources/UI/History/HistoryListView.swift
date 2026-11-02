@@ -1,50 +1,27 @@
 import SwiftUI
 
+/// The History sidebar list, grouped by day, newest first.
 struct HistoryListView: View {
-    @ObservedObject var store: HistoryStore
-    @Binding var entries: [HistoryEntry]
+    let entries: [HistoryEntry]
     @Binding var selectedEntryID: UUID?
-    @State private var offset = 0
-    @State private var isLoading = false
-    private let pageSize = 50
+    /// Called when the last row appears, to load the next page.
+    var onReachEnd: () -> Void = {}
 
     var body: some View {
         List(selection: $selectedEntryID) {
-            ForEach(entries) { entry in
-                HistoryRowView(entry: entry)
-                    .tag(entry.id)
-                    .onAppear {
-                        if entry.id == entries.last?.id {
-                            loadMore()
-                        }
+            ForEach(HistoryDays.sections(entries), id: \.title) { section in
+                Section(section.title) {
+                    ForEach(section.entries) { entry in
+                        HistoryRowView(entry: entry)
+                            .tag(entry.id)
+                            .onAppear {
+                                if entry.id == entries.last?.id { onReachEnd() }
+                            }
                     }
+                }
             }
         }
         .listStyle(.sidebar)
-        .onAppear { loadInitial() }
-    }
-
-    private func loadInitial() {
-        guard entries.isEmpty else { return }
-        offset = 0
-        do {
-            entries = try store.fetchPage(offset: 0, limit: pageSize)
-            offset = entries.count
-        } catch {
-            entries = []
-        }
-    }
-
-    private func loadMore() {
-        guard !isLoading else { return }
-        isLoading = true
-        defer { isLoading = false }
-        do {
-            let next = try store.fetchPage(offset: offset, limit: pageSize)
-            guard !next.isEmpty else { return }
-            entries.append(contentsOf: next)
-            offset = entries.count
-        } catch {}
     }
 }
 
@@ -53,22 +30,13 @@ private struct HistoryRowView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
-            Text(entry.inputText.flatMap { Self.truncate($0, length: 60) } ?? "Image translation")
+            Text(entry.inputText ?? "Image translation")
                 .lineLimit(1)
-                .font(.body)
-            Text(Self.truncate(entry.outputText, length: 60))
-                .lineLimit(1)
+            Text("\(entry.modelID) · \(entry.createdAt.formatted(date: .omitted, time: .shortened))")
                 .font(.caption)
                 .foregroundStyle(.secondary)
-            Text(entry.createdAt, style: .date)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .lineLimit(1)
         }
         .padding(.vertical, 2)
-    }
-
-    private static func truncate(_ text: String, length: Int) -> String {
-        guard text.count > length else { return text }
-        return String(text.prefix(length)) + "..."
     }
 }
