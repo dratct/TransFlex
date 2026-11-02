@@ -139,20 +139,20 @@ struct PopupView: View {
             PresetPickerView(viewModel: viewModel)
                 .focusable(false)
             Spacer()
-            headerButton(symbol: "clock.arrow.circlepath", help: "History · ⌘Y") {
+            headerButton(symbol: "clock.arrow.circlepath", title: "History", keys: ["⌘", "Y"]) {
                 // The popup floats above normal windows and would cover History.
                 viewModel.onDismissRequest?()
                 AppCommands.openHistory()
             }
             .keyboardShortcut("y", modifiers: .command)
-            headerButton(symbol: "gearshape", help: "Settings · ⌘,") {
+            headerButton(symbol: "gearshape", title: "Settings", keys: ["⌘", ","]) {
                 AppCommands.openSettings()
             }
             .keyboardShortcut(",", modifiers: .command)
         }
     }
 
-    private func headerButton(symbol: String, help: String, action: @escaping () -> Void) -> some View {
+    private func headerButton(symbol: String, title: String, keys: [String], action: @escaping () -> Void) -> some View {
         Button(action: action) {
             Image(systemName: symbol)
                 .font(.system(size: 13, weight: .medium))
@@ -162,8 +162,9 @@ struct PopupView: View {
         .buttonStyle(.plain)
         .foregroundStyle(.secondary)
         .focusable(false)
-        .help(help)
-        .accessibilityLabel(help)
+        .help("\(title) · \(keys.joined())")
+        .accessibilityLabel(title)
+        .accessibilityHint(KeyHint.spokenLabel(for: keys))
     }
 
     @ViewBuilder

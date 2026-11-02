@@ -58,6 +58,8 @@ struct PresetPickerView: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
+        .accessibilityLabel("Preset")
+        .accessibilityValue(viewModel.selectedPreset?.name ?? "None")
         .fixedSize()
     }
 }
