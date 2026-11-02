@@ -83,7 +83,11 @@ enum ScreenshotMode {
                 return AnyView(SettingsRoot(tabState: state).environmentObject(presets))
             })
         }
-        shots.append(Shot(name: "history", size: NSSize(width: 800, height: 500)) {
+        shots.append(Shot(name: "history", size: HistoryWindowController.defaultContentSize) {
+            AnyView(HistorySplitView(store: history, presets: presets))
+        })
+        // Narrower than the side-by-side width: the columns stack.
+        shots.append(Shot(name: "history-narrow", size: NSSize(width: 800, height: 500)) {
             AnyView(HistorySplitView(store: history, presets: presets))
         })
         shots.append(Shot(name: "model-picker", size: NSSize(width: 320, height: 420)) {

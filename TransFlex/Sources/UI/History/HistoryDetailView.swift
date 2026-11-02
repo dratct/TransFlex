@@ -23,19 +23,80 @@ struct HistoryDetailView: View {
     private func detailContent(_ entry: HistoryEntry) -> some View {
         VStack(alignment: .leading, spacing: Spacing.l) {
             header(entry)
-            ScrollView {
-                VStack(alignment: .leading, spacing: Spacing.xl) {
-                    if let input = entry.inputText {
-                        half(label: ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor)),
-                             text: input, font: ReadingType.original, lineSpacing: ReadingType.originalLineSpacing)
+                .padding(.horizontal, Spacing.xl)
+            columns(entry)
+        }
+        .padding(.vertical, Spacing.xl)
+        // A new entry starts with fresh copy buttons, not a lingering checkmark.
+        .id(entry.id)
+    }
+
+    /// `TranslationColumns`, as in the popup: side by side from 720pt, stacked below.
+    private func columns(_ entry: HistoryEntry) -> some View {
+        GeometryReader { geo in
+            Group {
+                if let input = entry.inputText {
+                    if geo.size.width >= ColumnLayout.sideBySideMinWidth {
+                        let column = ((geo.size.width - 2 * Spacing.xl - ColumnLayout.gutter) / 2).rounded(.down)
+                        HStack(spacing: 0) {
+                            originalColumn(input)
+                                .frame(width: column)
+                            ColumnSeam(direction: .vertical)
+                                .padding(.horizontal, ColumnLayout.gutter / 2)
+                            translationColumn(entry.outputText)
+                                .frame(width: column)
+                        }
+                    } else {
+                        VStack(spacing: 0) {
+                            originalColumn(input)
+                                .frame(height: geo.size.height * ColumnLayout.stackedOriginalShare)
+                            ColumnSeam(direction: .horizontal)
+                                .padding(.vertical, ColumnLayout.gutter / 2)
+                            translationColumn(entry.outputText)
+                        }
                     }
-                    half(label: ColumnLabel(title: "Translation", color: .accentText),
-                         text: entry.outputText, font: ReadingType.translation, lineSpacing: ReadingType.translationLineSpacing)
+                } else {
+                    translationColumn(entry.outputText)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            .padding(.horizontal, Spacing.xl)
+        }
+    }
+
+    private func originalColumn(_ text: String) -> some View {
+        column(label: ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor)),
+               copyLabel: "Copy original", text: text,
+               font: ReadingType.original, lineSpacing: ReadingType.originalLineSpacing,
+               color: Color(nsColor: .secondaryLabelColor))
+    }
+
+    private func translationColumn(_ text: String) -> some View {
+        column(label: ColumnLabel(title: "Translation", color: .accentText),
+               copyLabel: "Copy translation", text: text,
+               font: ReadingType.translation, lineSpacing: ReadingType.translationLineSpacing,
+               color: .primary)
+    }
+
+    /// The copy button sits beside the label, so a long text scrolls under it
+    /// instead of pushing it out of reach.
+    private func column(label: ColumnLabel, copyLabel: String, text: String,
+                        font: Font, lineSpacing: CGFloat, color: Color) -> some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            HStack {
+                label
+                Spacer(minLength: Spacing.s)
+                CopyIconButton(text: text, label: copyLabel)
+            }
+            ScrollView {
+                Text(text)
+                    .font(font)
+                    .lineSpacing(lineSpacing)
+                    .foregroundStyle(color)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
-        .padding(Spacing.xl)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private func header(_ entry: HistoryEntry) -> some View {
@@ -74,22 +135,6 @@ struct HistoryDetailView: View {
             Button("Translate again") {}
                 .disabled(true)
                 .help(reason)
-        }
-        Button("Copy") {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(entry.outputText, forType: .string)
-        }
-        .buttonStyle(.borderedProminent)
-    }
-
-    private func half(label: ColumnLabel, text: String, font: Font, lineSpacing: CGFloat) -> some View {
-        VStack(alignment: .leading, spacing: Spacing.s) {
-            label
-            Text(text)
-                .font(font)
-                .lineSpacing(lineSpacing)
-                .textSelection(.enabled)
-                .frame(maxWidth: .infinity, alignment: .leading)
         }
     }
 }
