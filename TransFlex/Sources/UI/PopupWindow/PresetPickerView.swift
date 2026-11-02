@@ -50,6 +50,10 @@ struct PresetPickerView: View {
                     .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
             )
             .contentShape(Capsule())
+            // One element for VoiceOver, not the icon, name and chevron apart.
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("Preset")
+            .accessibilityValue(viewModel.selectedPreset?.name ?? "None")
         }
         // `.menuStyle(.borderlessButton)` on macOS strips a custom HStack label
         // down to title-only — it dropped our globe + chevron + capsule. Use
@@ -58,8 +62,6 @@ struct PresetPickerView: View {
         .menuStyle(.button)
         .buttonStyle(.plain)
         .menuIndicator(.hidden)
-        .accessibilityLabel("Preset")
-        .accessibilityValue(viewModel.selectedPreset?.name ?? "None")
         .fixedSize()
     }
 }
