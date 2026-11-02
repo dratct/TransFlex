@@ -13,6 +13,7 @@ The codebase is split by responsibility:
 - `Presets`: user-facing translation profiles and persistence.
 - `History`: GRDB-backed translation history and export.
 - `UI`: SwiftUI/AppKit windows for popup, settings, welcome, and history.
+  `UI/Common` holds the design tokens and shared components from `docs/design/DESIGN.md` (`FooterAction`, `KeyHint`, `ColumnSeam`, `Notice`, `EmptyState`, `Toast`); windows build from these instead of styling their own.
 
 This layout is appropriate for the current app size. The main boundary to preserve is that providers emit stream events and should not know about UI, history, or clipboard side effects.
 

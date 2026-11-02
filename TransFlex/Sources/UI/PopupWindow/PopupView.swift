@@ -58,7 +58,7 @@ struct PopupView: View {
                 HStack {
                     Spacer()
                     if viewModel.showToast {
-                        ToastView(message: "Copied")
+                        Toast(message: "Copied")
                             .padding(.trailing, 18)
                             .padding(.bottom, 56)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
@@ -254,90 +254,68 @@ struct PopupView: View {
     }
 
     private var footerActions: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: Spacing.m) {
             if viewModel.isOutputOnly, !isAccessibilityCard {
-                actionButton("Show Input", keys: ["⌘", "I"], tint: .gray) {
+                FooterAction("Show Input", keys: ["⌘", "I"]) {
                     viewModel.showInput()
                 }
                 .keyboardShortcut("i", modifiers: .command)
             }
             switch viewModel.state {
             case .idle:
-                actionButton("Translate", keys: ["⌘", "⏎"], tint: .accentColor) {
+                FooterAction("Translate", keys: ["⌘", "↩"], prominence: .primary) {
                     viewModel.translate()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             case .streaming:
-                actionButton("Stop", keys: ["esc"], tint: .orange) { viewModel.cancelStream() }
+                FooterAction("Stop", keys: ["esc"]) { viewModel.cancelStream() }
                     .keyboardShortcut(.escape, modifiers: [])
             case .done(let result):
-                actionButton("New", keys: ["⌘", "N"], tint: .blue) {
+                FooterAction("New", keys: ["⌘", "N"], prominence: .plain) {
                     viewModel.startNewTranslation()
                 }
                 .keyboardShortcut("n", modifiers: .command)
                 // ⌘C itself is caught by `PopupPanel` so it wins over any
                 // selection in the result; the button is the click path.
-                actionButton("Copy", keys: ["⌘", "C"], tint: .purple) {
+                FooterAction("Copy", keys: ["⌘", "C"], prominence: .primary) {
                     viewModel.copyToClipboard(result)
                 }
-                actionButton("Re-translate", keys: ["⌘", "R"], tint: .accentColor) {
+                FooterAction("Re-translate", keys: ["⌘", "R"]) {
                     viewModel.translate()
                 }
                 .keyboardShortcut("r", modifiers: .command)
             case .error(_, let partial):
                 if let partial {
-                    actionButton("Continue", keys: ["⌘", "P"], tint: .blue) {
+                    FooterAction("Continue", keys: ["⌘", "P"]) {
                         viewModel.inputText = partial
                         viewModel.translate()
                     }
                     .keyboardShortcut("p", modifiers: .command)
                 }
-                actionButton("Dismiss", keys: ["⌘", "."], tint: .gray) {
+                FooterAction("Dismiss", keys: ["⌘", "."]) {
                     viewModel.dismissError()
                 }
                 .keyboardShortcut(".", modifiers: .command)
                 if hasInput {
-                    actionButton("Retry", keys: ["⌘", "⏎"], tint: .accentColor) {
+                    FooterAction("Retry", keys: ["⌘", "↩"], prominence: .primary) {
                         viewModel.translate()
                     }
                     .keyboardShortcut(.return, modifiers: .command)
                 }
             case .accessibilityRequired(granted: false):
                 // The card's only way forward, so it gets a filled button.
-                actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .accentColor) {
+                FooterAction("Open System Settings", keys: ["⌘", "↩"], prominence: .primary) {
                     viewModel.openAccessibilitySettings()
                 }
-                .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
             case .accessibilityRequired(granted: true):
-                actionButton("Done", keys: ["⌘", "⏎"], tint: .accentColor) {
+                FooterAction("Done", keys: ["⌘", "↩"], prominence: .primary) {
                     viewModel.onDismissRequest?()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
             }
         }
     }
-
-    /// Shared footer action button with stable shortcut-hint layout.
-    private func actionButton(
-        _ title: String,
-        keys: [String],
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .fixedSize()
-                KeyHintBadge(keys: keys, tone: .secondary)
-            }
-            .font(.system(size: 13, weight: .medium))
-            .fixedSize(horizontal: true, vertical: false)
-        }
-        .controlSize(.large)
-        .tint(tint)
-    }
-
 }
 
 /// Forces the enclosing TextEditor scroll view to use overlay scrollers.

@@ -105,7 +105,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 ## Shapes
 
 - 12pt continuous corners on the popup window; 10pt on cards, notices and
-  sheets drawn by the app; 6pt on inner controls (search field, key hint chips).
+  sheets drawn by the app; 6pt on inner controls (search field); key hint chips are capsules.
 - System controls keep their own shapes. No radius is invented per view.
 
 ## Components
@@ -115,7 +115,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `TranslationColumns` | Airy columns (chosen 2026-11-01): no inner box. **Original** (15pt, `on-surface-variant`) on the leading side, **Translation** (17pt, `on-surface`) on the trailing side, 28pt side margins, 26pt gutter, divided by the `ColumnSeam`. Labels are 11pt semibold uppercase with 0.06em tracking: `faint` for Original, `accent-text` for Translation. Under 720pt wide they stack with a horizontal `ColumnSeam`. |
 | `ColumnSeam` | The rule between the columns (chosen 2026-11-02): 1pt `hair-2`, fading out at both ends, broken at its midpoint by a 10pt ✦ spark in `accent-text`. While a translation streams the spark hides and the rule fills with `accent-text` from the start, led by a 7pt dot with a soft glow; the fill is translation length over source length in characters, held below 90% until the stream ends. Done, Stop or an error returns it to the neutral rule with the spark. Under Reduce Motion the dot has no glow and the fill does not ease. Stacked, it runs left to right. |
 | `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. System button styles only, at `.controlSize(.large)` in the popup footer, `Notice` actions and sheet action rows: macOS 26 and later draw these as capsules (grey fill for secondary, accent fill for primary), macOS 13–15 as classic push buttons. Buttons inside `SettingsRow` stay at the regular size. No custom `ButtonStyle`, no `.glass`/`.glassProminent`, no `.tint`: the accent comes from the AccentColor asset. |
-| `KeyHint` | 10.5pt keycaps on a faint fill, radius 4. Read by VoiceOver as part of the button label ("Command Return"). |
+| `KeyHint` | 10.5pt keycaps in capsules on a faint fill (white at 22% inside the primary button). Read by VoiceOver as part of the button label ("Command Return"). |
 | `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
 | `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
