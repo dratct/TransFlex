@@ -14,6 +14,8 @@ final class PopupPanel: NSPanel {
     var onHide: (() -> Void)?
     /// ⌘C handler; returns true when it consumed the key.
     var onCopyCommand: (() -> Bool)?
+    /// ⌘↩ handler; returns true when it consumed the key.
+    var onTranslateAgainCommand: (() -> Bool)?
 
     init(contentRect: NSRect) {
         // Borderless panel — no `.titled`, so AppKit draws no titlebar, no
@@ -88,6 +90,12 @@ final class PopupPanel: NSPanel {
         // Checked before the responder chain, so a text selection in the
         // result cannot turn ⌘C into a partial copy.
         if mods == .command, event.charactersIgnoringModifiers == "c", onCopyCommand?() == true {
+            return true
+        }
+        // A SwiftUI shortcut on a hidden button never fired here, and the
+        // stacked layout has no visible Translate again button to carry one.
+        if mods == .command, event.keyCode == 36 || event.keyCode == 76,
+           onTranslateAgainCommand?() == true {
             return true
         }
         return super.performKeyEquivalent(with: event)

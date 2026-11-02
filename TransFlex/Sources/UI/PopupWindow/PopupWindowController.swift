@@ -57,6 +57,7 @@ public final class PopupWindowController {
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
+        self.panel.onTranslateAgainCommand = { [weak vm] in vm?.translateAgainIfShown() ?? false }
         self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
 

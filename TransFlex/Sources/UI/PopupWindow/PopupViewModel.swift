@@ -440,6 +440,15 @@ final class PopupViewModel: ObservableObject {
         return true
     }
 
+    /// ⌘↩ while the Popup shows a result translates the source again. Returns
+    /// false otherwise, so the key goes on to the state's own button.
+    @discardableResult
+    func translateAgainIfShown() -> Bool {
+        guard case .done = state, !isOutputOnly else { return false }
+        translate()
+        return true
+    }
+
     func copyToClipboard(_ text: String) {
         pasteboard.writeText(text)
         triggerToast(autoDismiss: true)

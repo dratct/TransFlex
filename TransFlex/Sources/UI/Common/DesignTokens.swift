@@ -36,6 +36,16 @@ enum ReadingType {
     static let columnLabelTracking: CGFloat = 0.66
 }
 
+/// The popup's column layout (DESIGN.md › Components › TranslationColumns).
+enum ColumnLayout {
+    static let sideMargin: CGFloat = 28
+    static let gutter: CGFloat = 26
+    /// Narrower than this, the columns stack.
+    static let sideBySideMinWidth: CGFloat = 720
+    /// Stacked, the Original takes this share of the height, whatever the state.
+    static let stackedOriginalShare: CGFloat = 0.38
+}
+
 enum Motion {
     /// Toast and state swaps. Frame changes are never animated.
     static let stateSwap = Animation.easeOut(duration: 0.15)

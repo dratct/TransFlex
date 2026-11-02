@@ -25,6 +25,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     let providersStore = ProvidersStore()
     private(set) lazy var settingsWindowController = SettingsWindowController(presetStore: presetStore)
     private var historyStore: HistoryStore?
+    private(set) var historyWindowController: HistoryWindowController?
     private var presetCancellable: AnyCancellable?
     private var registeredPresetIDs: Set<UUID> = []
 
@@ -74,9 +75,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.popupWindowController = popup
         self.hotkeyManager = hotkey
+        let history = HistoryWindowController(store: historyStore)
+        self.historyWindowController = history
         self.statusBarController = StatusBarController(
             popupWindowController: popup,
-            historyWindowController: HistoryWindowController(store: historyStore)
+            historyWindowController: history
         )
 
         let defaults = UserDefaults.standard

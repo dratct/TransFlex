@@ -13,4 +13,12 @@ enum AppCommands {
         }
         controller.show(tab: tab)
     }
+
+    static func openHistory() {
+        guard let controller = AppDelegate.shared?.historyWindowController else {
+            logger.error("openHistory: AppDelegate.shared is nil — delegate not yet wired")
+            return
+        }
+        controller.show()
+    }
 }

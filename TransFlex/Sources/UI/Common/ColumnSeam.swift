@@ -39,33 +39,35 @@ struct ColumnSeam: View {
         .accessibilityHidden(true)
     }
 
+    // The spark and the dot are overlays so they never widen the 1pt rule.
     private func resting(length: CGFloat) -> some View {
-        ZStack {
-            line(Color(nsColor: .separatorColor))
-                .mask(fadeMask(gapAround: 0.5, gap: sparkGap / max(length, 1)))
-            Image(systemName: "sparkle")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(Color.accentText)
-                .fixedSize()
-        }
+        line(Color(nsColor: .separatorColor))
+            .mask(fadeMask(gapAround: 0.5, gap: sparkGap / max(length, 1)))
+            .overlay {
+                Image(systemName: "sparkle")
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(Color.accentText)
+                    .fixedSize()
+            }
     }
 
     private func streaming(length: CGFloat, fill: Double) -> some View {
         let lead = length * fill
-        return ZStack(alignment: direction == .vertical ? .top : .leading) {
-            line(Color(nsColor: .separatorColor))
-            line(Color.accentText)
-                .frame(width: direction == .vertical ? 1.5 : lead, height: direction == .vertical ? lead : 1.5)
-            Circle()
-                .fill(Color.accentText)
-                .frame(width: dotSize, height: dotSize)
-                .shadow(color: reduceMotion ? .clear : Color.accentText.opacity(0.55), radius: 7)
-                .offset(
-                    x: direction == .vertical ? -dotSize / 2 + 0.5 : lead - dotSize / 2,
-                    y: direction == .vertical ? lead - dotSize / 2 : -dotSize / 2 + 0.5
-                )
-        }
-        .mask(trailingFade.padding(-dotSize))
+        let vertical = direction == .vertical
+        let start: Alignment = vertical ? .top : .leading
+        return line(Color(nsColor: .separatorColor))
+            .overlay(alignment: start) {
+                line(Color.accentText)
+                    .frame(width: vertical ? 1.5 : lead, height: vertical ? lead : 1.5)
+            }
+            .overlay(alignment: start) {
+                Circle()
+                    .fill(Color.accentText)
+                    .frame(width: dotSize, height: dotSize)
+                    .shadow(color: reduceMotion ? .clear : Color.accentText.opacity(0.55), radius: 7)
+                    .offset(x: vertical ? 0 : lead - dotSize / 2, y: vertical ? lead - dotSize / 2 : 0)
+            }
+            .mask(trailingFade.padding(-dotSize))
     }
 
     private func line(_ color: Color) -> some View {

@@ -6,8 +6,8 @@ struct StreamingTextView: View {
 
     var body: some View {
         Text(displayText)
-            .font(.system(size: 14))
-            .lineSpacing(2)
+            .font(ReadingType.translation)
+            .lineSpacing(ReadingType.translationLineSpacing)
             .textSelection(.enabled)
             .frame(maxWidth: .infinity, alignment: .leading)
     }

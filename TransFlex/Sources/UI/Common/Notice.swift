@@ -29,7 +29,7 @@ struct Notice<Actions: View>: View {
         symbol: String,
         title: String,
         message: String,
-        @ViewBuilder actions: @escaping () -> Actions = { EmptyView() }
+        @ViewBuilder actions: @escaping () -> Actions
     ) {
         self.style = style
         self.tone = tone

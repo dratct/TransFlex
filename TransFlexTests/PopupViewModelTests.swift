@@ -302,6 +302,40 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "Bonjour")
     }
 
+    func testTranslateAgainCommandActsOnlyOnAShownResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+
+        XCTAssertFalse(vm.translateAgainIfShown(), "idle leaves ⌘↩ to the Translate button")
+
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        vm.inputText = "Hello there"
+        provider.scriptedEvents = [.textDelta("Salut"), .stop(reason: .complete)]
+
+        XCTAssertTrue(vm.translateAgainIfShown())
+        for _ in 0..<100 where vm.state != .done(result: "Salut") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Salut"), "⌘↩ after a result translates the edited source")
+    }
+
+    func testTranslateAgainCommandIgnoresTheOutputOnlyPopup() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+
+        XCTAssertFalse(vm.translateAgainIfShown(), "the Output-only popup has no source to translate again")
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+    }
+
     func testResetLeavesOutputOnlyWithoutResizeCallback() throws {
         let vm = makeViewModel()
         var notified = false
