@@ -46,6 +46,25 @@ enum HistoryText {
         return unpriced > 0 ? base + " · \(unpriced) unpriced" : base
     }
 
+    enum TranslateAgain: Equatable {
+        case enabled
+        case disabled(String)
+        case hidden
+    }
+
+    /// Translate again only replays text: an image translation (with or
+    /// without a caption) is not offered, and it never runs on a model other
+    /// than the one the entry was made with without saying so.
+    /// `presetModelID` is the entry's preset's current model, nil once deleted.
+    static func translateAgain(_ entry: HistoryEntry, presetModelID: String?) -> TranslateAgain {
+        guard entry.inputText != nil, !entry.hadImage else { return .hidden }
+        guard let presetModelID else { return .disabled("This preset was deleted.") }
+        guard presetModelID == entry.modelID else {
+            return .disabled("This preset now uses \(presetModelID), not \(entry.modelID).")
+        }
+        return .enabled
+    }
+
     private static func time(_ date: Date, calendar: Calendar) -> String {
         date.formatted(Date.FormatStyle(date: .omitted, time: .shortened, calendar: calendar, timeZone: calendar.timeZone))
     }

@@ -72,6 +72,30 @@ final class HistoryTextTests: XCTestCase {
         XCTAssertEqual(HistoryText.detailMeta(entry(cost: 0.0004, at: now)), "gpt-4o · 0.8 s · 96 tokens · $0.0004")
     }
 
+    func testTranslateAgainIsOfferedWhenThePresetStillUsesTheSavedModel() {
+        XCTAssertEqual(HistoryText.translateAgain(entry(cost: nil, at: now, model: "gpt-4o"), presetModelID: "gpt-4o"), .enabled)
+    }
+
+    func testTranslateAgainSaysWhenThePresetWasDeleted() {
+        XCTAssertEqual(HistoryText.translateAgain(entry(cost: nil, at: now), presetModelID: nil),
+                       .disabled("This preset was deleted."))
+    }
+
+    func testTranslateAgainSaysWhenThePresetNowUsesAnotherModel() {
+        XCTAssertEqual(HistoryText.translateAgain(entry(cost: nil, at: now, model: "gpt-4o"), presetModelID: "gpt-5.2"),
+                       .disabled("This preset now uses gpt-5.2, not gpt-4o."))
+    }
+
+    func testTranslateAgainIsHiddenForImageTranslationsEvenWithACaption() {
+        var withImage = entry(cost: nil, at: now)
+        withImage.hadImage = true
+        XCTAssertEqual(HistoryText.translateAgain(withImage, presetModelID: "gpt-4o"), .hidden)
+
+        var noText = entry(cost: nil, at: now)
+        noText.inputText = nil
+        XCTAssertEqual(HistoryText.translateAgain(noText, presetModelID: "gpt-4o"), .hidden)
+    }
+
     func testTodayLabel() {
         XCTAssertEqual(HistoryText.today(total: 0.0012, unpriced: 0), "Today: $0.0012")
         XCTAssertEqual(HistoryText.today(total: 0.0012, unpriced: 2), "Today: $0.0012 · 2 unpriced")

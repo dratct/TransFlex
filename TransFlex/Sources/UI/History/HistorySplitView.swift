@@ -96,7 +96,7 @@ struct HistorySplitView: View {
         } else {
             HistoryDetailView(
                 entry: currentEntry,
-                presetExists: currentEntry.map { presetName($0.presetID) != nil } ?? false,
+                presetModelID: currentEntry.flatMap { entry in presets.presets.first { $0.id == entry.presetID }?.modelID },
                 onDelete: deleteEntry
             )
                 .id(currentEntry?.id)

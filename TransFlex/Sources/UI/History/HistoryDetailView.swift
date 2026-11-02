@@ -4,8 +4,8 @@ import SwiftUI
 /// One past translation, laid out like the popup's two halves.
 struct HistoryDetailView: View {
     let entry: HistoryEntry?
-    /// False once the entry's preset was deleted: there is nothing to translate it with.
-    var presetExists = true
+    /// The entry's preset's current model, nil once that preset was deleted.
+    var presetModelID: String?
     let onDelete: (UUID) -> Void
 
     @State private var confirmingDelete = false
@@ -63,10 +63,17 @@ struct HistoryDetailView: View {
             } message: {
                 Text("It is removed from History. This can’t be undone.")
             }
-        if let input = entry.inputText {
-            Button("Translate again") { AppCommands.translateAgain(text: input, presetID: entry.presetID) }
-                .disabled(!presetExists)
-                .help(presetExists ? "" : "This preset was deleted.")
+        switch HistoryText.translateAgain(entry, presetModelID: presetModelID) {
+        case .hidden:
+            EmptyView()
+        case .enabled:
+            Button("Translate again") {
+                AppCommands.translateAgain(text: entry.inputText ?? "", presetID: entry.presetID)
+            }
+        case .disabled(let reason):
+            Button("Translate again") {}
+                .disabled(true)
+                .help(reason)
         }
         Button("Copy") {
             NSPasteboard.general.clearContents()

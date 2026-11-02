@@ -137,7 +137,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
     }
 
-    // MARK: Translate again from History (C-4)
+    // MARK: Translate again from History
 
     func testTranslateAgainUsesSavedPresetAndText() async throws {
         provider.scriptedEvents = [.textDelta("Xin chao"), .stop(reason: .complete)]
@@ -160,7 +160,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
     }
 
-    // MARK: Footer cost, written like History (C-11)
+    // MARK: Footer cost, written like History
 
     private func footerAfterTranslating(with preset: Preset) async throws -> String? {
         provider.scriptedEvents = [.textDelta("Xin chao"), .usage(input: 40, output: 56), .stop(reason: .complete)]

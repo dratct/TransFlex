@@ -161,8 +161,8 @@ public final class PopupWindowController {
         autoDismisser?.start()
 
         let elapsedMs = Double(ticksToNanos(mach_absolute_time() - start)) / 1_000_000.0
-        // A warning, not an assert: the first show after launch lays out the
-        // SwiftUI content cold and can pass 150 ms on a busy machine.
+        // The first show after launch lays out the SwiftUI content cold and can
+        // pass 150 ms on a busy machine, so a slow show is reported, not fatal.
         if elapsedMs < 150 {
             Self.logger.info("Popup show in \(elapsedMs, privacy: .public) ms")
         } else {
