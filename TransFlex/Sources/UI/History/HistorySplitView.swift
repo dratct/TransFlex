@@ -13,6 +13,8 @@ struct HistorySplitView: View {
     @State private var showExportSheet = false
     @State private var showDeleteConfirm = false
     @State private var todayLabel: String?
+    @State private var searchFocusRequest = 0
+    @FocusState private var listFocused: Bool
 
     private let pageSize = 50
 
@@ -55,14 +57,25 @@ struct HistorySplitView: View {
         } else {
             NavigationSplitView {
                 VStack(spacing: 0) {
-                    HistorySearchField(query: $searchQuery)
-                        .padding(Spacing.s)
+                    HistorySearchField(
+                        query: $searchQuery,
+                        focusRequest: searchFocusRequest,
+                        onMoveDown: { listFocused = true }
+                    )
+                    .padding(Spacing.s)
                     HistoryListView(
                         entries: searchResults ?? entries,
                         selectedEntryID: $selectedEntryID,
                         presetName: presetName,
                         onReachEnd: { if searchResults == nil { loadMore() } }
                     )
+                    .focused($listFocused)
+                }
+                .background {
+                    Button("Find") { searchFocusRequest += 1 }
+                        .keyboardShortcut("f")
+                        .opacity(0)
+                        .accessibilityHidden(true)
                 }
                 .navigationSplitViewColumnWidth(min: 220, ideal: 260, max: 360)
                 .onChange(of: searchQuery) { performSearch($0) }
