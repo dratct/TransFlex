@@ -9,11 +9,12 @@ enum ModelFamilies {
         let models: [Model]
     }
 
-    /// Speech, image, embedding, moderation and legacy completion models.
+    /// Speech, image, embedding and moderation models; legacy completion
+    /// models; and models the chat endpoint cannot run (codex, web search, live voice).
     private static let nonTextMarkers = [
-        "embed", "tts", "whisper", "transcribe", "speech", "audio", "realtime",
+        "embed", "tts", "whisper", "transcribe", "speech", "audio", "realtime", "live",
         "moderation", "dall-e", "image", "imagen", "sora", "veo", "aqa",
-        "rerank", "babbage", "davinci",
+        "rerank", "babbage", "davinci", "instruct", "codex", "search",
     ]
 
     static func isTextModel(_ id: String) -> Bool {

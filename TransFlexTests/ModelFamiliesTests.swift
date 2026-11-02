@@ -17,6 +17,7 @@ final class ModelFamiliesTests: XCTestCase {
             "gpt-4o", "text-embedding-3-large", "tts-1-hd", "whisper-1", "omni-moderation-latest",
             "dall-e-3", "gpt-image-1", "gpt-4o-realtime-preview", "gpt-4o-mini-transcribe",
             "babbage-002", "davinci-002", "models/text-embedding-004", "models/imagen-3.0-generate-002",
+            "gpt-3.5-turbo-instruct", "gpt-5.3-codex", "gpt-4o-search-preview", "gpt-live-1",
         ]
         XCTAssertEqual(layout(ids), [["GPT-4", "gpt-4o"]])
     }

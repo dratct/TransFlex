@@ -39,7 +39,7 @@ struct ModelPicker: View {
     }
 }
 
-private struct ModelPickerPopover: View {
+struct ModelPickerPopover: View {
     @Binding var selection: String
     let models: [Model]
     let providerName: String
@@ -61,11 +61,19 @@ private struct ModelPickerPopover: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            TextField("Search models", text: $query)
-                .textFieldStyle(.roundedBorder)
-                .focused($searchFocused)
-                .onSubmit { pick(highlighted ?? rows.first) }
-                .padding(Spacing.s)
+            HStack(spacing: Spacing.xs) {
+                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                TextField("Search models", text: $query)
+                    .textFieldStyle(.plain)
+                    .multilineTextAlignment(.leading)
+                    .focused($searchFocused)
+                    .onSubmit { pick(highlighted ?? rows.first) }
+            }
+            .padding(.horizontal, Spacing.s)
+            .padding(.vertical, 6)
+            .background(RoundedRectangle(cornerRadius: Radius.control).fill(Color(nsColor: .controlBackgroundColor)))
+            .overlay(RoundedRectangle(cornerRadius: Radius.control).stroke(Color(nsColor: .separatorColor), lineWidth: 0.5))
+            .padding(Spacing.s)
 
             Divider()
 
@@ -129,7 +137,11 @@ private struct ModelPickerPopover: View {
             highlighted = models.contains { $0.id == selection } ? selection : nil
             installArrowKeys()
         }
-        .onDisappear(perform: removeArrowKeys)
+        .onDisappear {
+            removeArrowKeys()
+            // Otherwise AppKit hands focus to the Settings tab bar and rings it.
+            DispatchQueue.main.async { NSApp.keyWindow?.makeFirstResponder(nil) }
+        }
         .onChange(of: query) { _ in highlighted = rows.first }
     }
 
