@@ -153,14 +153,16 @@ private struct WelcomeArt: View {
                                    .init(color: .brand, location: 1)],
                            startPoint: .top, endPoint: .bottom)
             VStack(alignment: .leading, spacing: 0) {
-                RoundedRectangle(cornerRadius: 11, style: .continuous)
-                    .fill(.white.opacity(0.18))
+                Image("AppLogo")
+                    .resizable()
+                    .interpolation(.high)
+                    .frame(width: 52, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                     .overlay(
-                        RoundedRectangle(cornerRadius: 11, style: .continuous)
-                            .strokeBorder(.white.opacity(0.4), lineWidth: 0.5)
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .strokeBorder(.white.opacity(0.25), lineWidth: 0.5)
                     )
-                    .frame(width: 44, height: 44)
-                    .overlay(Image(systemName: "translate").font(.system(size: 20, weight: .medium)))
+                    .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
                 Text("Translate anything you select.")
                     .font(.system(size: 22, weight: .semibold))
                     .padding(.top, 18)
