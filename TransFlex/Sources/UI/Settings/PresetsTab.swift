@@ -24,50 +24,37 @@ struct PresetsTab: View {
 
     private var presetList: some View {
         VStack(spacing: 0) {
-            ScrollView {
-                LazyVStack(spacing: 2) {
-                    ForEach(presetStore.presets) { preset in
-                        PresetListRow(preset: preset, isSelected: preset.id == selectedPresetID)
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                selectedPresetID = preset.id
-                            }
-                    }
+            List(selection: $selectedPresetID) {
+                ForEach(presetStore.presets) { preset in
+                    PresetListRow(preset: preset).tag(Optional(preset.id))
                 }
-                .padding(.vertical, 6)
             }
+            .listStyle(.sidebar)
 
             Divider()
 
-            HStack {
-                Button {
-                    addPreset()
-                } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11))
+            HStack(spacing: Spacing.xs) {
+                Button(action: addPreset) {
+                    Image(systemName: "plus").frame(width: 20, height: 20)
                 }
-                .buttonStyle(.plain)
-
-                Spacer()
-
-                Button {
-                    deleteSelected()
-                } label: {
-                    Image(systemName: "trash")
-                        .font(.system(size: 11))
+                .help("Add Preset")
+                .accessibilityLabel("Add Preset")
+                Button(action: deleteSelected) {
+                    Image(systemName: "minus").frame(width: 20, height: 20)
                 }
-                .buttonStyle(.plain)
                 .disabled(selectedPreset == nil)
+                .help("Delete Preset")
+                .accessibilityLabel("Delete Preset")
+                Spacer()
             }
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
+            .buttonStyle(.borderless)
+            .padding(Spacing.s)
 
             if let error = errorMessage {
                 Text(error)
-                    .font(.system(size: 10))
+                    .font(.caption)
                     .foregroundStyle(.red)
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 4)
+                    .padding([.horizontal, .bottom], Spacing.s)
             }
         }
     }
@@ -78,12 +65,8 @@ struct PresetsTab: View {
             PresetEditor(presetStore: presetStore, providersStore: providersStore, preset: preset)
                 .id(preset.id)
         } else {
-            VStack {
-                Text("Select a preset to edit")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.tertiary)
-            }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            EmptyState(symbol: "list.bullet.rectangle", title: "No preset selected",
+                       message: "Pick a preset on the left, or add one with +.")
         }
     }
 

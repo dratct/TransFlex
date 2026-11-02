@@ -395,7 +395,7 @@ final class PopupViewModel: ObservableObject {
     /// Opening the Popup. After a selection shortcut the Popup gets back its
     /// own Draft and result when `keepingDraft`, otherwise it starts empty;
     /// it never shows what the shortcut produced. `keepingDraft` comes from
-    /// Clear previous translation, timed from the Popup's own last hide.
+    /// Keep last translation, timed from the Popup's own last hide.
     func openPopup(keepingDraft: Bool) {
         if isOutputOnly {
             let session = popupSession

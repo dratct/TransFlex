@@ -1,32 +1,27 @@
+import KeyboardShortcuts
 import SwiftUI
 
+/// A preset in the Presets sidebar: its name, then the model and the
+/// Translate Selection shortcut when one is set.
 @MainActor
 struct PresetListRow: View {
     let preset: Preset
-    let isSelected: Bool
 
     var body: some View {
-        HStack(spacing: 8) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(preset.name)
-                    .font(.system(size: 12, weight: .medium))
-                    .lineLimit(1)
-
-                Text(providerSubtitle)
-                    .font(.system(size: 10))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
+        VStack(alignment: .leading, spacing: 2) {
+            Text(preset.name.isEmpty ? "Untitled Preset" : preset.name)
+                .lineLimit(1)
+            Text(subtitle)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
         }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(isSelected ? Color.accentColor.opacity(0.1) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .padding(.vertical, 2)
     }
 
-    private var providerSubtitle: String {
-        ProviderRegistry.shared.displayName(for: preset.providerID)
+    private var subtitle: String {
+        let model = preset.modelID.isEmpty ? ProviderRegistry.shared.displayName(for: preset.providerID) : preset.modelID
+        guard let shortcut = KeyboardShortcuts.getShortcut(for: .presetQuickPopup(preset.id)) else { return model }
+        return "\(model) · \(shortcut.description)"
     }
 }

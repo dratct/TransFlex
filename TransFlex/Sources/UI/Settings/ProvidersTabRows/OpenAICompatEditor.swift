@@ -17,85 +17,139 @@ struct OpenAICompatEditor: View {
     @State private var fetchedModels: [Model] = []
     @State private var isFetching = false
 
+    @State private var confirmsRemoval = false
+
+    /// Add Endpoint and Load Models stay off until these hold.
+    static func isValid(name: String, baseURL: String) -> Bool {
+        !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && validURL(baseURL) != nil
+    }
+
+    static func validURL(_ text: String) -> URL? {
+        guard let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
+              url.host != nil,
+              (try? ProviderRegistry.validateBaseURL(url)) != nil
+        else { return nil }
+        return url
+    }
+
     var body: some View {
-        VStack(spacing: 16) {
-            Text(editing == nil ? "Add Endpoint" : "Edit Endpoint")
-                .font(.system(size: 15, weight: .semibold))
+        VStack(alignment: .leading, spacing: 0) {
+            HStack(spacing: Spacing.m) {
+                ProviderLogo(providerID: "openai-compatible", name: displayName.isEmpty ? "API" : displayName)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(editing == nil ? "Add an OpenAI-compatible endpoint" : "Edit endpoint")
+                        .font(.title3.weight(.semibold))
+                    Text("Ollama, LM Studio, OpenRouter, or any /v1/chat/completions server.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .padding([.horizontal, .top], Spacing.xl)
 
             Form {
-                TextField("Name", text: $displayName)
-                TextField("Base URL", text: $baseURLString)
-                    .font(.system(size: 12, design: .monospaced))
-                SecureField(apiKeyPlaceholder, text: $apiKey)
+                Section {
+                    TextField("Name", text: $displayName, prompt: Text("Local Ollama"))
+                    TextField("Base URL", text: $baseURLString, prompt: Text("http://localhost:11434"))
+                    SecureField(text: $apiKey, prompt: Text(apiKeyPlaceholder)) {
+                        SettingsLabel("API key", caption: "Optional")
+                    }
                     .onChange(of: apiKey) { _ in didEditAPIKey = true }
-                TextField("Default Model", text: $defaultModel)
-
+                    defaultModelRow
+                }
                 extraHeadersSection
             }
             .formStyle(.grouped)
 
             if let error = errorMessage {
                 Text(error)
-                    .font(.system(size: 11))
+                    .font(.caption)
                     .foregroundStyle(.red)
+                    .padding(.horizontal, Spacing.xl)
             }
 
-            HStack {
-                Button("Fetch Models") {
-                    fetchModels()
+            HStack(spacing: Spacing.m) {
+                Button(isFetching ? "Loading…" : "Load Models", action: fetchModels)
+                    .disabled(isFetching || Self.validURL(baseURLString) == nil)
+                if editing != nil {
+                    Button("Remove Endpoint", role: .destructive) { confirmsRemoval = true }
                 }
-                .disabled(isFetching || baseURLString.isEmpty)
-                .font(.system(size: 12))
-
-                if !fetchedModels.isEmpty {
-                    Menu("Models (\(fetchedModels.count))") {
-                        ForEach(fetchedModels, id: \.id) { model in
-                            Button(model.name) {
-                                defaultModel = model.id
-                            }
-                        }
-                    }
-                    .font(.system(size: 12))
-                }
-
                 Spacer()
-
-                Button("Cancel") { dismiss() }
-                    .font(.system(size: 12))
-                Button("Save") { save() }
-                    .font(.system(size: 12))
-                    .disabled(displayName.isEmpty || baseURLString.isEmpty)
+                Button("Cancel", role: .cancel) { dismiss() }
+                    .keyboardShortcut(.cancelAction)
+                Button(editing == nil ? "Add Endpoint" : "Save", action: save)
                     .buttonStyle(.borderedProminent)
+                    .keyboardShortcut(.defaultAction)
+                    .disabled(!Self.isValid(name: displayName, baseURL: baseURLString))
+            }
+            .controlSize(.large)
+            .padding([.horizontal, .bottom], Spacing.xl)
+        }
+        .frame(width: 520)
+        .onAppear { populateFields() }
+        .confirmationDialog(
+            "Remove “\(editing?.displayName ?? "")”?",
+            isPresented: $confirmsRemoval
+        ) {
+            Button("Remove Endpoint", role: .destructive, action: remove)
+        } message: {
+            Text("Presets that use it will need another provider.")
+        }
+    }
+
+    @ViewBuilder
+    private var defaultModelRow: some View {
+        if fetchedModels.isEmpty {
+            TextField("Default model", text: $defaultModel, prompt: Text("Load models first, or type an ID"))
+        } else {
+            Picker("Default model", selection: $defaultModel) {
+                Text("None").tag("")
+                ForEach(fetchedModels, id: \.id) { model in
+                    Text(model.name).tag(model.id)
+                }
             }
         }
-        .padding(20)
-        .frame(width: 420)
-        .onAppear { populateFields() }
     }
 
     private var apiKeyPlaceholder: String {
-        guard let editing, store.hasCompatAPIKey(for: editing.instanceId) else { return "API Key" }
-        return "Configured — enter new key to replace"
+        if let editing, store.hasCompatAPIKey(for: editing.instanceId) {
+            return "Saved — type a new key to replace it"
+        }
+        return "Not needed for local servers"
     }
 
     private var extraHeadersSection: some View {
-        Section("Custom Headers") {
+        Section {
             ForEach($extraHeaders) { $entry in
                 HStack {
-                    TextField("Key", text: $entry.key)
-                        .frame(maxWidth: 100)
-                    SecureField("Value", text: $entry.value)
+                    TextField("Header", text: $entry.key, prompt: Text("X-Header"))
+                        .labelsHidden()
+                        .frame(maxWidth: 140)
+                    SecureField("Value", text: $entry.value, prompt: Text("Value"))
+                        .labelsHidden()
                     Button {
                         extraHeaders.removeAll { $0.id == entry.id }
                     } label: {
                         Image(systemName: "minus.circle")
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
+                    .accessibilityLabel("Remove header")
                 }
             }
             Button("Add Header") {
                 extraHeaders.append(HeaderEntry())
             }
+        } header: {
+            Text("Custom headers") + Text(" · optional").foregroundColor(.secondary)
+        }
+    }
+
+    private func remove() {
+        guard let editing else { return }
+        do {
+            try store.deleteCompatInstance(editing.instanceId)
+            dismiss()
+        } catch {
+            errorMessage = error.localizedDescription
         }
     }
 

@@ -41,11 +41,12 @@ enum PopupResetPolicy: Equatable {
         }
     }
 
+    /// Read under "Keep last translation": how long the popup keeps it.
     var displayName: String {
         switch self {
-        case .always: return "Always clear"
-        case .afterMinutes(let n): return "After \(n) minute\(n == 1 ? "" : "s")"
-        case .never: return "Never"
+        case .always: return "Don’t keep"
+        case .afterMinutes(let n): return "\(n) minute\(n == 1 ? "" : "s")"
+        case .never: return "Always"
         }
     }
 

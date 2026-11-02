@@ -21,14 +21,15 @@ and pastes the result over it; the popup appears only on failure.
 **Draft** — what the user typed or attached in the Popup and has not cleared.
 _Avoid_: input state, session.
 
-**Clear previous translation** — the General setting that decides whether the
+**Keep last translation** — the General setting that decides whether the
 Popup opens empty or with its last Draft and result, by how long it has been
-hidden (always, after 1–5 minutes, never).
+hidden (don't keep, 1–5 minutes, always).
+_Avoid_: Clear previous translation, reset policy.
 
 ## Rules
 
 - When the Popup is opened after a Translate Selection, its Draft comes back
-  only if Clear previous translation would keep it, timed from when the Popup
+  only if Keep last translation would keep it, timed from when the Popup
   itself was last hidden. A Translate Selection in between does not reset or
   extend that time.
 - The Output-only popup always starts from the new selection; it never shows

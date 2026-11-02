@@ -12,7 +12,7 @@ struct PresetEditor: View {
     @State private var isFetchingModels = false
     @State private var errorMessage: String?
     @State private var isPromptExpanded = false
-    @State private var isAdvancedExpanded = false
+    @State private var promptSheetSize = CGSize(width: 640, height: 480)
     @State private var isFallbackList = false
 
     private static let modelCache = ModelCatalogCache()
@@ -26,159 +26,150 @@ struct PresetEditor: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                heroHeader
-
-                SettingsSection("Identity") {
-                    formRow(label: "Name") {
-                        TextField("Preset name", text: $draft.name)
-                            .textFieldStyle(.roundedBorder)
-                            .frame(maxWidth: 320)
+        SettingsForm {
+            Section {
+                TextField("Name", text: $draft.name, prompt: Text("Preset name"))
+                Picker("Provider", selection: Binding(
+                    get: { draft.providerID },
+                    set: { newValue in
+                        draft.providerID = newValue
+                        draft.modelID = ""
+                    }
+                )) {
+                    ForEach(allProviderIDs(), id: \.self) { id in
+                        Text(providerLabel(for: id)).tag(id)
                     }
                 }
-
-                SettingsSection("Shortcut") {
-                    formRow(
-                        label: "Global Shortcut",
-                        caption: "Press this key combination from anywhere to select this preset."
-                    ) {
-                        KeyboardShortcuts.Recorder(for: .preset(draft.id))
-                    }
-
-                    rowDivider
-
-                    formRow(
-                        label: "Translate Selection",
-                        caption: "Translate the selected text and show only the result."
-                    ) {
-                        KeyboardShortcuts.Recorder(for: .presetQuickPopup(draft.id))
-                    }
-
-                    rowDivider
-
-                    formRow(
-                        label: "Replace Selection",
-                        caption: "Translate the selected text and paste the result over it."
-                    ) {
-                        KeyboardShortcuts.Recorder(for: .presetQuickReplace(draft.id))
+                LabeledContent {
+                    modelControl
+                } label: {
+                    HStack(spacing: Spacing.s) {
+                        Text("Model")
+                        if isFetchingModels { ProgressView().controlSize(.small) }
                     }
                 }
-
-                SettingsSection("Backend") {
-                    formRow(label: "Provider") {
-                        Picker("", selection: Binding(
-                            get: { draft.providerID },
-                            set: { newValue in
-                                draft.providerID = newValue
-                                draft.modelID = ""
-                            }
-                        )) {
-                            ForEach(allProviderIDs(), id: \.self) { id in
-                                Text(providerLabel(for: id)).tag(id)
-                            }
-                        }
-                        .labelsHidden()
-                        .frame(maxWidth: 260, alignment: .trailing)
-                    }
-
-                    rowDivider
-
-                    formRow(label: "Model", trailingExtra: modelLoadingIndicator) {
-                        modelControl
-                    }
+                Toggle(isOn: $draft.supportsVision) {
+                    SettingsLabel(
+                        "Reads images",
+                        caption: "Turn on if this model accepts images. Lets you attach screenshots in the popup."
+                    )
                 }
+                .toggleStyle(.switch)
+            }
 
-                systemPromptSection
-
-                SettingsSection("Behavior") {
-                    formRow(label: "Temperature", trailingExtra: temperatureValue) {
-                        Slider(value: $draft.temperature, in: 0...1)
-                            .controlSize(.small)
-                            .frame(maxWidth: 220, alignment: .trailing)
-                    }
-
-                    rowDivider
-
-                    formRow(label: "Top P", trailingExtra: topPDisplay) {
-                        HStack(spacing: 8) {
-                            Slider(
-                                value: Binding(
-                                    get: { draft.topP ?? 1.0 },
-                                    set: { draft.topP = $0 }
-                                ),
-                                in: 0...1
-                            )
-                            if draft.topP != nil {
-                                Button {
-                                    draft.topP = nil
-                                } label: {
-                                    Image(systemName: "arrow.uturn.backward")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.borderless)
-                                .help("Reset to provider default")
-                            }
-                        }
-                        .controlSize(.small)
-                        .frame(maxWidth: 220, alignment: .trailing)
-                    }
-
-                    rowDivider
-
-                    formRow(label: "Max Tokens") {
-                        TextField(
-                            "Default",
-                            text: Binding(
-                                get: { draft.maxTokens.map { String($0) } ?? "" },
-                                set: { newValue in
-                                    let digits = newValue.filter { $0.isNumber }
-                                    draft.maxTokens = Int(digits)
-                                }
-                            )
-                        )
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 100, alignment: .trailing)
-                    }
-
-                    if !effortLevels.isEmpty {
-                        rowDivider
-
-                        formRow(label: "Effort") {
-                            Picker("", selection: $draft.effort) {
-                                Text("Default (\(AnthropicModelSupport.defaultEffort))").tag(String?.none)
-                                ForEach(effortLevels, id: \.self) { level in
-                                    Text(level).tag(String?.some(level))
-                                }
-                            }
-                            .labelsHidden()
-                            .frame(maxWidth: 160, alignment: .trailing)
-                        }
-                    }
-
-                    rowDivider
-
-                    formRow(label: "Supports Vision") {
-                        Toggle("", isOn: $draft.supportsVision)
-                            .toggleStyle(.switch)
-                            .labelsHidden()
-                            .controlSize(.small)
-                    }
-                }
-
-                advancedSection
-
-                if let error = errorMessage {
-                    Text(error)
-                        .font(.system(size: 11))
-                        .foregroundStyle(.red)
-                        .padding(.horizontal, 4)
+            Section {
+                // A fixed height: the form scrolls, the prompt does not grow
+                // a second scroller inside it; Expand opens it large.
+                TextEditor(text: $draft.systemPrompt)
+                    .font(.body)
+                    .scrollContentBackground(.hidden)
+                    .frame(height: 120)
+            } header: {
+                HStack {
+                    Text("Instructions")
+                    Spacer()
+                    Text("\(draft.systemPrompt.count.formatted()) characters")
+                        .monospacedDigit()
+                        .foregroundStyle(.tertiary)
+                    Button("Expand") { openPromptSheet() }
+                        .buttonStyle(.link)
                 }
             }
-            .padding(.horizontal, 22)
-            .padding(.vertical, 22)
-            .frame(maxWidth: .infinity, alignment: .leading)
+
+            Section("Shortcuts") {
+                SettingsRow("Choose this preset", caption: "Makes it the popup’s preset.") {
+                    KeyboardShortcuts.Recorder(for: .preset(draft.id))
+                }
+                SettingsRow("Translate selection", caption: "Shows the translation in a small popup.") {
+                    KeyboardShortcuts.Recorder(for: .presetQuickPopup(draft.id))
+                }
+                SettingsRow("Replace selection", caption: "Pastes the translation over the selected text.") {
+                    KeyboardShortcuts.Recorder(for: .presetQuickReplace(draft.id))
+                }
+            }
+
+            Section("Tuning") {
+                SettingsRow("Temperature") {
+                    HStack(spacing: Spacing.s) {
+                        Slider(value: $draft.temperature, in: 0...1)
+                            .frame(width: 200)
+                        valueLabel(String(format: "%.2f", draft.temperature))
+                    }
+                }
+                SettingsRow("Top P") {
+                    HStack(spacing: Spacing.s) {
+                        Slider(
+                            value: Binding(get: { draft.topP ?? 1.0 }, set: { draft.topP = $0 }),
+                            in: 0...1
+                        )
+                        .frame(width: 200)
+                        valueLabel(draft.topP.map { String(format: "%.2f", $0) } ?? "Default")
+                        if draft.topP != nil {
+                            Button {
+                                draft.topP = nil
+                            } label: {
+                                Image(systemName: "arrow.uturn.backward")
+                            }
+                            .buttonStyle(.borderless)
+                            .help("Use the provider’s default")
+                            .accessibilityLabel("Use the provider’s default")
+                        }
+                    }
+                }
+                SettingsRow("Max tokens", caption: "Leave empty for the provider’s default.") {
+                    TextField(
+                        "Max tokens",
+                        text: Binding(
+                            get: { draft.maxTokens.map { String($0) } ?? "" },
+                            set: { draft.maxTokens = Int($0.filter(\.isNumber)) }
+                        ),
+                        prompt: Text("Default")
+                    )
+                    .labelsHidden()
+                    .multilineTextAlignment(.trailing)
+                    .frame(width: 100)
+                }
+                if !effortLevels.isEmpty {
+                    Picker("Effort", selection: $draft.effort) {
+                        Text("Default (\(AnthropicModelSupport.defaultEffort))").tag(String?.none)
+                        ForEach(effortLevels, id: \.self) { level in
+                            Text(level).tag(String?.some(level))
+                        }
+                    }
+                }
+            }
+
+            Section {
+                TextEditor(text: Binding(
+                    get: { draft.extraBody ?? "" },
+                    set: { draft.extraBody = $0.isEmpty ? nil : $0 }
+                ))
+                .font(.body)
+                .scrollContentBackground(.hidden)
+                .frame(height: 72)
+                .overlay(alignment: .topLeading) {
+                    if (draft.extraBody ?? "").isEmpty {
+                        Text(#"{ "reasoning_effort": "low" }"#)
+                            .foregroundStyle(.tertiary)
+                            .padding(.leading, 5)
+                            .allowsHitTesting(false)
+                    }
+                }
+            } header: {
+                Text("Extra request fields")
+            } footer: {
+                Text(isExtraBodyValid
+                     ? "JSON merged into the request body, for provider-specific options."
+                     : "This is not valid JSON, so it is not sent.")
+                    .font(.caption)
+                    .foregroundStyle(isExtraBodyValid ? Color(nsColor: .tertiaryLabelColor) : .red)
+            }
+
+            if let error = errorMessage {
+                Section {
+                    Text(error).foregroundStyle(.red)
+                }
+            }
         }
         .onChange(of: draft.providerID) { newID in
             loadModels(for: newID)
@@ -197,73 +188,28 @@ struct PresetEditor: View {
         }
         .sheet(isPresented: $isPromptExpanded) {
             PromptFullScreenEditor(
-                title: draft.name.isEmpty ? "System Prompt" : draft.name,
+                title: draft.name.isEmpty ? "Instructions" : draft.name,
                 text: $draft.systemPrompt,
                 isReadOnly: false,
                 isPresented: $isPromptExpanded
             )
+            .frame(width: promptSheetSize.width, height: promptSheetSize.height)
         }
     }
 
-    // MARK: - Hero
-
-    private var heroHeader: some View {
-        HStack(spacing: 12) {
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.accentColor.gradient)
-                .frame(width: 36, height: 36)
-                .overlay(
-                    Image(systemName: "text.badge.star")
-                        .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(.white)
-                )
-            VStack(alignment: .leading, spacing: 2) {
-                Text(draft.name.isEmpty ? "Untitled Preset" : draft.name)
-                    .font(.system(size: 16, weight: .semibold))
-                    .lineLimit(1)
-                Text(providerLabel(for: draft.providerID))
-                    .font(.system(size: 11))
-                    .foregroundStyle(.secondary)
-            }
-            Spacer()
+    /// The Expand sheet takes 80% of the Settings window (DESIGN.md › Do's and Don'ts).
+    private func openPromptSheet() {
+        if let window = NSApp.keyWindow {
+            promptSheetSize = CGSize(width: window.frame.width * 0.8, height: window.frame.height * 0.8)
         }
+        isPromptExpanded = true
     }
 
-    // MARK: - Form primitives
-
-    private func formRow<Control: View>(
-        label: String,
-        caption: String? = nil,
-        trailingExtra: AnyView? = nil,
-        @ViewBuilder control: () -> Control
-    ) -> some View {
-        HStack(alignment: .center, spacing: 12) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(label)
-                    .font(.system(size: 12))
-                if let caption {
-                    Text(caption)
-                        .font(.system(size: 10))
-                        .foregroundStyle(.secondary)
-                }
-            }
-            
-            Spacer(minLength: 16)
-            
-            control()
-            
-            if let trailingExtra {
-                trailingExtra
-            }
-        }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-    }
-
-    private var rowDivider: some View {
-        Divider()
-            .opacity(0.5)
-            .padding(.leading, 14)
+    private func valueLabel(_ text: String) -> some View {
+        Text(text)
+            .monospacedDigit()
+            .foregroundStyle(.secondary)
+            .frame(width: 52, alignment: .trailing)
     }
 
     // MARK: - Model row
@@ -275,7 +221,6 @@ struct PresetEditor: View {
                 HStack(spacing: 6) {
                     TextField("Model ID", text: $draft.modelID)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 12, design: .monospaced))
                         .frame(maxWidth: 290, alignment: .trailing)
                     refreshButton
                 }
@@ -298,7 +243,6 @@ struct PresetEditor: View {
                 if draft.modelID.isEmpty || availableModels.allSatisfy({ $0.id != draft.modelID }) {
                     TextField("Custom model ID", text: $draft.modelID)
                         .textFieldStyle(.roundedBorder)
-                        .font(.system(size: 12, design: .monospaced))
                         .frame(maxWidth: 320, alignment: .trailing)
                 }
 
@@ -322,160 +266,17 @@ struct PresetEditor: View {
     @ViewBuilder
     private var fallbackCaption: some View {
         if isFallbackList {
-            Text("Showing built-in list — add an API key in the Providers tab to load the full catalog.")
-                .font(.system(size: 10))
-                .foregroundStyle(.secondary)
+            Text("Showing the built-in list. Add a key in Providers to load every model.")
+                .font(.caption)
+                .foregroundStyle(.tertiary)
                 .frame(maxWidth: 320, alignment: .trailing)
                 .multilineTextAlignment(.trailing)
         }
     }
 
-    private var modelLoadingIndicator: AnyView? {
-        guard isFetchingModels else { return nil }
-        return AnyView(
-            ProgressView()
-                .controlSize(.small)
-        )
-    }
-
-    // MARK: - System prompt
-
-    private var systemPromptSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text("SYSTEM PROMPT")
-                    .font(.system(size: 10, weight: .semibold))
-                    .foregroundStyle(.secondary)
-                    .tracking(0.6)
-                    .padding(.leading, 4)
-
-                Spacer()
-
-                Text("\(draft.systemPrompt.count) chars")
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-
-                Button {
-                    isPromptExpanded = true
-                } label: {
-                    Image(systemName: "arrow.up.left.and.arrow.down.right")
-                        .font(.system(size: 10, weight: .semibold))
-                }
-                .buttonStyle(.borderless)
-                .help("Edit prompt in larger window")
-            }
-
-            VStack(spacing: 0) {
-                TextEditor(text: $draft.systemPrompt)
-                    .font(.system(size: 12, design: .monospaced))
-                    .frame(height: 200)
-                    .scrollContentBackground(.hidden)
-                    .padding(8)
-                    .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
-                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 8, style: .continuous)
-                            .stroke(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 1)
-                    )
-                    .padding(12)
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color(nsColor: .controlBackgroundColor).opacity(0.6))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.06), lineWidth: 1)
-            )
-        }
-    }
-
-    // MARK: - Temperature
-
-    private var temperatureValue: AnyView? {
-        AnyView(
-            Text(String(format: "%.2f", draft.temperature))
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .frame(width: Self.valueColumnWidth, alignment: .trailing)
-        )
-    }
-
-    /// Shared by Temperature and Top P so both sliders end at the same edge.
-    private static let valueColumnWidth: CGFloat = 52
-
     private var effortLevels: [String] {
         guard draft.providerID == "anthropic" else { return [] }
         return AnthropicModelSupport.effortLevels(draft.modelID)
-    }
-
-    private var topPDisplay: AnyView? {
-        AnyView(
-            Text(draft.topP.map { String(format: "%.2f", $0) } ?? "Default")
-                .font(.system(size: 11, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .frame(width: Self.valueColumnWidth, alignment: .trailing)
-        )
-    }
-
-    // MARK: - Advanced
-
-    private var advancedSection: some View {
-        DisclosureGroup(isExpanded: $isAdvancedExpanded) {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack(alignment: .top) {
-                    Text("Extra parameters merged into the API request body (JSON). Use for provider-specific features like thinking mode.")
-                        .font(.system(size: 11))
-                        .foregroundStyle(.secondary)
-                    Spacer()
-                    if !isExtraBodyValid {
-                        Text("⚠ Invalid JSON")
-                            .font(.system(size: 11, weight: .semibold))
-                            .foregroundStyle(.red)
-                    }
-                }
-                .padding(.horizontal, 14)
-
-                TextEditor(
-                    text: Binding(
-                        get: { draft.extraBody ?? "" },
-                        set: { draft.extraBody = $0.isEmpty ? nil : $0 }
-                    )
-                )
-                .font(.system(size: 12, design: .monospaced))
-                .frame(minHeight: 80)
-                .scrollContentBackground(.hidden)
-                .overlay(alignment: .topLeading) {
-                    if (draft.extraBody ?? "").isEmpty {
-                        Text(#"{ "reasoning_effort": "low" }"#)
-                            .font(.system(size: 12, design: .monospaced))
-                            .foregroundStyle(.tertiary)
-                            .padding(.leading, 5)
-                            .allowsHitTesting(false)
-                    }
-                }
-                .padding(8)
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.4))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color(nsColor: .separatorColor).opacity(0.6), lineWidth: 1)
-                )
-                .padding(.horizontal, 14)
-            }
-            .padding(.vertical, 10)
-        } label: {
-            Text("ADVANCED")
-                .font(.system(size: 10, weight: .semibold))
-                .foregroundStyle(.secondary)
-                .tracking(0.6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-                .onTapGesture { isAdvancedExpanded.toggle() }
-        }
-        .padding(.horizontal, 4)
     }
 
     private var isExtraBodyValid: Bool {
@@ -580,8 +381,9 @@ private struct PromptFullScreenEditor: View {
                         .clipShape(Capsule())
                 }
                 Spacer()
-                Text("\(text.count) chars")
-                    .font(.system(size: 11, design: .monospaced))
+                Text("\(text.count.formatted()) characters")
+                    .font(.caption)
+                    .monospacedDigit()
                     .foregroundStyle(.tertiary)
                 Button("Done") { isPresented = false }
                     .keyboardShortcut(.return, modifiers: [.command])
@@ -592,12 +394,12 @@ private struct PromptFullScreenEditor: View {
             Divider()
 
             TextEditor(text: $text)
-                .font(.system(size: 13, design: .monospaced))
+                .font(.body)
                 .scrollContentBackground(.hidden)
                 .padding(14)
                 .background(Color(nsColor: .textBackgroundColor))
                 .disabled(isReadOnly)
         }
-        .frame(minWidth: 640, minHeight: 480)
+        .frame(minWidth: 480, minHeight: 360)
     }
 }
