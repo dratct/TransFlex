@@ -51,6 +51,7 @@ final class PopupViewModel: ObservableObject {
     private let historyRecorder = HistoryRecorder()
 
     private let isAccessibilityGranted: () -> Bool
+    private let hasAPIKey: (Preset) -> Bool
     private let openAccessibilitySettingsAction: () -> Void
     private var accessibilityPoll: Task<Void, Never>?
 
@@ -64,9 +65,11 @@ final class PopupViewModel: ObservableObject {
         pasteboard: PasteboardHelper = PasteboardHelper(),
         keychain: KeychainStore = KeychainStore(),
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
-        openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings
+        openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
+        hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
     ) {
         self.isAccessibilityGranted = isAccessibilityGranted
+        self.hasAPIKey = hasAPIKey
         self.openAccessibilitySettingsAction = openAccessibilitySettings
         self.translationService = translationService
         self.presetStore = presetStore
@@ -145,6 +148,10 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
+    /// Providers that cannot work without an API key. OpenAI-compatible
+    /// endpoints (local servers) may run without one.
+    static let keyedProviderIDs = ["openai", "anthropic", "gemini"]
+
     static let visionOffMessage =
         "This preset can't read images. Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
 
@@ -154,6 +161,11 @@ final class PopupViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasImage = attachedImage != nil
         guard !text.isEmpty || hasImage, let preset = selectedPreset else { return }
+        guard hasAPIKey(preset) else {
+            cancelStream()
+            state = .missingKey(providerID: preset.providerID)
+            return
+        }
 
         if let imageInput = attachedImage {
             let estimate = ImageTranslationCoordinator.preflightCost(
@@ -439,8 +451,7 @@ final class PopupViewModel: ObservableObject {
     func hasProviderKeyConfigured() -> Bool {
         if UserDefaults.standard.bool(forKey: "hasCompletedFirstRun") { return true }
 
-        let cloudIDs = ["openai", "anthropic", "gemini"]
-        if cloudIDs.contains(where: { keychain.exists("provider.\($0).apiKey") }) {
+        if Self.keyedProviderIDs.contains(where: { keychain.exists("provider.\($0).apiKey") }) {
             UserDefaults.standard.set(true, forKey: "hasCompletedFirstRun")
             return true
         }
@@ -494,4 +505,6 @@ enum PopupState: Equatable {
     /// A selection shortcut needs the Accessibility grant; `granted` flips
     /// once the user enables it in System Settings.
     case accessibilityRequired(granted: Bool)
+    /// The preset's provider needs a key and none is saved; nothing was sent.
+    case missingKey(providerID: String)
 }

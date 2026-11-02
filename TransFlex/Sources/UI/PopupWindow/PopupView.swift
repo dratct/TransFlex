@@ -308,6 +308,8 @@ struct PopupView: View {
                     viewModel.openAccessibilitySettings()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
+            case .missingKey:
+                FooterAction("Back to text", keys: ["esc"]) { viewModel.dismissError() }
             case .accessibilityRequired(granted: true):
                 FooterAction("Done", keys: ["⌘", "↩"], prominence: .primary) {
                     viewModel.onDismissRequest?()

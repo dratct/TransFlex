@@ -38,6 +38,8 @@ struct PopupOutputSection: View {
                             errorView(message: message, partial: partial)
                         case .accessibilityRequired(let granted):
                             AccessibilityPermissionCard(granted: granted)
+                        case .missingKey(let providerID):
+                            MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
                         }
 
                         Color.clear.frame(height: 1).id(bottomAnchor)

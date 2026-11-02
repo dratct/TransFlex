@@ -50,9 +50,25 @@ final class PopupPanel: NSPanel {
         if wasVisible { onHide?() }
     }
 
-    /// Pressing ESC dismisses (Cocoa "cancel" action).
+    /// Esc, whatever holds focus; the controller decides what it does.
+    var onEscape: (() -> Void)?
+
     override func cancelOperation(_ sender: Any?) {
-        orderOut(nil)
+        if let onEscape { onEscape() } else { orderOut(nil) }
+    }
+
+    /// Esc is caught here, before the responder chain: a focused text view
+    /// turns it into `complete:` and it would never reach `cancelOperation`.
+    /// An input method composing text (Vietnamese Telex) still gets it first.
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, event.keyCode == 53,
+           event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+           (firstResponder as? NSTextView)?.hasMarkedText() != true,
+           let onEscape {
+            onEscape()
+            return
+        }
+        super.sendEvent(event)
     }
 
     // Intentionally NOT overriding `resignKey` to dismiss: window-key

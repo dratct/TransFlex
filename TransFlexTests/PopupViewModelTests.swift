@@ -75,14 +75,50 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         try await super.tearDown()
     }
 
-    private func makeViewModel() -> PopupViewModel {
+    private func makeViewModel(hasAPIKey: @escaping (Preset) -> Bool = { _ in true }) -> PopupViewModel {
         let provider = provider!
         let service = TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
         return PopupViewModel(
             translationService: service,
             presetStore: presetStore,
-            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)")))
+            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)"))),
+            hasAPIKey: hasAPIKey
         )
+    }
+
+    // MARK: Missing key (audit D2)
+
+    func testMissingKeyShowsNoticeInsteadOfSending() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let preset = try XCTUnwrap(vm.selectedPreset)
+        vm.inputText = "hello"
+
+        vm.translate()
+
+        XCTAssertEqual(vm.state, .missingKey(providerID: preset.providerID))
+        XCTAssertEqual(vm.inputText, "hello", "the user's text stays")
+        XCTAssertNil(provider.capturedConfig, "nothing is sent without a key")
+    }
+
+    func testBackToTextFromMissingKeyReturnsToTheEditor() {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        vm.inputText = "hello"
+        vm.translate()
+
+        vm.dismissError()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "hello")
+    }
+
+    func testSelectionWithoutKeyShowsTheNoticeInTheOutputOnlyPopup() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let target = try XCTUnwrap(presetStore.presets.last)
+
+        vm.startQuickTranslation(text: "Hello", presetID: target.id)
+
+        XCTAssertTrue(vm.isOutputOnly)
+        XCTAssertEqual(vm.state, .missingKey(providerID: target.providerID))
     }
 
     func testQuickTranslationShowsOnlyOutputAndTranslatesSelection() async throws {
@@ -380,5 +416,27 @@ final class PopupHideClockTests: XCTestCase {
         let clock = PopupHideClock()
         XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0))
         XCTAssertTrue(clock.keepsDraft(policy: .never, now: t0))
+    }
+}
+
+final class PopupEscapeTests: XCTestCase {
+    func testStreamingStops() {
+        XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: "x"), isOutputOnly: false), .stop)
+        XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: ""), isOutputOnly: true), .stop)
+    }
+
+    func testNoticeCardGoesBackToTheText() {
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: nil), isOutputOnly: false), .backToText)
+        XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: false), .backToText)
+    }
+
+    func testEverythingElseCloses() {
+        XCTAssertEqual(PopupEscape.action(for: .idle, isOutputOnly: false), .close)
+        XCTAssertEqual(PopupEscape.action(for: .done(result: "x"), isOutputOnly: false), .close)
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: "p"), isOutputOnly: false), .close)
+        // The Output-only popup has no text to go back to.
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: nil), isOutputOnly: true), .close)
+        XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: true), .close)
+        XCTAssertEqual(PopupEscape.action(for: .accessibilityRequired(granted: false), isOutputOnly: true), .close)
     }
 }

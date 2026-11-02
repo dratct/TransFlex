@@ -42,7 +42,11 @@ public final class PopupWindowController {
         let vm = PopupViewModel(
             translationService: service,
             presetStore: presetStore,
-            keychain: keychain
+            keychain: keychain,
+            hasAPIKey: { preset in
+                guard PopupViewModel.keyedProviderIDs.contains(preset.providerID) else { return true }
+                return keychain.exists("provider.\(preset.providerID).apiKey")
+            }
         )
         vm.historyStore = historyStore
         self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
@@ -53,10 +57,10 @@ public final class PopupWindowController {
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
+        self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
 
         let popupView = PopupView(viewModel: vm)
-            .modifier(PopupEscapeModifier(viewModel: vm, onEscape: { [weak self] in self?.hide() }))
         let host = NSHostingController(rootView: popupView)
         host.view.frame = frame
         self.panel.contentViewController = host
@@ -144,6 +148,15 @@ public final class PopupWindowController {
     }
 
     // MARK: - Private
+
+    private func handleEscape() {
+        guard let vm = viewModel else { return hide() }
+        switch PopupEscape.action(for: vm.state, isOutputOnly: vm.isOutputOnly) {
+        case .stop: vm.cancelStream()
+        case .backToText: vm.dismissError()
+        case .close: hide()
+        }
+    }
 
     private func showQuickError(_ error: Error, presetID: UUID) {
         if error as? SelectionCapture.Failure == .accessibilityNotGranted {
