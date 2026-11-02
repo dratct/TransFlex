@@ -217,40 +217,15 @@ struct PresetEditor: View {
 
     // MARK: - Model row
 
-    @ViewBuilder
     private var modelControl: some View {
-        if availableModels.isEmpty {
-            VStack(alignment: .trailing, spacing: 6) {
-                HStack(spacing: 6) {
-                    TextField("Model ID", text: $draft.modelID)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 290, alignment: .trailing)
-                    refreshButton
-                }
-                fallbackCaption
-            }
-        } else {
-            VStack(alignment: .trailing, spacing: 6) {
-                HStack(spacing: 6) {
-                    Picker("", selection: $draft.modelID) {
-                        Text("Custom…").tag("")
-                        ForEach(availableModels, id: \.id) { model in
-                            Text(model.name).tag(model.id)
-                        }
-                    }
-                    .labelsHidden()
-                    .frame(maxWidth: 230, alignment: .trailing)
-                    refreshButton
-                }
-
-                if draft.modelID.isEmpty || availableModels.allSatisfy({ $0.id != draft.modelID }) {
-                    TextField("Custom model ID", text: $draft.modelID)
-                        .textFieldStyle(.roundedBorder)
-                        .frame(maxWidth: 320, alignment: .trailing)
-                }
-
-                fallbackCaption
-            }
+        HStack(spacing: 6) {
+            ModelPicker(
+                modelID: $draft.modelID,
+                models: availableModels,
+                providerName: providerLabel(for: draft.providerID),
+                isBuiltInList: isFallbackList
+            )
+            refreshButton
         }
     }
 
@@ -264,17 +239,6 @@ struct PresetEditor: View {
         .buttonStyle(.borderless)
         .disabled(isFetchingModels)
         .help("Refresh model list from the provider")
-    }
-
-    @ViewBuilder
-    private var fallbackCaption: some View {
-        if isFallbackList {
-            Text("Showing the built-in list. Add a key in Providers to load every model.")
-                .font(.caption)
-                .foregroundStyle(.tertiary)
-                .frame(maxWidth: 320, alignment: .trailing)
-                .multilineTextAlignment(.trailing)
-        }
     }
 
     private var effortLevels: [String] {

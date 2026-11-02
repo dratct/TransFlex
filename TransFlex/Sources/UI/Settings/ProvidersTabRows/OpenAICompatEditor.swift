@@ -101,11 +101,8 @@ struct OpenAICompatEditor: View {
         if fetchedModels.isEmpty {
             TextField("Default model", text: $defaultModel, prompt: Text("Load models first, or type an ID"))
         } else {
-            Picker("Default model", selection: $defaultModel) {
-                Text("None").tag("")
-                ForEach(fetchedModels, id: \.id) { model in
-                    Text(model.name).tag(model.id)
-                }
+            LabeledContent("Default model") {
+                ModelPicker(modelID: $defaultModel, models: fetchedModels, providerName: displayName.isEmpty ? "endpoint" : displayName)
             }
         }
     }
