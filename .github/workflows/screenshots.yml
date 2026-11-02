@@ -1,0 +1,88 @@
+name: Screenshots
+
+# Renders every screen × state (app launch argument `--screenshots`) on the
+# macOS versions nobody on the team runs, and keeps the PNGs as artifacts.
+# macOS 13 and 14 have no GitHub-hosted runner, so they stay unchecked.
+
+on:
+  pull_request:
+    paths:
+      - "TransFlex/Sources/UI/**"
+      - "TransFlex/Sources/App/**"
+      - ".github/workflows/screenshots.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Release app
+    runs-on: macos-26
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Install XcodeGen
+        run: |
+          if ! command -v xcodegen >/dev/null 2>&1; then
+            brew install xcodegen
+          fi
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build Release
+        run: scripts/build.sh --release --no-gen
+
+      - name: Pack app
+        run: ditto -c -k --keepParent DerivedData/Build/Products/Release/TransFlex.app TransFlex.zip
+
+      - name: Upload app
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: TransFlex-screenshot-build
+          path: TransFlex.zip
+          retention-days: 3
+
+  capture:
+    name: Capture on ${{ matrix.os }}
+    needs: build
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-15, macos-26]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+
+    steps:
+      - name: Download app
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7.0.0
+        with:
+          name: TransFlex-screenshot-build
+
+      - name: Unpack app
+        run: |
+          ditto -x -k TransFlex.zip .
+          xattr -cr TransFlex.app
+          sw_vers
+
+      - name: Render screenshots
+        run: |
+          mkdir -p shots
+          TransFlex.app/Contents/MacOS/TransFlex --screenshots "$PWD/shots" | tee render.log
+          count=$(ls shots/*.png | wc -l | tr -d ' ')
+          echo "PNG files: $count"
+          test "$count" -gt 0
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots-${{ matrix.os }}
+          path: |
+            shots/
+            render.log
+          retention-days: 14

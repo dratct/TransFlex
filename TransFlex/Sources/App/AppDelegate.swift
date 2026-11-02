@@ -31,6 +31,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        if let directory = ScreenshotMode.outputDirectory(from: CommandLine.arguments) {
+            ScreenshotMode.run(to: directory)
+            return
+        }
 
         // Register persisted OpenAI-compat endpoints into the shared registry
         // before any popup/translation path can run. Without this, compat

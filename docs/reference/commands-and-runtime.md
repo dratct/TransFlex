@@ -107,7 +107,31 @@ CI uses standard public GitHub-hosted macOS runners:
 - `macos-26` for pull request, `main`, and release builds.
 - `macos-26-intel` for the manually triggered Intel test probe.
 
+- `macos-15` and `macos-26` for the Screenshots workflow (below).
+
 The workflows avoid larger paid runner labels. Workflow artifacts use `retention-days: 7`; public release downloads are attached to GitHub Releases.
+
+## Screenshot Mode
+
+`TransFlex.app/Contents/MacOS/TransFlex --screenshots <dir>` renders every
+popup state, each Settings tab, History, the model picker and the Replace
+Selection capsule and banner from sample data, in light and dark, writes one
+PNG each to `<dir>` and quits. It calls no provider and registers no hotkey.
+The Screenshots workflow builds the Release app once on `macos-26`, runs this
+on `macos-15` and `macos-26`, and uploads the PNGs as `screenshots-<os>`.
+
+Known limits of the UI checks:
+
+- The UI is checked by hand on macOS 27 only. macOS 15 and 26 are covered by
+  the screenshots, which show layout and colour but not behaviour (focus,
+  shortcuts, window order).
+- macOS 13 and 14 are not checked at all: GitHub has no hosted runner for
+  them. Calls to newer APIs are caught by the compiler (deployment target 13.0).
+- Screenshot mode draws views into an off-screen window, so the popup's blur
+  material shows as its solid fallback colour, popovers and sheets are drawn
+  on their own, and a few AppKit controls (the Settings tab bar) draw only in
+  part. History shows its empty state until saving history works again
+  (column-name fix in its own PR).
 
 ## Troubleshooting
 

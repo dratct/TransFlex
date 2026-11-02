@@ -14,7 +14,8 @@ final class ReplaceHUD {
 
     @MainActor
     final class Model: ObservableObject {
-        @Published var phase: Phase = .replaced
+        @Published var phase: Phase
+        init(phase: Phase = .replaced) { self.phase = phase }
         var onCancel: () -> Void = {}
         var onOpenPopup: () -> Void = {}
         var onRetry: () -> Void = {}
@@ -110,7 +111,7 @@ final class ReplaceHUD {
     }
 }
 
-private struct ReplaceHUDView: View {
+struct ReplaceHUDView: View {
     @ObservedObject var model: ReplaceHUD.Model
 
     var body: some View {
