@@ -36,7 +36,7 @@ final class WelcomeWindowController {
         win.title = "Welcome to \(AppIdentity.current.displayName)"
         win.styleMask = [.titled, .closable]
         win.isReleasedWhenClosed = false
-        win.setContentSize(NSSize(width: 620, height: 460))
+        win.setContentSize(WelcomeView.size)
         win.center()
 
         // Red-X / Cmd-W path: still mark welcome as shown but skip the

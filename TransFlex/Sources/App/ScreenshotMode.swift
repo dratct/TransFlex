@@ -94,6 +94,14 @@ enum ScreenshotMode {
         shots.append(Shot(name: "history-image", size: HistoryWindowController.defaultContentSize) {
             AnyView(HistorySplitView(store: imageHistory, presets: presets))
         })
+        for step in WelcomeStep.allCases {
+            shots.append(Shot(name: "welcome-\(step)", size: WelcomeView.size) {
+                // A fixed shortcut, so the shot does not depend on this Mac's.
+                AnyView(WelcomeView(initialStep: step, shortcutKeys: ["⌥", "V"],
+                                    provider: ProviderSetupModel(save: { _, _ in }, onSaved: {}),
+                                    onClose: { _ in }))
+            })
+        }
         shots.append(Shot(name: "model-picker", size: NSSize(width: 320, height: 420)) {
             AnyView(ModelPickerPopover(
                 selection: .constant("gpt-5.2"),

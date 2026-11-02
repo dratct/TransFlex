@@ -1,108 +1,89 @@
+import KeyboardShortcuts
 import SwiftUI
 
+/// Welcome: the brand panel on the left stays put; the step on the right
+/// changes (docs/design/mockups.html › Welcome and menu bar).
 @MainActor
 struct WelcomeView: View {
+    static let size = NSSize(width: 720, height: 460)
+
     let onClose: (Bool) -> Void
 
-    @State private var step: WelcomeStep = .intro
+    @State private var step: WelcomeStep
+    @State private var shortcutKeys: [String]
+    @StateObject private var provider: ProviderSetupModel
 
-    var body: some View {
-        VStack(spacing: 0) {
-            header
-            Divider()
-            content
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
-            Divider()
-            footer
-        }
-        .frame(width: 620, height: 460)
-        .background(Color(nsColor: .windowBackgroundColor))
+    init(
+        initialStep: WelcomeStep = .intro,
+        shortcutKeys: [String]? = nil,
+        provider: ProviderSetupModel? = nil,
+        onClose: @escaping (Bool) -> Void
+    ) {
+        _step = State(initialValue: initialStep)
+        _shortcutKeys = State(initialValue: shortcutKeys
+            ?? KeyboardShortcuts.getShortcut(for: .openPopup).map(ShortcutKeys.symbols(for:)) ?? [])
+        _provider = StateObject(wrappedValue: provider ?? .live())
+        self.onClose = onClose
     }
 
-    private var header: some View {
-        HStack(spacing: 12) {
-            Image("AppLogo")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 34, height: 34)
-                .shadow(color: Color.brand.opacity(0.18), radius: 8, y: 3)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(AppIdentity.current.displayName)
-                    .font(.system(size: 15, weight: .semibold))
+    var body: some View {
+        HStack(spacing: 0) {
+            WelcomeArt()
+                .frame(width: 290)
+            VStack(alignment: .leading, spacing: 0) {
                 Text(step.stepLabel)
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary)
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(.tertiary)
+                stepContent
+                    .padding(.top, 6)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                footer
             }
-            Spacer()
+            .padding(EdgeInsets(top: 28, leading: 32, bottom: 20, trailing: 32))
+            .background(Color(nsColor: .windowBackgroundColor))
         }
-        .padding(.horizontal, 24)
-        .frame(height: 64)
-        .background(.regularMaterial)
+        .frame(width: Self.size.width, height: Self.size.height)
     }
 
     @ViewBuilder
-    private var content: some View {
-        ZStack {
-            switch step {
-            case .intro:
-                WelcomeIntroView()
-                    .transition(stepTransition)
-            case .shortcut:
-                WelcomeHotkeyView()
-                    .transition(stepTransition)
-            case .provider:
-                WelcomeProviderView(
-                    onSaveSuccess: { advance() },
-                    onSkip: { advance() }
-                )
-                .transition(stepTransition)
-            case .done:
-                WelcomeFinishView()
-                    .transition(stepTransition)
-            }
+    private var stepContent: some View {
+        switch step {
+        case .intro:
+            WelcomeIntroView()
+        case .provider:
+            WelcomeProviderView(model: provider)
+        case .shortcut:
+            WelcomeShortcutView(keys: $shortcutKeys)
+        case .done:
+            WelcomeDoneView(keys: shortcutKeys)
         }
-        .animation(.easeOut(duration: 0.25), value: step)
-    }
-
-    private var stepTransition: AnyTransition {
-        .asymmetric(
-            insertion: .move(edge: .trailing).combined(with: .opacity),
-            removal: .move(edge: .leading).combined(with: .opacity)
-        )
     }
 
     private var footer: some View {
-        HStack(spacing: 12) {
-            Button("Back") { goBack() }
-                .buttonStyle(.bordered)
-                .opacity(step == .intro ? 0 : 1)
-                .disabled(step == .intro)
-
+        HStack(spacing: Spacing.s) {
+            WelcomeProgress(step: step)
             Spacer()
-
-            stepDots
-
-            Spacer()
-
-            Button(step.primaryTitle) { advance() }
+            if step.showsBack {
+                Button("Back") { if let previous = step.previous { step = previous } }
+                    .buttonStyle(WelcomeTextButtonStyle())
+            }
+            if step.showsSkip {
+                Button("Skip for now") { advance() }
+                    .buttonStyle(WelcomeTextButtonStyle())
+            }
+            Button(step.primaryTitle) { primaryAction() }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
                 .keyboardShortcut(.defaultAction)
-                .opacity(step == .provider ? 0 : 1)
-                .disabled(step == .provider)
+                .disabled(step == .provider && !provider.canSave)
         }
-        .padding(.horizontal, 24)
-        .frame(height: 64)
     }
 
-    private var stepDots: some View {
-        HStack(spacing: 6) {
-            ForEach(WelcomeStep.allCases, id: \.rawValue) { dot in
-                Capsule()
-                    .fill(dot == step ? Color.accentColor : Color.secondary.opacity(0.3))
-                    .frame(width: dot == step ? 24 : 6, height: 6)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.8), value: step)
-            }
-        }
+    private func primaryAction() {
+        // The provider step goes on only once the key is in the Keychain;
+        // a failure stays on the step with its reason under the field.
+        if step == .provider, !provider.save() { return }
+        advance()
     }
 
     private func advance() {
@@ -112,10 +93,111 @@ struct WelcomeView: View {
             onClose(true)
         }
     }
+}
 
-    private func goBack() {
-        if let prev = step.previous {
-            step = prev
+/// The step's title and the line under it.
+struct WelcomeHeading: View {
+    let title: String
+    let lead: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.system(size: 20, weight: .semibold))
+            Text(lead)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(.bottom, 18)
+    }
+}
+
+/// One bar per step, filled up to the current one.
+private struct WelcomeProgress: View {
+    let step: WelcomeStep
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(WelcomeStep.allCases, id: \.rawValue) { each in
+                RoundedRectangle(cornerRadius: 2)
+                    .fill(each.rawValue <= step.rawValue ? Color.accentColor : Color(nsColor: .quaternaryLabelColor))
+                    .frame(width: 22, height: 4)
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(step.stepLabel)
+    }
+}
+
+/// Back and Skip for now: words, no fill, so the one filled button is the way on.
+private struct WelcomeTextButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, Spacing.s)
+            .padding(.vertical, 5)
+            .contentShape(Rectangle())
+            .opacity(configuration.isPressed ? 0.6 : 1)
+    }
+}
+
+/// The brand panel: what the app does, in one line and one picture.
+private struct WelcomeArt: View {
+    var body: some View {
+        ZStack(alignment: .topLeading) {
+            // Dark at the top, where the white text sits; `brand` only lower
+            // down, behind the picture.
+            LinearGradient(colors: [.brandDeep, .brand], startPoint: .topLeading, endPoint: .bottomTrailing)
+            VStack(alignment: .leading, spacing: 0) {
+                RoundedRectangle(cornerRadius: 11, style: .continuous)
+                    .fill(.white.opacity(0.18))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 11, style: .continuous)
+                            .strokeBorder(.white.opacity(0.4), lineWidth: 0.5)
+                    )
+                    .frame(width: 44, height: 44)
+                    .overlay(Image(systemName: "translate").font(.system(size: 20, weight: .medium)))
+                Text("Translate anything you select.")
+                    .font(.system(size: 22, weight: .semibold))
+                    .padding(.top, 18)
+                    .padding(.bottom, 6)
+                Text("Press a shortcut in any app. The translation appears right there.")
+                    .opacity(0.85)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.white)
+            .padding(28)
+            popupPicture
+                .padding(.leading, 28)
+                .padding(.trailing, -40)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+                .padding(.bottom, 30)
+        }
+        .clipped()
+        .accessibilityElement(children: .combine)
+    }
+
+    /// A drawing of the popup, not a real one: fixed colours on purpose.
+    private var popupPicture: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("Natural EN ↔ VI")
+                .font(.system(size: 11, weight: .bold))
+                .foregroundStyle(Color(white: 0.11))
+            bar(width: 0.85, color: Color(white: 0.9))
+            bar(width: 0.95, color: Color.brand.opacity(0.35))
+            bar(width: 0.6, color: Color.brand.opacity(0.35))
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .background(RoundedRectangle(cornerRadius: Radius.pane, style: .continuous).fill(.white.opacity(0.95)))
+        .shadow(color: .black.opacity(0.25), radius: 20, y: 20)
+        .accessibilityHidden(true)
+    }
+
+    private func bar(width: CGFloat, color: Color) -> some View {
+        GeometryReader { geo in
+            RoundedRectangle(cornerRadius: 4).fill(color).frame(width: geo.size.width * width)
+        }
+        .frame(height: 8)
     }
 }
