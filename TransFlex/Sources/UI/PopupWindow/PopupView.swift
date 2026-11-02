@@ -198,11 +198,16 @@ struct PopupView: View {
                 if viewModel.isOutputOnly {
                     PopupOutputSection(viewModel: viewModel)
                 } else if wide {
+                    // Fixed, whole-point column widths: a share decided by the
+                    // content would move the seam by a point between states.
+                    let column = ((geo.size.width - 2 * ColumnLayout.sideMargin - ColumnLayout.gutter) / 2).rounded(.down)
                     HStack(spacing: 0) {
                         originalColumn
+                            .frame(width: column)
                         ColumnSeam(direction: .vertical, fill: seamFill)
                             .padding(.horizontal, ColumnLayout.gutter / 2)
                         PopupOutputSection(viewModel: viewModel)
+                            .frame(width: column)
                     }
                 } else {
                     VStack(spacing: 0) {
