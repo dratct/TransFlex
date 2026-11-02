@@ -29,7 +29,7 @@ struct WelcomeView: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(AppIdentity.current.displayName)
                     .font(.system(size: 15, weight: .semibold))
-                Text(step.subtitle)
+                Text(step.stepLabel)
                     .font(.system(size: 12))
                     .foregroundStyle(.secondary)
             }
@@ -47,7 +47,7 @@ struct WelcomeView: View {
             case .intro:
                 WelcomeIntroView()
                     .transition(stepTransition)
-            case .hotkey:
+            case .shortcut:
                 WelcomeHotkeyView()
                     .transition(stepTransition)
             case .provider:
@@ -56,7 +56,7 @@ struct WelcomeView: View {
                     onSkip: { advance() }
                 )
                 .transition(stepTransition)
-            case .finish:
+            case .done:
                 WelcomeFinishView()
                     .transition(stepTransition)
             }
@@ -84,7 +84,7 @@ struct WelcomeView: View {
 
             Spacer()
 
-            Button(step.primaryCTA) { advance() }
+            Button(step.primaryTitle) { advance() }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.defaultAction)
                 .opacity(step == .provider ? 0 : 1)

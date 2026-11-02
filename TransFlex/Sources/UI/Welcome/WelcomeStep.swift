@@ -2,27 +2,25 @@ import Foundation
 
 enum WelcomeStep: Int, CaseIterable {
     case intro
-    case hotkey
     case provider
-    case finish
+    case shortcut
+    case done
 
     var next: WelcomeStep? { Self(rawValue: rawValue + 1) }
     var previous: WelcomeStep? { Self(rawValue: rawValue - 1) }
 
-    var primaryCTA: String {
+    var stepLabel: String { "Step \(rawValue + 1) of \(Self.allCases.count)" }
+
+    var primaryTitle: String {
         switch self {
         case .intro: return "Get Started"
-        case .hotkey, .provider: return "Continue"
-        case .finish: return "Open Translator"
+        case .provider, .shortcut: return "Continue"
+        case .done: return "Open Translator"
         }
     }
 
-    var subtitle: String {
-        switch self {
-        case .intro: return "Welcome"
-        case .hotkey: return "Step 1 of 3 — Hotkey"
-        case .provider: return "Step 2 of 3 — Provider"
-        case .finish: return "All done"
-        }
-    }
+    var showsBack: Bool { self != .intro }
+
+    /// Only the key can be left for later; every other step has nothing to skip.
+    var showsSkip: Bool { self == .provider }
 }
