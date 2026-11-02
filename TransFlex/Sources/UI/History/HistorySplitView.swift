@@ -3,6 +3,7 @@ import SwiftUI
 
 struct HistorySplitView: View {
     @ObservedObject var store: HistoryStore
+    @ObservedObject var presets: PresetStore
 
     @State private var selectedEntryID: UUID?
     @State private var entries: [HistoryEntry] = []
@@ -11,12 +12,16 @@ struct HistorySplitView: View {
     @State private var searchResults: [HistoryEntry]?
     @State private var showExportSheet = false
     @State private var showDeleteConfirm = false
+    @State private var todayLabel: String?
 
     private let pageSize = 50
 
     var body: some View {
         content
             .frame(minWidth: 560, minHeight: 340)
+            // The day's total is read-only, so it sits under the title rather
+            // than in a toolbar item, which macOS draws as a button capsule.
+            .navigationSubtitle(todayLabel ?? "")
             .toolbar {
                 ToolbarItemGroup(placement: .primaryAction) {
                     // Searching never changes these: they act on the whole history.
@@ -55,6 +60,7 @@ struct HistorySplitView: View {
                     HistoryListView(
                         entries: searchResults ?? entries,
                         selectedEntryID: $selectedEntryID,
+                        presetName: presetName,
                         onReachEnd: { if searchResults == nil { loadMore() } }
                     )
                 }
@@ -76,6 +82,7 @@ struct HistorySplitView: View {
             )
         } else {
             HistoryDetailView(entry: currentEntry, onDelete: deleteEntry)
+                .id(currentEntry?.id)
         }
     }
 
@@ -91,9 +98,20 @@ struct HistorySplitView: View {
         (searchResults ?? entries).first { $0.id == selectedEntryID }
     }
 
+    private func presetName(_ id: UUID) -> String? {
+        presets.presets.first { $0.id == id }?.name
+    }
+
     private func loadFirstPage() {
         entries = (try? store.fetchPage(offset: 0, limit: pageSize)) ?? []
         hasLoaded = true
+        selectedEntryID = entries.first?.id
+        refreshToday()
+    }
+
+    private func refreshToday() {
+        let today = try? store.todayCost(now: Date(), calendar: .current)
+        todayLabel = today.flatMap { HistoryText.today(total: $0.total, unpriced: $0.unpriced) }
     }
 
     private func loadMore() {
@@ -104,17 +122,24 @@ struct HistorySplitView: View {
     private func performSearch(_ query: String) {
         guard !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             searchResults = nil
+            selectedEntryID = entries.first?.id
             return
         }
         searchResults = (try? store.search(query: query)) ?? []
+        selectedEntryID = searchResults?.first?.id
     }
 
     private func deleteEntry(_ id: UUID) {
+        let shown = searchResults ?? entries
+        let next = shown.firstIndex { $0.id == id }.flatMap { index in
+            shown.indices.contains(index + 1) ? shown[index + 1].id : (index > 0 ? shown[index - 1].id : nil)
+        }
         do {
             try store.delete(id: id)
             searchResults?.removeAll { $0.id == id }
             entries.removeAll { $0.id == id }
-            if selectedEntryID == id { selectedEntryID = nil }
+            if selectedEntryID == id { selectedEntryID = next }
+            refreshToday()
         } catch {}
     }
 
@@ -125,6 +150,7 @@ struct HistorySplitView: View {
             searchResults = nil
             entries = []
             selectedEntryID = nil
+            todayLabel = nil
         } catch {}
     }
 }

@@ -79,7 +79,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.popupWindowController = popup
         self.hotkeyManager = hotkey
-        let history = HistoryWindowController(store: historyStore)
+        let history = HistoryWindowController(store: historyStore, presetStore: presetStore)
         self.historyWindowController = history
         self.statusBarController = StatusBarController(
             popupWindowController: popup,

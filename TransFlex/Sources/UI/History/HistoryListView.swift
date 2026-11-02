@@ -4,6 +4,8 @@ import SwiftUI
 struct HistoryListView: View {
     let entries: [HistoryEntry]
     @Binding var selectedEntryID: UUID?
+    /// The preset's current name, or nil once it was deleted.
+    var presetName: (UUID) -> String? = { _ in nil }
     /// Called when the last row appears, to load the next page.
     var onReachEnd: () -> Void = {}
 
@@ -12,7 +14,7 @@ struct HistoryListView: View {
             ForEach(HistoryDays.sections(entries), id: \.title) { section in
                 Section(section.title) {
                     ForEach(section.entries) { entry in
-                        HistoryRowView(entry: entry)
+                        HistoryRowView(entry: entry, subtitle: HistoryText.subtitle(entry, presetName: presetName(entry.presetID)))
                             .tag(entry.id)
                             .onAppear {
                                 if entry.id == entries.last?.id { onReachEnd() }
@@ -27,12 +29,13 @@ struct HistoryListView: View {
 
 private struct HistoryRowView: View {
     let entry: HistoryEntry
+    let subtitle: String
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(entry.inputText ?? "Image translation")
                 .lineLimit(1)
-            Text("\(entry.modelID) · \(entry.createdAt.formatted(date: .omitted, time: .shortened))")
+            Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
                 .lineLimit(1)

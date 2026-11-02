@@ -6,6 +6,8 @@ struct HistoryDetailView: View {
     let entry: HistoryEntry?
     let onDelete: (UUID) -> Void
 
+    @State private var confirmingDelete = false
+
     var body: some View {
         if let entry {
             detailContent(entry)
@@ -35,16 +37,24 @@ struct HistoryDetailView: View {
     }
 
     private func header(_ entry: HistoryEntry) -> some View {
-        HStack(spacing: Spacing.s) {
-            Text(entry.createdAt.formatted(date: .abbreviated, time: .shortened))
-                .font(.headline)
-            Text(meta(entry))
-                .font(.callout)
-                .foregroundStyle(.secondary)
-                .monospacedDigit()
-                .lineLimit(1)
+        HStack(alignment: .firstTextBaseline, spacing: Spacing.s) {
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text(HistoryText.when(entry.createdAt))
+                    .font(.headline)
+                Text(HistoryText.detailMeta(entry))
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(2)
+                    .textSelection(.enabled)
+            }
             Spacer(minLength: Spacing.s)
-            Button("Delete") { onDelete(entry.id) }
+            Button("Delete…") { confirmingDelete = true }
+                .confirmationDialog("Delete this translation?", isPresented: $confirmingDelete) {
+                    Button("Delete", role: .destructive) { onDelete(entry.id) }
+                } message: {
+                    Text("It is removed from History. This can’t be undone.")
+                }
             Button("Copy") {
                 NSPasteboard.general.clearContents()
                 NSPasteboard.general.setString(entry.outputText, forType: .string)
@@ -62,15 +72,5 @@ struct HistoryDetailView: View {
                 .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
-    }
-
-    private func meta(_ entry: HistoryEntry) -> String {
-        var parts = [entry.modelID]
-        if let ms = entry.durationMs {
-            parts.append((Double(ms) / 1000).formatted(.number.precision(.fractionLength(1))) + " s")
-        }
-        if let tokens = entry.tokenCount { parts.append("\(tokens.formatted()) tokens") }
-        if entry.hadImage { parts.append("image") }
-        return "· " + parts.joined(separator: " · ")
     }
 }

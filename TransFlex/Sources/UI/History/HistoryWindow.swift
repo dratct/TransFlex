@@ -9,9 +9,11 @@ final class HistoryWindowController {
     private var window: NSWindow?
     private var windowDelegate: HistoryWindowDelegate?
     private let store: HistoryStore
+    private let presetStore: PresetStore
 
-    init(store: HistoryStore) {
+    init(store: HistoryStore, presetStore: PresetStore) {
         self.store = store
+        self.presetStore = presetStore
     }
 
     func show() {
@@ -23,7 +25,7 @@ final class HistoryWindowController {
             return
         }
 
-        let contentView = HistorySplitView(store: store)
+        let contentView = HistorySplitView(store: store, presets: presetStore)
         let hosting = NSHostingController(rootView: contentView)
 
         let frame = NSRect(x: 0, y: 0, width: 800, height: 500)

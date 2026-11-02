@@ -84,7 +84,7 @@ enum ScreenshotMode {
             })
         }
         shots.append(Shot(name: "history", size: NSSize(width: 800, height: 500)) {
-            AnyView(HistorySplitView(store: history))
+            AnyView(HistorySplitView(store: history, presets: presets))
         })
         shots.append(Shot(name: "model-picker", size: NSSize(width: 320, height: 420)) {
             AnyView(ModelPickerPopover(
