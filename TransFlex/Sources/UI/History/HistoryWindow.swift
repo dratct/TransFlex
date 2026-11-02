@@ -29,7 +29,10 @@ final class HistoryWindowController {
         let frame = NSRect(x: 0, y: 0, width: 800, height: 500)
         let newWindow = NSWindow(
             contentRect: frame,
-            styleMask: [.titled, .closable, .resizable, .miniaturizable],
+            // NavigationSplitView lays itself out for content that runs under
+            // the toolbar; without this it draws a second toolbar-high backdrop
+            // over the top of the detail column.
+            styleMask: [.titled, .closable, .resizable, .miniaturizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
