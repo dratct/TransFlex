@@ -7,19 +7,26 @@ final class HistoryDatabase {
 
     let dbQueue: DatabaseQueue
 
-    init() throws {
+    convenience init() throws {
         let dbDir = Self.databaseDirectory()
         try FileManager.default.createDirectory(at: dbDir, withIntermediateDirectories: true)
+        try self.init(path: Self.databasePath())
+        try Self.excludeFromBackup()
+    }
 
+    /// Opens and migrates the file at `path`; tests use it to upgrade a file
+    /// an older build wrote.
+    init(path: URL) throws {
+        self.dbQueue = try DatabaseQueue(path: path.path, configuration: Self.fileConfiguration())
+        try Self.migrator.migrate(dbQueue)
+    }
+
+    static func fileConfiguration() -> Configuration {
         var config = Configuration()
         config.prepareDatabase { db in
             try db.execute(sql: "PRAGMA journal_mode=WAL")
         }
-
-        self.dbQueue = try DatabaseQueue(path: Self.databasePath().path, configuration: config)
-
-        try migrate(dbQueue)
-        try Self.excludeFromBackup()
+        return config
     }
 
     init(inMemory: Bool) throws {
@@ -29,7 +36,7 @@ final class HistoryDatabase {
         }
 
         self.dbQueue = try DatabaseQueue(configuration: config)
-        try migrate(dbQueue)
+        try Self.migrator.migrate(dbQueue)
     }
 
     // MARK: - Paths
@@ -45,7 +52,7 @@ final class HistoryDatabase {
 
     // MARK: - Migration
 
-    private func migrate(_ dbQueue: DatabaseQueue) throws {
+    static var migrator: DatabaseMigrator {
         var migrator = DatabaseMigrator()
 
         migrator.registerMigration("v1") { db in
@@ -100,7 +107,16 @@ final class HistoryDatabase {
                 """)
         }
 
-        try migrator.migrate(dbQueue)
+        // docs/decisions/2026-11-01-history-stores-cost-4000.md
+        migrator.registerMigration("v2") { db in
+            try db.execute(sql: """
+                ALTER TABLE history_entry ADD COLUMN input_tokens INTEGER;
+                ALTER TABLE history_entry ADD COLUMN output_tokens INTEGER;
+                ALTER TABLE history_entry ADD COLUMN cost_usd REAL;
+                """)
+        }
+
+        return migrator
     }
 
     // MARK: - Backup exclusion
