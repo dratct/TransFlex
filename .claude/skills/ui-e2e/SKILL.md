@@ -92,10 +92,15 @@ a shortcut flow; DESIGN.md › Popup states is what each state must look like.
    streams and stays at the same x in every state.
 4. **Settings mid-way.** While the popup shows a result press ⌘,: Settings
    opens in front; closing it leaves the popup visible and typing goes to it.
-5. **History with entries.** ⌘Y: History opens in front, grouped by day;
-   search a word with no match shows "No results for …" and leaves
-   Export…/Delete All… as they were. With Settings open, History cascades
-   24pt down and right.
+5. **History with entries.** ⌘Y: History opens in front, grouped by day,
+   the newest entry already selected and its header (date, Delete…,
+   Translate again, Copy) fully visible below the toolbar; rows read
+   "preset · time · cost" and the subtitle "Today: $…" once a priced model
+   translated today. In the search field ↓ moves into the list and ⌘F back.
+   Delete… asks before deleting. Translate again opens the full popup with
+   that text and preset and adds a new entry. A search with no match shows
+   "No results for …" and leaves Export…/Delete All… as they were. With
+   Settings open, History cascades 24pt down and right.
 6. **Replace Selection.** In TextEdit: the capsule appears beside the pointer,
    "Replaced · ⌘Z to undo" fades; Esc during a run cancels it and the text is
    unchanged; afterwards Esc works in other apps again. A failing preset shows

@@ -130,8 +130,7 @@ Known limits of the UI checks:
 - Screenshot mode draws views into an off-screen window, so the popup's blur
   material shows as its solid fallback colour, popovers and sheets are drawn
   on their own, and a few AppKit controls (the Settings tab bar) draw only in
-  part. History shows its empty state until saving history works again
-  (column-name fix in its own PR).
+  part.
 
 ## Troubleshooting
 

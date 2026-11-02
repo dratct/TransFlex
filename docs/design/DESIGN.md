@@ -117,6 +117,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. System button styles only, at `.controlSize(.large)` in the popup footer, `Notice` actions and sheet action rows: macOS 26 and later draw these as capsules (grey fill for secondary, accent fill for primary), macOS 13–15 as classic push buttons. Buttons inside `SettingsRow` stay at the regular size. No custom `ButtonStyle`, no `.glass`/`.glassProminent`, no `.tint`: the accent comes from the AccentColor asset. |
 | `KeyHint` | 10.5pt keycaps in capsules on a faint fill (white at 22% inside the primary button). Read by VoiceOver as part of the button label ("Command Return"). |
 | `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
+| `HistoryEntry` | Sidebar row: the text, then "preset · time · cost" in `faint` (the model when the preset was deleted). Detail: "Today at 4:29 PM" with Delete…, Translate again and Copy (the primary) on the same row, then "model · duration · tokens · cost" at full width so the cost is never truncated. Delete… asks first; Translate again opens the full popup with the entry's text and preset, disabled with "This preset was deleted." when that preset is gone, hidden for image translations. The window subtitle holds "Today: $X · N unpriced", hidden when nothing today has a price. |
 | `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
 | `ReadsImages` | A per-preset switch the user sets. The app does not detect image support: OpenAI and Gemini model lists do not report it (checked 2026-11-01). |
@@ -163,5 +164,11 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
   a ring and swallows ⌘⏎ (audit D4).
 - Don't nest a scroll view inside a scrolling form (the preset prompt). Give
   the editor a fixed height and an "Expand" sheet at 80% of the window.
+- Don't write a cost any other way than `CostFormat`: "96 tokens · $0.0004"
+  (input plus output tokens), "price unknown" when the model has no price.
+  The popup and History once showed "0.0004 USD · 56 tok" and "495 tokens"
+  for the same translation.
+- Don't put read-only text in a toolbar item: macOS draws it as a button
+  capsule. History's daily total is the window subtitle.
 - Don't open a window behind another one of the app's windows. Settings and
   History come to the front and cascade by 24pt.

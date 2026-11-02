@@ -63,7 +63,7 @@ enum ScreenshotMode {
             }
         }
 
-        let history = sampleHistoryStore()
+        let history = sampleHistoryStore(presets: presets)
         var shots = [
             popup("popup-idle-empty", input: "", .idle),
             popup("popup-idle", .idle),
@@ -120,7 +120,8 @@ enum ScreenshotMode {
         return store
     }
 
-    private static func sampleHistoryStore() -> HistoryStore {
+    /// One priced entry, one from a model with no price, one whose preset is gone.
+    private static func sampleHistoryStore(presets: PresetStore) -> HistoryStore {
         let store: HistoryStore
         do {
             store = try HistoryStore(inMemory: true)
@@ -128,16 +129,20 @@ enum ScreenshotMode {
             fatalError("Cannot create in-memory history: \(error)")
         }
         let now = Date()
-        let samples: [(String, String, TimeInterval)] = [
-            ("Please review the release notes before Friday.", "Merci de relire les notes de version avant vendredi.", -600),
-            ("See you tomorrow.", "A demain.", -1_200),
-            ("Cette version corrige le bug de connexion.", "This release fixes the sign-in bug.", -86_400),
+        let preset = presets.presets.first?.id ?? UUID()
+        let samples: [(String, String, UUID, String, Double?, TimeInterval)] = [
+            ("Please review the release notes before Friday.", "Merci de relire les notes de version avant vendredi.",
+             preset, "gpt-4o", 0.0004, -600),
+            ("See you tomorrow.", "A demain.", preset, "gpt-6-luna", nil, -1_200),
+            ("Cette version corrige le bug de connexion.", "This release fixes the sign-in bug.",
+             UUID(), "gpt-4o", 0.0004, -86_400),
         ]
-        for (input, output, offset) in samples {
+        for (input, output, presetID, model, cost, offset) in samples {
             do {
                 try store.insert(HistoryEntry(
-                    presetID: UUID(), providerID: "openai", modelID: "gpt-5.2",
+                    presetID: presetID, providerID: "openai", modelID: model,
                     inputText: input, outputText: output, durationMs: 800, tokenCount: 96,
+                    inputTokens: 40, outputTokens: 56, costUSD: cost,
                     createdAt: now.addingTimeInterval(offset)
                 ))
             } catch {
