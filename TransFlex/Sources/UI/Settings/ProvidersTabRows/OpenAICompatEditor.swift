@@ -49,7 +49,7 @@ struct OpenAICompatEditor: View {
             Form {
                 Section {
                     TextField("Name", text: $displayName, prompt: Text("Local Ollama"))
-                    TextField("Base URL", text: $baseURLString, prompt: Text("http://localhost:11434"))
+                    TextField("Base URL", text: $baseURLString, prompt: Text(verbatim: "http://localhost:11434"))
                     SecureField(text: $apiKey, prompt: Text(apiKeyPlaceholder)) {
                         SettingsLabel("API key", caption: "Optional")
                     }

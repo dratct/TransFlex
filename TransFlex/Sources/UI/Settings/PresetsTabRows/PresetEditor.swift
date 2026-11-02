@@ -14,6 +14,7 @@ struct PresetEditor: View {
     @State private var isPromptExpanded = false
     @State private var promptSheetSize = CGSize(width: 640, height: 480)
     @State private var isFallbackList = false
+    @State private var hostWindow: NSWindow?
 
     private static let modelCache = ModelCatalogCache()
 
@@ -195,11 +196,13 @@ struct PresetEditor: View {
             )
             .frame(width: promptSheetSize.width, height: promptSheetSize.height)
         }
+        .background(HostWindowReader { hostWindow = $0 })
     }
 
     /// The Expand sheet takes 80% of the Settings window (DESIGN.md › Do's and Don'ts).
     private func openPromptSheet() {
-        if let window = NSApp.keyWindow {
+        // `keyWindow` is not Settings when the popup panel holds key focus.
+        if let window = hostWindow ?? NSApp.keyWindow {
             promptSheetSize = CGSize(width: window.frame.width * 0.8, height: window.frame.height * 0.8)
         }
         isPromptExpanded = true
@@ -401,5 +404,16 @@ private struct PromptFullScreenEditor: View {
                 .disabled(isReadOnly)
         }
         .frame(minWidth: 480, minHeight: 360)
+    }
+}
+
+/// Reports the window a SwiftUI view is hosted in.
+private struct HostWindowReader: NSViewRepresentable {
+    let onWindow: (NSWindow?) -> Void
+
+    func makeNSView(context: Context) -> NSView { NSView() }
+
+    func updateNSView(_ view: NSView, context: Context) {
+        DispatchQueue.main.async { onWindow(view.window) }
     }
 }
