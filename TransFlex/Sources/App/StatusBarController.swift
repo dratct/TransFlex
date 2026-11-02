@@ -48,9 +48,12 @@ final class StatusBarController: NSObject {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.target = self
         // Text-only items: AppKit would otherwise add a symbol to Settings alone.
+        // Swift 6.4 ships with the macOS 27 SDK that declares this property.
+        #if compiler(>=6.4)
         if #available(macOS 27.0, *) {
             item.preferredImageVisibility = .hidden
         }
+        #endif
         return item
     }
 
