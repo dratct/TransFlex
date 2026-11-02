@@ -160,6 +160,40 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
     }
 
+    // MARK: Footer cost, written like History (C-11)
+
+    private func footerAfterTranslating(with preset: Preset) async throws -> String? {
+        provider.scriptedEvents = [.textDelta("Xin chao"), .usage(input: 40, output: 56), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.switchPreset(preset.id)
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Xin chao"))
+        return vm.costEstimate
+    }
+
+    func testFooterShowsTotalTokensThenDollarCost() async throws {
+        let priced = try XCTUnwrap(presetStore.presets.first { $0.modelID == "gpt-4o" })
+
+        // gpt-4o: 40 in × $0.0025/1k + 56 out × $0.01/1k = $0.00066
+        let footer = try await footerAfterTranslating(with: priced)
+
+        XCTAssertEqual(footer, "96 tokens · $0.0007")
+    }
+
+    func testFooterShowsOnlyTokensWhenTheModelHasNoPrice() async throws {
+        var unpriced = try XCTUnwrap(presetStore.presets.first)
+        unpriced.modelID = "gpt-6-luna"
+        try presetStore.update(unpriced)
+
+        let footer = try await footerAfterTranslating(with: unpriced)
+
+        XCTAssertEqual(footer, "96 tokens")
+    }
+
     func testShowInputLeavesOutputOnlyAndNotifiesOnce() throws {
         let vm = makeViewModel()
         var notified = 0

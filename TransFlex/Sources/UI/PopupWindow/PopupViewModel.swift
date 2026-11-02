@@ -503,14 +503,15 @@ final class PopupViewModel: ObservableObject {
     }
 
     private func updateCost(model: String, input: Int, output: Int, hadImage: Bool) {
-        let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage)
-        if let cost {
-            let formatted = String(format: "%.4f", cost)
-            costEstimate = "\(formatted) USD · \(output) tok"
-        } else if output > 0 {
-            costEstimate = "\(output) tok"
-        } else {
+        guard input + output > 0 else {
             costEstimate = nil
+            return
+        }
+        let tokens = CostFormat.tokens(input + output)
+        if let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage) {
+            costEstimate = tokens + " · " + CostFormat.usd(cost)
+        } else {
+            costEstimate = tokens
         }
     }
 

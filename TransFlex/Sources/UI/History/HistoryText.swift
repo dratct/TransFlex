@@ -33,7 +33,7 @@ enum HistoryText {
         if let ms = entry.durationMs {
             parts.append((Double(ms) / 1000).formatted(.number.precision(.fractionLength(1))) + " s")
         }
-        if let tokens = entry.tokenCount { parts.append("\(tokens.formatted()) tokens") }
+        if let tokens = entry.tokenCount { parts.append(CostFormat.tokens(tokens)) }
         if entry.hadImage { parts.append("image") }
         parts.append(cost(entry.costUSD))
         return parts.joined(separator: " · ")
