@@ -13,6 +13,8 @@ final class MockLLMProvider: LLMProvider, @unchecked Sendable {
     var scriptedEvents: [LLMEvent] = []
     var scriptedError: Error?
     var scriptedModels: [Model] = [Model(id: "m1", name: "Mock", supportsVision: false)]
+    /// Keeps the stream open after the scripted events, like a slow provider.
+    var holdsOpen = false
 
     var localModels: [Model]? { scriptedModels }
     func availableModels(apiKey: String) async throws -> [Model] { scriptedModels }
@@ -27,8 +29,10 @@ final class MockLLMProvider: LLMProvider, @unchecked Sendable {
         capturedConfig = config
         let events = scriptedEvents
         let error = scriptedError
+        let holdsOpen = holdsOpen
         return AsyncThrowingStream { continuation in
             for event in events { continuation.yield(event) }
+            if holdsOpen { return }
             if let error { continuation.finish(throwing: error) } else { continuation.finish() }
         }
     }

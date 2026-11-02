@@ -17,6 +17,7 @@ public final class PopupWindowController {
     private let presetStore: PresetStore
     private let selection = SelectionCapture()
     private let replaceCoordinator: QuickReplaceCoordinator
+    private let replaceHUD = ReplaceHUD()
     private var cancellables: Set<AnyCancellable> = []
 
     public convenience init() {
@@ -51,6 +52,7 @@ public final class PopupWindowController {
         vm.historyStore = historyStore
         self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
         self.replaceCoordinator.historyStore = historyStore
+        self.replaceCoordinator.escapeHold = GlobalEscapeHold()
         self.panel.onHide = { [weak self, weak vm] in
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
@@ -97,15 +99,30 @@ public final class PopupWindowController {
     /// The popup appears only to report a failure.
     public func quickReplace(presetID: UUID) {
         guard let preset = presetStore.presets.first(where: { $0.id == presetID }) else { return }
+        // A repeated press while a run is active must not paste twice.
+        guard !replaceCoordinator.isRunning else { return NSSound.beep() }
         hide()
+        replaceHUD.showTranslating(presetName: preset.name) { [weak self] in
+            self?.replaceCoordinator.cancel()
+        }
         Task { @MainActor in
             do {
-                if try await !replaceCoordinator.run(preset: preset) {
-                    NSSound.beep()
-                }
+                try await replaceCoordinator.run(preset: preset)
+                replaceHUD.showReplaced()
+            } catch is CancellationError {
+                replaceHUD.hide()
             } catch {
                 Self.logger.error("Quick replace failed: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
-                showQuickError(error, presetID: presetID)
+                if error as? SelectionCapture.Failure == .accessibilityNotGranted {
+                    replaceHUD.hide()
+                    showQuickError(error, presetID: presetID)
+                    return
+                }
+                replaceHUD.showFailed(
+                    message: ReplaceHUD.failureMessage(for: error),
+                    onOpenPopup: { [weak self] in self?.showQuickError(error, presetID: presetID) },
+                    onRetry: { [weak self] in self?.quickReplace(presetID: presetID) }
+                )
             }
         }
     }
