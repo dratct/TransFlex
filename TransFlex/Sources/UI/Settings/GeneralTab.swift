@@ -13,7 +13,7 @@ struct GeneralTab: View {
                 SettingsSection("Startup Options") {
                     SettingsRow(
                         icon: "play.square.stack",
-                        iconTint: .brandAccent,
+                        iconTint: .accentColor,
                         label: "Start at login",
                         caption: "Launch \(AppIdentity.current.displayName) when you start your session."
                     ) {
@@ -34,7 +34,7 @@ struct GeneralTab: View {
                 SettingsSection("Popup Behavior") {
                     SettingsRow(
                         icon: "clock.arrow.circlepath",
-                        iconTint: .brandAccent,
+                        iconTint: .accentColor,
                         label: "Clear previous translation",
                         caption: "Discard the previous text, image and result once the popup has been hidden this long."
                     ) {
@@ -70,7 +70,7 @@ struct GeneralTab: View {
     private var heroHeader: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.brandAccent.gradient)
+                .fill(Color.accentColor.gradient)
                 .frame(width: 36, height: 36)
                 .overlay(
                     Image(systemName: "gearshape.fill")

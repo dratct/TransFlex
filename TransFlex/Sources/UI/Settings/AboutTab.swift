@@ -73,7 +73,7 @@ struct AboutTab: View {
                 .interpolation(.high)
                 .frame(width: 58, height: 58)
                 .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .shadow(color: Color.brandAccent.opacity(0.18), radius: 10, y: 4)
+                .shadow(color: Color.brand.opacity(0.18), radius: 10, y: 4)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(AboutInfo.appName)

@@ -60,7 +60,7 @@ struct SettingsRow<Trailing: View>: View {
 
     init(
         icon: String,
-        iconTint: Color = .brandAccent,
+        iconTint: Color = .accentColor,
         label: String,
         caption: String? = nil,
         @ViewBuilder trailing: @escaping () -> Trailing

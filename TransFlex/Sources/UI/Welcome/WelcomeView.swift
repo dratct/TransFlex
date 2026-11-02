@@ -25,7 +25,7 @@ struct WelcomeView: View {
                 .resizable()
                 .scaledToFit()
                 .frame(width: 34, height: 34)
-                .shadow(color: Color.brandAccent.opacity(0.18), radius: 8, y: 3)
+                .shadow(color: Color.brand.opacity(0.18), radius: 8, y: 3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(AppIdentity.current.displayName)
                     .font(.system(size: 15, weight: .semibold))
@@ -98,7 +98,7 @@ struct WelcomeView: View {
         HStack(spacing: 6) {
             ForEach(WelcomeStep.allCases, id: \.rawValue) { dot in
                 Capsule()
-                    .fill(dot == step ? Color.brandAccent : Color.secondary.opacity(0.3))
+                    .fill(dot == step ? Color.accentColor : Color.secondary.opacity(0.3))
                     .frame(width: dot == step ? 24 : 6, height: 6)
                     .animation(.spring(response: 0.3, dampingFraction: 0.8), value: step)
             }

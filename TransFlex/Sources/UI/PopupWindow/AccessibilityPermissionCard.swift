@@ -13,7 +13,7 @@ struct AccessibilityPermissionCard: View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 12) {
                 RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(granted ? Color.green.gradient : Color.brandAccent.gradient)
+                    .fill(granted ? Color.green.gradient : Color.accentColor.gradient)
                     .frame(width: 36, height: 36)
                     .overlay(
                         Image(systemName: granted ? "checkmark" : "hand.raised.fill")
@@ -59,7 +59,7 @@ struct AccessibilityPermissionCard: View {
                 .font(.system(size: 11, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
                 .frame(width: 18, height: 18)
-                .background(Circle().fill(Color.brandAccent))
+                .background(Circle().fill(Color.accentColor))
             Text(text)
                 .font(.system(size: 12))
                 .fixedSize(horizontal: false, vertical: true)

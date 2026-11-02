@@ -30,7 +30,6 @@ final class WelcomeWindowController {
         let view = WelcomeView(onClose: { [weak self] invokedByFinish in
             self?.handleClose(invokedByFinish: invokedByFinish)
         })
-        .tint(.brandAccent)
 
         let host = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: host)

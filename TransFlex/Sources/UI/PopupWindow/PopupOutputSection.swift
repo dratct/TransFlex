@@ -14,7 +14,7 @@ struct PopupOutputSection: View {
         // "source" card above so hierarchy reads source → result at a glance.
         HStack(alignment: .top, spacing: 0) {
             Rectangle()
-                .fill(Color.brandAccent.opacity(0.55))
+                .fill(Color.accentColor.opacity(0.55))
                 .frame(width: 2)
 
             ScrollViewReader { proxy in
@@ -59,14 +59,14 @@ struct PopupOutputSection: View {
             }
         }
         .frame(minHeight: 80, maxHeight: .infinity)
-        .background(Color.brandAccent.opacity(0.06))
+        .background(Color.accentColor.opacity(0.06))
         // Solid base under the tint: the popup's behind-window blur otherwise
         // lets bright windows underneath show through the result text.
         .background(Color(nsColor: .windowBackgroundColor).opacity(0.7))
         .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .stroke(Color.brandAccent.opacity(0.15), lineWidth: 1)
+                .stroke(Color.accentColor.opacity(0.15), lineWidth: 1)
         )
     }
 

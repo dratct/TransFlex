@@ -16,7 +16,7 @@ struct WelcomeHotkeyView: View {
             HStack(spacing: 12) {
                 Image(systemName: "keyboard.fill")
                     .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(Color.brandAccent)
+                    .foregroundStyle(Color.brand)
                     .frame(width: 28)
                 Text("Open \(AppIdentity.current.displayName)")
                     .font(.system(size: 13))

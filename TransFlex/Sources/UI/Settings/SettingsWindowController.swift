@@ -37,7 +37,6 @@ final class SettingsWindowController {
     private func makeWindow() -> NSWindow {
         let view = SettingsRoot(tabState: tabState)
             .environmentObject(presetStore)
-            .tint(.brandAccent)
         let host = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: host)
         win.title = "\(AppIdentity.current.displayName) Settings"

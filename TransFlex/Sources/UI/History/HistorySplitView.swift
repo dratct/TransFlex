@@ -26,7 +26,6 @@ struct HistorySplitView: View {
             }
         }
         .frame(minWidth: 640, minHeight: 400)
-        .tint(.brandAccent)
         .toolbar {
             ToolbarItemGroup(placement: .primaryAction) {
                 ToolbarButton(title: "Export", systemImage: "square.and.arrow.up") {

@@ -11,7 +11,7 @@ struct WelcomeIntroView: View {
                     .resizable()
                     .scaledToFit()
                     .frame(width: 72, height: 72)
-                    .shadow(color: Color.brandAccent.opacity(0.28), radius: 16, y: 8)
+                    .shadow(color: Color.brand.opacity(0.28), radius: 16, y: 8)
 
                 Text(AppIdentity.current.displayName)
                     .font(.system(.largeTitle, design: .rounded).weight(.bold))
@@ -43,7 +43,7 @@ private struct BulletCard: View {
         VStack(spacing: 8) {
             Image(systemName: icon)
                 .font(.system(size: 18, weight: .semibold))
-                .foregroundStyle(Color.brandAccent)
+                .foregroundStyle(Color.brand)
                 .frame(height: 22)
             Text(label)
                 .font(.system(size: 12, weight: .medium))

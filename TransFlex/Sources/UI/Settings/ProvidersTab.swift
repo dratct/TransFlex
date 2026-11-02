@@ -40,7 +40,7 @@ struct ProvidersTab: View {
     private var heroHeader: some View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.brandAccent.gradient)
+                .fill(Color.accentColor.gradient)
                 .frame(width: 36, height: 36)
                 .overlay(
                     Image(systemName: "server.rack")

@@ -1,11 +1,6 @@
 import SwiftUI
 import AppKit
 
-extension Color {
-    /// App accent for primary actions and focus rings.
-    static let brandAccent = Color(red: 0.13, green: 0.70, blue: 0.55)
-}
-
 @MainActor
 struct PopupView: View {
     @StateObject private var viewModel: PopupViewModel
@@ -79,7 +74,6 @@ struct PopupView: View {
             RoundedRectangle(cornerRadius: 12, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
-        .tint(.brandAccent)
         .onAppear {
             if !viewModel.hasProviderKeyConfigured() {
                 showFirstRun = true
@@ -269,7 +263,7 @@ struct PopupView: View {
             }
             switch viewModel.state {
             case .idle:
-                actionButton("Translate", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                actionButton("Translate", keys: ["⌘", "⏎"], tint: .accentColor) {
                     viewModel.translate()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
@@ -286,7 +280,7 @@ struct PopupView: View {
                 actionButton("Copy", keys: ["⌘", "C"], tint: .purple) {
                     viewModel.copyToClipboard(result)
                 }
-                actionButton("Re-translate", keys: ["⌘", "R"], tint: .brandAccent) {
+                actionButton("Re-translate", keys: ["⌘", "R"], tint: .accentColor) {
                     viewModel.translate()
                 }
                 .keyboardShortcut("r", modifiers: .command)
@@ -303,20 +297,20 @@ struct PopupView: View {
                 }
                 .keyboardShortcut(".", modifiers: .command)
                 if hasInput {
-                    actionButton("Retry", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                    actionButton("Retry", keys: ["⌘", "⏎"], tint: .accentColor) {
                         viewModel.translate()
                     }
                     .keyboardShortcut(.return, modifiers: .command)
                 }
             case .accessibilityRequired(granted: false):
                 // The card's only way forward, so it gets a filled button.
-                actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .accentColor) {
                     viewModel.openAccessibilitySettings()
                 }
                 .buttonStyle(.borderedProminent)
                 .keyboardShortcut(.return, modifiers: .command)
             case .accessibilityRequired(granted: true):
-                actionButton("Done", keys: ["⌘", "⏎"], tint: .brandAccent) {
+                actionButton("Done", keys: ["⌘", "⏎"], tint: .accentColor) {
                     viewModel.onDismissRequest?()
                 }
                 .keyboardShortcut(.return, modifiers: .command)
