@@ -31,7 +31,7 @@ final class HistoryStore: ObservableObject {
     func fetchPage(offset: Int, limit: Int = 50) throws -> [HistoryEntry] {
         try dbQueue.read { db in
             try HistoryEntry
-                .order(Column("createdAt").desc)
+                .order(HistoryEntry.Columns.createdAt.desc)
                 .limit(limit, offset: offset)
                 .fetchAll(db)
         }
@@ -58,7 +58,7 @@ final class HistoryStore: ObservableObject {
         let timestamp = cutoff.timeIntervalSince1970
         return try dbQueue.write { db in
             let count = try HistoryEntry
-                .filter(Column("createdAt") < timestamp)
+                .filter(HistoryEntry.Columns.createdAt < timestamp)
                 .deleteAll(db)
             return count
         }
@@ -79,7 +79,7 @@ final class HistoryStore: ObservableObject {
 
     func allEntries() throws -> [HistoryEntry] {
         try dbQueue.read { db in
-            try HistoryEntry.order(Column("createdAt").desc).fetchAll(db)
+            try HistoryEntry.order(HistoryEntry.Columns.createdAt.desc).fetchAll(db)
         }
     }
 
