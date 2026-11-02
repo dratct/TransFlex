@@ -4,6 +4,8 @@ import SwiftUI
 /// One past translation, laid out like the popup's two halves.
 struct HistoryDetailView: View {
     let entry: HistoryEntry?
+    /// False once the entry's preset was deleted: there is nothing to translate it with.
+    var presetExists = true
     let onDelete: (UUID) -> Void
 
     @State private var confirmingDelete = false
@@ -37,30 +39,40 @@ struct HistoryDetailView: View {
     }
 
     private func header(_ entry: HistoryEntry) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: Spacing.s) {
-            VStack(alignment: .leading, spacing: Spacing.xs) {
+        VStack(alignment: .leading, spacing: Spacing.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Spacing.s) {
                 Text(HistoryText.when(entry.createdAt))
                     .font(.headline)
-                Text(HistoryText.detailMeta(entry))
-                    .font(.callout)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(2)
-                    .textSelection(.enabled)
+                Spacer(minLength: Spacing.s)
+                actions(entry)
             }
-            Spacer(minLength: Spacing.s)
-            Button("Delete…") { confirmingDelete = true }
-                .confirmationDialog("Delete this translation?", isPresented: $confirmingDelete) {
-                    Button("Delete", role: .destructive) { onDelete(entry.id) }
-                } message: {
-                    Text("It is removed from History. This can’t be undone.")
-                }
-            Button("Copy") {
-                NSPasteboard.general.clearContents()
-                NSPasteboard.general.setString(entry.outputText, forType: .string)
-            }
-            .buttonStyle(.borderedProminent)
+            // Full width below the buttons, so the cost is never the part cut off.
+            Text(HistoryText.detailMeta(entry))
+                .font(.callout)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+                .textSelection(.enabled)
         }
+    }
+
+    @ViewBuilder
+    private func actions(_ entry: HistoryEntry) -> some View {
+        Button("Delete…") { confirmingDelete = true }
+            .confirmationDialog("Delete this translation?", isPresented: $confirmingDelete) {
+                Button("Delete", role: .destructive) { onDelete(entry.id) }
+            } message: {
+                Text("It is removed from History. This can’t be undone.")
+            }
+        if let input = entry.inputText {
+            Button("Translate again") { AppCommands.translateAgain(text: input, presetID: entry.presetID) }
+                .disabled(!presetExists)
+                .help(presetExists ? "" : "This preset was deleted.")
+        }
+        Button("Copy") {
+            NSPasteboard.general.clearContents()
+            NSPasteboard.general.setString(entry.outputText, forType: .string)
+        }
+        .buttonStyle(.borderedProminent)
     }
 
     private func half(label: ColumnLabel, text: String, font: Font, lineSpacing: CGFloat) -> some View {

@@ -22,6 +22,14 @@ enum AppCommands {
         controller.show()
     }
 
+    static func translateAgain(text: String, presetID: UUID) {
+        guard let controller = AppDelegate.shared?.popupWindowController else {
+            logger.error("translateAgain: AppDelegate.shared is nil — delegate not yet wired")
+            return
+        }
+        controller.translateAgain(text: text, presetID: presetID)
+    }
+
     /// Closing Settings or History hands activation back to the app that was
     /// in front, which would otherwise read as "the user left" and hide the popup.
     static func keepPopupAfterWindowClose() {

@@ -127,6 +127,12 @@ public final class PopupWindowController {
         }
     }
 
+    /// Shows the full popup and translates a History entry's text again.
+    public func translateAgain(text: String, presetID: UUID) {
+        show()
+        viewModel?.translateAgain(text: text, presetID: presetID)
+    }
+
     /// Toggles popup visibility. If shown, brings to front and focuses.
     public func toggle() {
         if panel.isVisible {

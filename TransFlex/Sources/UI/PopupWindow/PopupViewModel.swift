@@ -348,6 +348,16 @@ final class PopupViewModel: ObservableObject {
         translate()
     }
 
+    /// Translates a History entry again in the full popup, with the preset it
+    /// was made with. Starts a fresh session, so the draft that was open is
+    /// replaced the same way a reopen after the idle time replaces it.
+    func translateAgain(text: String, presetID: UUID) {
+        reset()
+        selectedPresetID = presetID
+        inputText = text
+        translate()
+    }
+
     /// Surfaces a selection-translate failure in the output-only popup.
     func presentQuickError(_ message: String, presetID: UUID) {
         resetForSelection()

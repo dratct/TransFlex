@@ -137,6 +137,29 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
     }
 
+    // MARK: Translate again from History (C-4)
+
+    func testTranslateAgainUsesSavedPresetAndText() async throws {
+        provider.scriptedEvents = [.textDelta("Xin chao"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        let saved = try XCTUnwrap(presetStore.presets.last)
+        XCTAssertNotEqual(vm.selectedPresetID, saved.id, "the saved preset is not the one already selected")
+        vm.presentQuickError("earlier selection failed", presetID: saved.id)
+        XCTAssertTrue(vm.isOutputOnly)
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.first?.id))
+
+        vm.translateAgain(text: "Hello", presetID: saved.id)
+
+        XCTAssertFalse(vm.isOutputOnly, "the full popup, with the source text, not the output-only one")
+        XCTAssertEqual(vm.selectedPresetID, saved.id)
+        XCTAssertEqual(vm.inputText, "Hello")
+        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Xin chao"))
+        XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
+    }
+
     func testShowInputLeavesOutputOnlyAndNotifiesOnce() throws {
         let vm = makeViewModel()
         var notified = 0

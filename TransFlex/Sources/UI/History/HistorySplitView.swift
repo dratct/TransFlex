@@ -94,7 +94,11 @@ struct HistorySplitView: View {
                 message: "Search looks in both the text and its translation."
             )
         } else {
-            HistoryDetailView(entry: currentEntry, onDelete: deleteEntry)
+            HistoryDetailView(
+                entry: currentEntry,
+                presetExists: currentEntry.map { presetName($0.presetID) != nil } ?? false,
+                onDelete: deleteEntry
+            )
                 .id(currentEntry?.id)
         }
     }
@@ -119,6 +123,8 @@ struct HistorySplitView: View {
         entries = (try? store.fetchPage(offset: 0, limit: pageSize)) ?? []
         hasLoaded = true
         selectedEntryID = entries.first?.id
+        // ↑/↓ browse at once; otherwise the first key view is a detail button.
+        listFocused = true
         refreshToday()
     }
 
