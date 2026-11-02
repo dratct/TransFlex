@@ -11,6 +11,9 @@ final class HistoryWindowController {
     private let store: HistoryStore
     private let presetStore: PresetStore
 
+    /// Wide enough that the detail shows Original and Translation side by side.
+    static let defaultContentSize = NSSize(width: 1000, height: 560)
+
     init(store: HistoryStore, presetStore: PresetStore) {
         self.store = store
         self.presetStore = presetStore
@@ -28,7 +31,7 @@ final class HistoryWindowController {
         let contentView = HistorySplitView(store: store, presets: presetStore)
         let hosting = NSHostingController(rootView: contentView)
 
-        let frame = NSRect(x: 0, y: 0, width: 800, height: 500)
+        let frame = NSRect(origin: .zero, size: Self.defaultContentSize)
         let newWindow = NSWindow(
             contentRect: frame,
             // NavigationSplitView lays itself out for content that runs under

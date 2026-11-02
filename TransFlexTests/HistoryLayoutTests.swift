@@ -40,4 +40,11 @@ final class HistoryLayoutTests: XCTestCase {
         // Top edges: 720 for the other window, 696 for the new one.
         XCTAssertEqual(origin.y + 500, 696)
     }
+
+    /// The detail shows Original and Translation side by side only from
+    /// 720pt; the sidebar's ideal width is 260pt.
+    @MainActor
+    func testDefaultWindowFitsSideBySideColumns() {
+        XCTAssertGreaterThanOrEqual(HistoryWindowController.defaultContentSize.width, 260 + ColumnLayout.sideBySideMinWidth)
+    }
 }
