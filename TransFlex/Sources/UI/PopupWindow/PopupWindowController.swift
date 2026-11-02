@@ -124,8 +124,7 @@ public final class PopupWindowController {
         viewModel?.leaveOutputOnly()
 
         let reference = point ?? NSEvent.mouseLocation
-        let frame = centeredFrame(onScreenContaining: reference, sizeRatio: 0.6)
-        panel.setFrame(frame, display: true)
+        panel.setFrame(frame(.popup, onScreenContaining: reference), display: true)
         panel.orderFrontRegardless()
         panel.makeKey()
 
@@ -157,10 +156,7 @@ public final class PopupWindowController {
     }
 
     private func showOutputOnly() {
-        let reference = NSEvent.mouseLocation
-        let visible = screen(containing: reference)?.visibleFrame
-            ?? NSRect(origin: .zero, size: Self.defaultSize)
-        panel.setFrame(QuickPopupSizing.initialFrame(in: visible), display: true)
+        panel.setFrame(frame(.outputOnly, onScreenContaining: NSEvent.mouseLocation), display: true)
         panel.orderFrontRegardless()
         panel.makeKey()
         // No input editor here, so AppKit would focus the preset picker and
@@ -193,7 +189,7 @@ public final class PopupWindowController {
         vm.onShowInput = { [weak self] in
             guard let self, self.panel.isVisible else { return }
             let center = NSPoint(x: self.panel.frame.midX, y: self.panel.frame.midY)
-            self.panel.setFrame(self.centeredFrame(onScreenContaining: center, sizeRatio: 0.6), display: true)
+            self.panel.setFrame(self.frame(.popup, onScreenContaining: center), display: true)
         }
     }
 
@@ -202,7 +198,7 @@ public final class PopupWindowController {
     private func fitOutputOnly() {
         guard let vm = viewModel, vm.isOutputOnly,
               let screenFrame = screen(containing: NSPoint(x: panel.frame.midX, y: panel.frame.midY))?.visibleFrame,
-              let grown = QuickPopupSizing.grownFrame(
+              let grown = PopupFrame.grown(
                   current: panel.frame,
                   outputContentHeight: vm.outputContentHeight,
                   outputVisibleHeight: vm.outputVisibleHeight,
@@ -229,20 +225,14 @@ public final class PopupWindowController {
         }
     }
 
-    /// Center panel on the screen containing `point`, sized to `sizeRatio` of
-    /// that screen's visible frame. Falls back to primary then first screen
-    /// if `point`'s screen yields no visible frame (display reconfig race).
-    private func centeredFrame(onScreenContaining point: NSPoint, sizeRatio: CGFloat) -> NSRect {
+    /// The mode's frame on the screen containing `point`. Falls back to primary
+    /// then first screen if `point`'s screen yields no visible frame (display
+    /// reconfig race).
+    private func frame(_ mode: PopupFrame.Mode, onScreenContaining point: NSPoint) -> NSRect {
         guard let visible = screen(containing: point)?.visibleFrame else {
             return NSRect(origin: .zero, size: Self.defaultSize)
         }
-        let size = NSSize(width: visible.width * sizeRatio, height: visible.height * sizeRatio)
-        return NSRect(
-            x: visible.midX - size.width / 2,
-            y: visible.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
+        return PopupFrame.initial(mode, in: visible)
     }
 
     /// Cached `mach_timebase_info` — values are constant for the process lifetime.
