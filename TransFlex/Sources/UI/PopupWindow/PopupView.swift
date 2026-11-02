@@ -72,7 +72,7 @@ struct PopupView: View {
             if available { focusEditor() }
         }
         .sheet(isPresented: $showFirstRun) {
-            FirstRunWizardView(viewModel: viewModel)
+            FirstRunWizardView()
         }
         .alert("Estimated Cost", isPresented: $viewModel.showCostConfirmation) {
             Button("Cancel", role: .cancel) { viewModel.cancelCostConfirmation() }

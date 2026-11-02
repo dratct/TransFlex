@@ -102,6 +102,9 @@ enum ScreenshotMode {
                                     onClose: { _ in }))
             })
         }
+        shots.append(Shot(name: "first-run", size: NSSize(width: FirstRunWizardView.width, height: 400)) {
+            AnyView(FirstRunWizardView(model: ProviderSetupModel(save: { _, _ in }, onSaved: {})))
+        })
         shots.append(Shot(name: "model-picker", size: NSSize(width: 320, height: 420)) {
             AnyView(ModelPickerPopover(
                 selection: .constant("gpt-5.2"),
