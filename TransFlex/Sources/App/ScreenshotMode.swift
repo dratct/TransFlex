@@ -90,6 +90,10 @@ enum ScreenshotMode {
         shots.append(Shot(name: "history-narrow", size: NSSize(width: 800, height: 500)) {
             AnyView(HistorySplitView(store: history, presets: presets))
         })
+        let imageHistory = sampleImageHistoryStore(presets: presets)
+        shots.append(Shot(name: "history-image", size: HistoryWindowController.defaultContentSize) {
+            AnyView(HistorySplitView(store: imageHistory, presets: presets))
+        })
         shots.append(Shot(name: "model-picker", size: NSSize(width: 320, height: 420)) {
             AnyView(ModelPickerPopover(
                 selection: .constant("gpt-5.2"),
@@ -152,6 +156,23 @@ enum ScreenshotMode {
             } catch {
                 logger.error("Sample history insert failed: \(error.localizedDescription, privacy: .public)")
             }
+        }
+        return store
+    }
+
+    /// A translation read from an image: no original text to show.
+    private static func sampleImageHistoryStore(presets: PresetStore) -> HistoryStore {
+        let store: HistoryStore
+        do {
+            store = try HistoryStore(inMemory: true)
+            try store.insert(HistoryEntry(
+                presetID: presets.presets.first?.id ?? UUID(), providerID: "openai", modelID: "gpt-4o",
+                inputText: nil, outputText: "Merci de relire les notes de version avant vendredi.",
+                hadImage: true, durationMs: 1_400, tokenCount: 880,
+                inputTokens: 820, outputTokens: 60, costUSD: 0.0027
+            ))
+        } catch {
+            fatalError("Cannot create in-memory image history: \(error)")
         }
         return store
     }
