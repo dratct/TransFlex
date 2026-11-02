@@ -216,12 +216,25 @@ figcaption b { color: var(--label); font-weight: 600; }
 .popup .half:first-child, .win .half:first-child { padding-left: 0; }
 .popup .half:last-child, .win .half:last-child { padding-right: 0; }
 .popup .half + .half, .win .half + .half { border: 0; }
-.popup .half + .half::before, .win .half + .half::before { content: ""; position: absolute; left: 0; top: 0; bottom: 8px; width: 1px;
-  background: linear-gradient(transparent, var(--hair-2) 18%, var(--hair-2) 82%, transparent); }
+/* ColumnSeam: fading rule broken by a spark; while streaming it fills to --p with a glowing dot */
+.popup .half + .half::before, .win .half + .half::before { content: ""; position: absolute; left: 0; top: 0; bottom: 8px; width: 1px; transform: translateX(-50%);
+  background: var(--hair-2);
+  -webkit-mask: linear-gradient(transparent, #000 16%, #000 calc(50% - 18px), transparent calc(50% - 13px), transparent calc(50% + 13px), #000 calc(50% + 18px), #000 84%, transparent);
+  mask: linear-gradient(transparent, #000 16%, #000 calc(50% - 18px), transparent calc(50% - 13px), transparent calc(50% + 13px), #000 calc(50% + 18px), #000 84%, transparent); }
+.popup .half + .half::after, .win .half + .half::after { content: ""; position: absolute; left: 0; top: calc(50% - 4px); width: 10px; height: 10px; transform: translate(-50%,-50%);
+  background: var(--accent-text);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5c.6 4.6 2.9 6.9 9.5 9.5-6.6 2.6-8.9 4.9-9.5 9.5-.6-4.6-2.9-6.9-9.5-9.5 6.6-2.6 8.9-4.9 9.5-9.5z'/%3E%3C/svg%3E") center/contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2.5c.6 4.6 2.9 6.9 9.5 9.5-6.6 2.6-8.9 4.9-9.5 9.5-.6-4.6-2.9-6.9-9.5-9.5 6.6-2.6 8.9-4.9 9.5-9.5z'/%3E%3C/svg%3E") center/contain no-repeat; }
+.popup .sheet.streaming .half + .half::before { width: 1.5px; background: linear-gradient(var(--accent-text), var(--accent-text)) 0 0 / 100% var(--p) no-repeat, var(--hair-2);
+  -webkit-mask: linear-gradient(#000 84%, transparent); mask: linear-gradient(#000 84%, transparent); }
+.popup .sheet.streaming .half + .half::after { top: calc((100% - 8px) * var(--pf)); width: 7px; height: 7px; border-radius: 50%; -webkit-mask: none; mask: none;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent-text) 18%, transparent), 0 0 14px color-mix(in srgb, var(--accent-text) 55%, transparent); }
 .popup .sheet.stack .half, .win .sheet.stack .half { padding: 0; }
 .popup .sheet.stack .half + .half { padding-top: 16px; }
-.popup .sheet.stack .half + .half::before { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 1px;
-  background: linear-gradient(90deg, transparent, var(--hair-2) 18%, var(--hair-2) 82%, transparent); }
+.popup .sheet.stack .half + .half::before { left: 0; right: 0; top: 0; bottom: auto; width: auto; height: 1px; transform: translateY(-50%);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 16%, #000 calc(50% - 18px), transparent calc(50% - 13px), transparent calc(50% + 13px), #000 calc(50% + 18px), #000 84%, transparent);
+  mask: linear-gradient(90deg, transparent, #000 16%, #000 calc(50% - 18px), transparent calc(50% - 13px), transparent calc(50% + 13px), #000 calc(50% + 18px), #000 84%, transparent); }
+.popup .sheet.stack .half + .half::after { left: 50%; top: 0; }
 .popup .lang, .win .lang { height: auto; padding: 0 0 10px; font-size: 11px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--label-3); }
 .popup .lang .muted, .win .lang .muted { text-transform: none; letter-spacing: 0; }
 .popup .out .lang, .win .out .lang { color: var(--accent-text); }
@@ -286,7 +299,7 @@ figcaption b { color: var(--label); font-weight: 600; }
 <main>
 
 <section>
-  <header><h2>Popup</h2><p>Airy columns: what you wrote on the left, the translation on the right in larger type, directly on a near-opaque material and divided by a fading rule. No boxes. One filled button per state. Shown at 860 × 470 — 60% of a 1440 × 900 screen.</p></header>
+  <header><h2>Popup</h2><p>Airy columns: what you wrote on the left, the translation on the right in larger type, directly on a near-opaque material and divided by a fading rule with a spark at its midpoint. No boxes. One filled button per state. Shown at 860 × 470 — 60% of a 1440 × 900 screen.</p></header>
   <div class="stage">
     <figure>
       <div class="popup" style="width:860px;height:470px">
@@ -308,13 +321,13 @@ figcaption b { color: var(--label); font-weight: 600; }
     <figure>
       <div class="popup" style="width:860px;height:470px">
         <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
-        <div class="sheet">
+        <div class="sheet streaming" style="--p:62%;--pf:.62">
           <div class="half"><div class="lang">Original</div><div class="text dim">Please review the release notes before Friday and flag anything that blocks the launch. The QA sign-off is still pending on two items.</div></div>
           <div class="half out"><div class="lang">Translation</div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và báo ngay những gì đang cản trở<span class="caret"></span></div></div>
         </div>
         <div class="p-foot"><span class="meta"><span class="typing"><i></i><i></i><i></i></span>&nbsp;Translating…</span><span class="sp"></span><span class="btn">Stop<span class="kc"><i>esc</i></span></span></div>
       </div>
-      <figcaption><b>Translating.</b> The source dims and locks only while text streams in. Stop is the only action and is not coloured: there is nothing to confirm.</figcaption>
+      <figcaption><b>Translating.</b> The source dims and locks only while text streams in. The seam between the columns fills with the accent as the translation grows, then settles back to the hairline with its spark. Stop is the only action and is not coloured: there is nothing to confirm.</figcaption>
     </figure>
 
     <figure>
