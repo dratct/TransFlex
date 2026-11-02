@@ -113,7 +113,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | Component | Rule |
 |---|---|
 | `TranslationColumns` | Airy columns (chosen 2026-11-01): no inner box. **Original** (15pt, `on-surface-variant`) on the leading side, **Translation** (17pt, `on-surface`) on the trailing side, 28pt side margins, 26pt gutter, divided by a 1pt rule that fades out at both ends. Labels are 11pt semibold uppercase with 0.06em tracking: `faint` for Original, `accent-text` for Translation. Under 720pt wide they stack with a horizontal fading rule. |
-| `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. No per-button tint. |
+| `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. System button styles only, at `.controlSize(.large)` in the popup footer, `Notice` actions and sheet action rows: macOS 26 and later draw these as capsules (grey fill for secondary, accent fill for primary), macOS 13–15 as classic push buttons. Buttons inside `SettingsRow` stay at the regular size. No custom `ButtonStyle`, no `.glass`/`.glassProminent`, no `.tint`: the accent comes from the AccentColor asset. |
 | `KeyHint` | 10.5pt keycaps on a faint fill, radius 4. Read by VoiceOver as part of the button label ("Command Return"). |
 | `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
 | `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
@@ -147,6 +147,10 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
   common correction loop, and ⌘N would lose the text.
 - Don't colour buttons by meaning (blue New, purple Copy, orange Stop).
   Coloured text on glass was unreadable on light backgrounds (audit D6, R3).
+- Don't tint the button group or use the glass styles. With `.tint` the
+  secondary button also turns accent-coloured and fades in dark mode, and
+  tinted glass makes primary and secondary look alike (rendered on macOS 27,
+  2026-11-02).
 - Don't put an error inside the translation. It hides the result and reads
   like translated text; use a `Notice` (owner request, 2026-11-01).
 - Don't use emoji as icons. One SF Symbol set, one weight.
