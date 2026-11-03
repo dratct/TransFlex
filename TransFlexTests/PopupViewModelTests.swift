@@ -75,14 +75,50 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         try await super.tearDown()
     }
 
-    private func makeViewModel() -> PopupViewModel {
+    private func makeViewModel(hasAPIKey: @escaping (Preset) -> Bool = { _ in true }) -> PopupViewModel {
         let provider = provider!
         let service = TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
         return PopupViewModel(
             translationService: service,
             presetStore: presetStore,
-            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)")))
+            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)"))),
+            hasAPIKey: hasAPIKey
         )
+    }
+
+    // MARK: Missing key (audit D2)
+
+    func testMissingKeyShowsNoticeInsteadOfSending() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let preset = try XCTUnwrap(vm.selectedPreset)
+        vm.inputText = "hello"
+
+        vm.translate()
+
+        XCTAssertEqual(vm.state, .missingKey(providerID: preset.providerID))
+        XCTAssertEqual(vm.inputText, "hello", "the user's text stays")
+        XCTAssertNil(provider.capturedConfig, "nothing is sent without a key")
+    }
+
+    func testBackToTextFromMissingKeyReturnsToTheEditor() {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        vm.inputText = "hello"
+        vm.translate()
+
+        vm.dismissError()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "hello")
+    }
+
+    func testSelectionWithoutKeyShowsTheNoticeInTheOutputOnlyPopup() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let target = try XCTUnwrap(presetStore.presets.last)
+
+        vm.startQuickTranslation(text: "Hello", presetID: target.id)
+
+        XCTAssertTrue(vm.isOutputOnly)
+        XCTAssertEqual(vm.state, .missingKey(providerID: target.providerID))
     }
 
     func testQuickTranslationShowsOnlyOutputAndTranslatesSelection() async throws {
@@ -99,6 +135,63 @@ final class PopupViewModelQuickModeTests: XCTestCase {
             try await Task.sleep(nanoseconds: 5_000_000)
         }
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+    }
+
+    // MARK: Translate again from History
+
+    func testTranslateAgainUsesSavedPresetAndText() async throws {
+        provider.scriptedEvents = [.textDelta("Xin chao"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        let saved = try XCTUnwrap(presetStore.presets.last)
+        XCTAssertNotEqual(vm.selectedPresetID, saved.id, "the saved preset is not the one already selected")
+        vm.presentQuickError("earlier selection failed", presetID: saved.id)
+        XCTAssertTrue(vm.isOutputOnly)
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.first?.id))
+
+        vm.translateAgain(text: "Hello", presetID: saved.id)
+
+        XCTAssertFalse(vm.isOutputOnly, "the full popup, with the source text, not the output-only one")
+        XCTAssertEqual(vm.selectedPresetID, saved.id)
+        XCTAssertEqual(vm.inputText, "Hello")
+        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Xin chao"))
+        XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
+    }
+
+    // MARK: Footer cost, written like History
+
+    private func footerAfterTranslating(with preset: Preset) async throws -> String? {
+        provider.scriptedEvents = [.textDelta("Xin chao"), .usage(input: 40, output: 56), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.switchPreset(preset.id)
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Xin chao"))
+        return vm.costEstimate
+    }
+
+    func testFooterShowsTotalTokensThenDollarCost() async throws {
+        let priced = try XCTUnwrap(presetStore.presets.first { $0.modelID == "gpt-4o" })
+
+        // gpt-4o: 40 in × $0.0025/1k + 56 out × $0.01/1k = $0.00066
+        let footer = try await footerAfterTranslating(with: priced)
+
+        XCTAssertEqual(footer, "96 tokens · $0.0007")
+    }
+
+    func testFooterShowsOnlyTokensWhenTheModelHasNoPrice() async throws {
+        var unpriced = try XCTUnwrap(presetStore.presets.first)
+        unpriced.modelID = "gpt-6-luna"
+        try presetStore.update(unpriced)
+
+        let footer = try await footerAfterTranslating(with: unpriced)
+
+        XCTAssertEqual(footer, "96 tokens")
     }
 
     func testShowInputLeavesOutputOnlyAndNotifiesOnce() throws {
@@ -134,7 +227,9 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(notified, 2)
     }
 
-    func testQuickErrorKeepsDraftAndPresetForNextNormalOpen() throws {
+    // MARK: Draft rule (CONTEXT.md)
+
+    func testPopupDraftComesBackAfterSelectionWhenKept() throws {
         let vm = makeViewModel()
         let draftPreset = try XCTUnwrap(presetStore.presets.first?.id)
         let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
@@ -143,8 +238,9 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.presentQuickError("No text selected.", presetID: shortcutPreset)
         XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
+        XCTAssertEqual(vm.inputText, "", "the Output-only popup never shows the Draft")
 
-        vm.leaveOutputOnly()
+        vm.openPopup(keepingDraft: true)
 
         XCTAssertFalse(vm.isOutputOnly)
         XCTAssertEqual(vm.inputText, "half-typed draft")
@@ -152,26 +248,77 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.state, .idle)
     }
 
-    func testQuickWithoutDraftKeepsQuickResultOnNormalOpen() throws {
+    func testPopupResultComesBackWithItsDraft() throws {
         let vm = makeViewModel()
-        let shortcutPreset = try XCTUnwrap(presetStore.presets.last?.id)
+        vm.inputText = "hello"
+        vm.state = .done(result: "xin chào")
 
-        vm.presentQuickError("No text selected.", presetID: shortcutPreset)
-        vm.leaveOutputOnly()
+        vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: true)
 
-        XCTAssertEqual(vm.selectedPresetID, shortcutPreset)
-        XCTAssertEqual(vm.state, .error(message: "No text selected.", partial: nil))
+        XCTAssertEqual(vm.inputText, "hello")
+        XCTAssertEqual(vm.state, .done(result: "xin chào"))
     }
 
-    func testStaleResetDropsKeptDraft() throws {
+    func testPopupStartsEmptyAfterSelectionWhenCleared() throws {
         let vm = makeViewModel()
+        let draftPreset = try XCTUnwrap(presetStore.presets.first?.id)
+        vm.switchPreset(draftPreset)
         vm.inputText = "old draft"
+        vm.state = .done(result: "cũ")
+
         vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: false)
 
-        vm.reset()
-        vm.leaveOutputOnly()
-
+        XCTAssertFalse(vm.isOutputOnly)
         XCTAssertEqual(vm.inputText, "")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.selectedPresetID, draftPreset, "the preset is a choice, not part of the Draft")
+    }
+
+    func testPopupNeverInheritsTheSelectionResult() throws {
+        let vm = makeViewModel()
+
+        vm.presentQuickError("No text selected.", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    func testTwoSelectionsInARowStillHandBackTheFirstDraft() throws {
+        let vm = makeViewModel()
+        let last = try XCTUnwrap(presetStore.presets.last?.id)
+        vm.inputText = "draft"
+
+        vm.presentQuickError("x", presetID: last)
+        vm.presentQuickError("y", presetID: last)
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "draft")
+    }
+
+    func testReopeningThePopupClearsOnlyWhenTold() {
+        let vm = makeViewModel()
+        vm.inputText = "draft"
+
+        vm.openPopup(keepingDraft: true)
+        XCTAssertEqual(vm.inputText, "draft")
+
+        vm.openPopup(keepingDraft: false)
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    func testShowInputTurnsTheSelectionIntoThePopup() throws {
+        let vm = makeViewModel()
+        vm.inputText = "older draft"
+        vm.presentQuickError("x", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        vm.inputText = "selected text"
+
+        vm.showInput()
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "selected text")
     }
 
     func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
@@ -210,6 +357,40 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         XCTAssertTrue(vm.copyResultIfShown())
         XCTAssertEqual(board.string(forType: .string), "Bonjour")
+    }
+
+    func testTranslateAgainCommandActsOnlyOnAShownResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+
+        XCTAssertFalse(vm.translateAgainIfShown(), "idle leaves ⌘↩ to the Translate button")
+
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        vm.inputText = "Hello there"
+        provider.scriptedEvents = [.textDelta("Salut"), .stop(reason: .complete)]
+
+        XCTAssertTrue(vm.translateAgainIfShown())
+        for _ in 0..<100 where vm.state != .done(result: "Salut") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Salut"), "⌘↩ after a result translates the edited source")
+    }
+
+    func testTranslateAgainCommandIgnoresTheOutputOnlyPopup() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+
+        XCTAssertFalse(vm.translateAgainIfShown(), "the Output-only popup has no source to translate again")
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
     }
 
     func testResetLeavesOutputOnlyWithoutResizeCallback() throws {
@@ -284,23 +465,14 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         XCTAssertEqual(vm.state, .idle)
     }
 
-    func testAccessibilityCardKeepsDraftForNextNormalOpen() throws {
+    func testAccessibilityCardKeepsDraftForNextPopupOpen() throws {
         let vm = makeViewModel(granted: { false })
         vm.inputText = "draft"
 
         vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
-        vm.leaveOutputOnly()
+        vm.openPopup(keepingDraft: true)
 
         XCTAssertEqual(vm.inputText, "draft")
-        XCTAssertEqual(vm.state, .idle)
-    }
-
-    func testAccessibilityCardWithoutDraftStartsCleanOnNormalOpen() throws {
-        let vm = makeViewModel(granted: { false })
-
-        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.last?.id), pollInterval: 1_000_000)
-        vm.leaveOutputOnly()
-
         XCTAssertEqual(vm.state, .idle)
         XCTAssertFalse(vm.isOutputOnly)
     }
@@ -310,5 +482,52 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         let vm = makeViewModel(granted: { false }, opened: { opened += 1 })
         vm.openAccessibilitySettings()
         XCTAssertEqual(opened, 1)
+    }
+}
+
+final class PopupHideClockTests: XCTestCase {
+    private let twoMinutes = PopupResetPolicy.afterMinutes(2)
+    private let t0 = Date(timeIntervalSince1970: 1_000_000)
+
+    func testDraftKeptWithinThePolicyWindow() {
+        var clock = PopupHideClock()
+        clock.recordHide(outputOnly: false, at: t0)
+        XCTAssertTrue(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(60)))
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(130)))
+    }
+
+    func testOutputOnlyHideDoesNotExtendTheWindow() {
+        var clock = PopupHideClock()
+        clock.recordHide(outputOnly: false, at: t0)
+        clock.recordHide(outputOnly: true, at: t0.addingTimeInterval(90))
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0.addingTimeInterval(130)))
+    }
+
+    func testFirstOpenStartsEmptyUnlessNever() {
+        let clock = PopupHideClock()
+        XCTAssertFalse(clock.keepsDraft(policy: twoMinutes, now: t0))
+        XCTAssertTrue(clock.keepsDraft(policy: .never, now: t0))
+    }
+}
+
+final class PopupEscapeTests: XCTestCase {
+    func testStreamingStops() {
+        XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: "x"), isOutputOnly: false), .stop)
+        XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: ""), isOutputOnly: true), .stop)
+    }
+
+    func testNoticeCardGoesBackToTheText() {
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: nil), isOutputOnly: false), .backToText)
+        XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: false), .backToText)
+    }
+
+    func testEverythingElseCloses() {
+        XCTAssertEqual(PopupEscape.action(for: .idle, isOutputOnly: false), .close)
+        XCTAssertEqual(PopupEscape.action(for: .done(result: "x"), isOutputOnly: false), .close)
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: "p"), isOutputOnly: false), .close)
+        // The Output-only popup has no text to go back to.
+        XCTAssertEqual(PopupEscape.action(for: .error(message: "x", partial: nil), isOutputOnly: true), .close)
+        XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: true), .close)
+        XCTAssertEqual(PopupEscape.action(for: .accessibilityRequired(granted: false), isOutputOnly: true), .close)
     }
 }

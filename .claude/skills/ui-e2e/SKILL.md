@@ -76,6 +76,42 @@ reproduce, then:
 
 Remove every `TMP` log line before finishing (`rg -n TMP TransFlex/Sources`).
 
+## 6. Full checklist (before calling a UI change done)
+
+Run the whole list after a change that touches the popup, Settings, History or
+a shortcut flow; DESIGN.md › Popup states is what each state must look like.
+
+1. **Open twice.** Open the popup, close it with Esc, open it again: the
+   second open looks the same as the first (size, focus in the editor, no
+   ring on the preset picker), and the Draft follows Keep last translation.
+2. **Quick translate, short → long → short.** Translation-only popup from a
+   selection: a short text, then a long one (grows downward, then scrolls with
+   the newest line in view), then a short one again (shrinks back).
+3. **⌘I, edit, translate again.** From the translation-only popup press ⌘I,
+   edit the Original, ⌘↩: one request per press, the seam fills while it
+   streams and stays at the same x in every state.
+4. **Settings mid-way.** While the popup shows a result press ⌘,: Settings
+   opens in front; closing it leaves the popup visible and typing goes to it.
+5. **History with entries.** ⌘Y: History opens in front, grouped by day,
+   the newest entry already selected and its header (date, Delete…,
+   Translate again, Copy) fully visible below the toolbar; rows read
+   "preset · time · cost" and the subtitle "Today: $…" once a priced model
+   translated today. In the search field ↓ moves into the list and ⌘F back.
+   Delete… asks before deleting. Translate again opens the full popup with
+   that text and preset and adds a new entry. A search with no match shows
+   "No results for …" and leaves Export…/Delete All… as they were. With
+   Settings open, History cascades 24pt down and right.
+6. **Replace Selection.** In TextEdit: the capsule appears beside the pointer,
+   "Replaced · ⌘Z to undo" fades; Esc during a run cancels it and the text is
+   unchanged; afterwards Esc works in other apps again. A failing preset shows
+   the banner ending "Nothing was changed.". TextEdit keeps focus throughout.
+7. **Model picker.** Search, ↑↓, a typed custom ID; no speech, image or
+   embedding models.
+8. **Light, dark, Reduce Transparency** for the popup and one Settings tab.
+
+Compare each screenshot with the matching `docs/design/mockups.html` figure
+and with the previous run's screenshot of the same step.
+
 ## Known traps
 
 - SwiftUI preference keys set inside the popup's `ScrollView` never reach

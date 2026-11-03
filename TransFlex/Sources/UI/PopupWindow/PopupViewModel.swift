@@ -19,7 +19,7 @@ final class PopupViewModel: ObservableObject {
     /// when the view should re-focus on a subsequent reopen.
     @Published var inputFocusRequest: Int = 0
     /// Selection-translate mode: the popup shows only the result. Cleared by
-    /// `reset()`, `showInput()` and `leaveOutputOnly()`.
+    /// `reset()`, `showInput()` and `openPopup(keepingDraft:)`.
     @Published private(set) var isOutputOnly: Bool = false
     /// Natural height of the output content and the height it is given,
     /// reported by the view so the controller can grow the panel to fit.
@@ -27,14 +27,16 @@ final class PopupViewModel: ObservableObject {
     @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
-    /// What the user was typing when a selection shortcut took over the popup;
-    /// handed back on the next normal open.
-    private var keptDraft: Draft?
+    /// The Popup's Draft and result, set aside while a selection shortcut
+    /// uses the panel; `openPopup(keepingDraft:)` hands it back.
+    private var popupSession: PopupSession?
 
-    private struct Draft {
+    private struct PopupSession {
         let text: String
         let image: ImageInput?
         let presetID: UUID?
+        let state: PopupState
+        let costEstimate: String?
     }
 
     private let translationService: TranslationService
@@ -49,6 +51,7 @@ final class PopupViewModel: ObservableObject {
     private let historyRecorder = HistoryRecorder()
 
     private let isAccessibilityGranted: () -> Bool
+    private let hasAPIKey: (Preset) -> Bool
     private let openAccessibilitySettingsAction: () -> Void
     private var accessibilityPoll: Task<Void, Never>?
 
@@ -62,9 +65,11 @@ final class PopupViewModel: ObservableObject {
         pasteboard: PasteboardHelper = PasteboardHelper(),
         keychain: KeychainStore = KeychainStore(),
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
-        openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings
+        openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
+        hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
     ) {
         self.isAccessibilityGranted = isAccessibilityGranted
+        self.hasAPIKey = hasAPIKey
         self.openAccessibilitySettingsAction = openAccessibilitySettings
         self.translationService = translationService
         self.presetStore = presetStore
@@ -143,6 +148,10 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
+    /// Providers that cannot work without an API key. OpenAI-compatible
+    /// endpoints (local servers) may run without one.
+    static let keyedProviderIDs = ["openai", "anthropic", "gemini"]
+
     static let visionOffMessage =
         "This preset can't read images. Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
 
@@ -152,6 +161,11 @@ final class PopupViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasImage = attachedImage != nil
         guard !text.isEmpty || hasImage, let preset = selectedPreset else { return }
+        guard hasAPIKey(preset) else {
+            cancelStream()
+            state = .missingKey(providerID: preset.providerID)
+            return
+        }
 
         if let imageInput = attachedImage {
             let estimate = ImageTranslationCoordinator.preflightCost(
@@ -300,37 +314,53 @@ final class PopupViewModel: ObservableObject {
         isOutputOnly = false
         outputContentHeight = 0
         outputVisibleHeight = 0
-        keptDraft = nil
+        popupSession = nil
         state = .idle
     }
 
-    /// Resets for a selection shortcut, keeping a non-empty draft from the
-    /// normal popup so `leaveOutputOnly()` can hand it back.
-    private func resetKeepingDraft() {
-        let draft: Draft?
+    /// Resets for a selection shortcut. The Popup's own session is set aside
+    /// first; a second shortcut in a row keeps the one already set aside.
+    private func resetForSelection() {
+        let session: PopupSession?
         if isOutputOnly {
-            draft = keptDraft
-        } else if !inputText.isEmpty || attachedImage != nil {
-            draft = Draft(text: inputText, image: attachedImage, presetID: selectedPresetID)
+            session = popupSession
         } else {
-            draft = nil
+            let kept: PopupState
+            switch state {
+            case .done, .error(_, .some): kept = state
+            default: kept = .idle
+            }
+            session = PopupSession(
+                text: inputText, image: attachedImage, presetID: selectedPresetID,
+                state: kept, costEstimate: kept == .idle ? nil : costEstimate
+            )
         }
         reset()
-        keptDraft = draft
+        popupSession = session
     }
 
     /// Translates text captured from another app and shows only the result.
     func startQuickTranslation(text: String, presetID: UUID) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         inputText = text
         isOutputOnly = true
         translate()
     }
 
+    /// Translates a History entry again in the full popup, with the preset it
+    /// was made with. Starts a fresh session, so the draft that was open is
+    /// replaced the same way a reopen after the idle time replaces it.
+    func translateAgain(text: String, presetID: UUID) {
+        reset()
+        selectedPresetID = presetID
+        inputText = text
+        translate()
+    }
+
     /// Surfaces a selection-translate failure in the output-only popup.
     func presentQuickError(_ message: String, presetID: UUID) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .error(message: message, partial: nil)
@@ -345,7 +375,7 @@ final class PopupViewModel: ObservableObject {
         pollInterval: UInt64 = 1_000_000_000,
         maxPolls: Int = 300
     ) {
-        resetKeepingDraft()
+        resetForSelection()
         selectedPresetID = presetID
         isOutputOnly = true
         state = .accessibilityRequired(granted: false)
@@ -368,24 +398,30 @@ final class PopupViewModel: ObservableObject {
     func showInput() {
         guard isOutputOnly else { return }
         isOutputOnly = false
-        keptDraft = nil
+        popupSession = nil
         onShowInput?()
     }
 
-    /// Normal popup open: drop output-only mode without resizing, and bring
-    /// back the draft a selection shortcut set aside. The permission card
-    /// belongs to the shortcut, so with no draft the popup starts clean.
-    func leaveOutputOnly() {
-        guard isOutputOnly else { return }
-        if let draft = keptDraft {
+    /// Opening the Popup. After a selection shortcut the Popup gets back its
+    /// own Draft and result when `keepingDraft`, otherwise it starts empty;
+    /// it never shows what the shortcut produced. `keepingDraft` comes from
+    /// Keep last translation, timed from the Popup's own last hide.
+    func openPopup(keepingDraft: Bool) {
+        if isOutputOnly {
+            let session = popupSession
             reset()
-            inputText = draft.text
-            attachedImage = draft.image
-            selectedPresetID = draft.presetID ?? selectedPresetID
-        } else if case .accessibilityRequired = state {
+            if let session {
+                selectedPresetID = session.presetID ?? selectedPresetID
+                if keepingDraft {
+                    inputText = session.text
+                    attachedImage = session.image
+                    state = session.state
+                    costEstimate = session.costEstimate
+                }
+            }
+        } else if !keepingDraft {
             reset()
         }
-        isOutputOnly = false
     }
 
     func switchPreset(_ id: UUID) {
@@ -414,6 +450,15 @@ final class PopupViewModel: ObservableObject {
         return true
     }
 
+    /// ⌘↩ while the Popup shows a result translates the source again. Returns
+    /// false otherwise, so the key goes on to the state's own button.
+    @discardableResult
+    func translateAgainIfShown() -> Bool {
+        guard case .done = state, !isOutputOnly else { return false }
+        translate()
+        return true
+    }
+
     func copyToClipboard(_ text: String) {
         pasteboard.writeText(text)
         triggerToast(autoDismiss: true)
@@ -425,8 +470,7 @@ final class PopupViewModel: ObservableObject {
     func hasProviderKeyConfigured() -> Bool {
         if UserDefaults.standard.bool(forKey: "hasCompletedFirstRun") { return true }
 
-        let cloudIDs = ["openai", "anthropic", "gemini"]
-        if cloudIDs.contains(where: { keychain.exists("provider.\($0).apiKey") }) {
+        if Self.keyedProviderIDs.contains(where: { keychain.exists("provider.\($0).apiKey") }) {
             UserDefaults.standard.set(true, forKey: "hasCompletedFirstRun")
             return true
         }
@@ -459,14 +503,15 @@ final class PopupViewModel: ObservableObject {
     }
 
     private func updateCost(model: String, input: Int, output: Int, hadImage: Bool) {
-        let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage)
-        if let cost {
-            let formatted = String(format: "%.4f", cost)
-            costEstimate = "\(formatted) USD · \(output) tok"
-        } else if output > 0 {
-            costEstimate = "\(output) tok"
-        } else {
+        guard input + output > 0 else {
             costEstimate = nil
+            return
+        }
+        let tokens = CostFormat.tokens(input + output)
+        if let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage) {
+            costEstimate = tokens + " · " + CostFormat.usd(cost)
+        } else {
+            costEstimate = tokens
         }
     }
 
@@ -480,4 +525,6 @@ enum PopupState: Equatable {
     /// A selection shortcut needs the Accessibility grant; `granted` flips
     /// once the user enables it in System Settings.
     case accessibilityRequired(granted: Bool)
+    /// The preset's provider needs a key and none is saved; nothing was sent.
+    case missingKey(providerID: String)
 }

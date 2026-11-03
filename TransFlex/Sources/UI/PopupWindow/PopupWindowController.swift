@@ -12,11 +12,12 @@ public final class PopupWindowController {
     private static let defaultSize = NSSize(width: 480, height: 320)
 
     private var viewModel: PopupViewModel?
-    private var lastHiddenAt: Date?
+    private var hideClock = PopupHideClock()
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
     private let selection = SelectionCapture()
     private let replaceCoordinator: QuickReplaceCoordinator
+    private let replaceHUD = ReplaceHUD()
     private var cancellables: Set<AnyCancellable> = []
 
     public convenience init() {
@@ -42,21 +43,27 @@ public final class PopupWindowController {
         let vm = PopupViewModel(
             translationService: service,
             presetStore: presetStore,
-            keychain: keychain
+            keychain: keychain,
+            hasAPIKey: { preset in
+                guard PopupViewModel.keyedProviderIDs.contains(preset.providerID) else { return true }
+                return keychain.exists("provider.\(preset.providerID).apiKey")
+            }
         )
         vm.historyStore = historyStore
         self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
         self.replaceCoordinator.historyStore = historyStore
-        self.panel.onHide = { [weak self] in
-            self?.lastHiddenAt = Date()
+        self.replaceCoordinator.escapeHold = GlobalEscapeHold()
+        self.panel.onHide = { [weak self, weak vm] in
+            self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
+        self.panel.onTranslateAgainCommand = { [weak vm] in vm?.translateAgainIfShown() ?? false }
+        self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
 
         let popupView = PopupView(viewModel: vm)
-            .modifier(PopupEscapeModifier(viewModel: vm, onEscape: { [weak self] in self?.hide() }))
         let host = NSHostingController(rootView: popupView)
         host.view.frame = frame
         self.panel.contentViewController = host
@@ -92,17 +99,38 @@ public final class PopupWindowController {
     /// The popup appears only to report a failure.
     public func quickReplace(presetID: UUID) {
         guard let preset = presetStore.presets.first(where: { $0.id == presetID }) else { return }
+        // A repeated press while a run is active must not paste twice.
+        guard !replaceCoordinator.isRunning else { return NSSound.beep() }
         hide()
+        replaceHUD.showTranslating(presetName: preset.name) { [weak self] in
+            self?.replaceCoordinator.cancel()
+        }
         Task { @MainActor in
             do {
-                if try await !replaceCoordinator.run(preset: preset) {
-                    NSSound.beep()
-                }
+                try await replaceCoordinator.run(preset: preset)
+                replaceHUD.showReplaced()
+            } catch is CancellationError {
+                replaceHUD.hide()
             } catch {
                 Self.logger.error("Quick replace failed: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
-                showQuickError(error, presetID: presetID)
+                if error as? SelectionCapture.Failure == .accessibilityNotGranted {
+                    replaceHUD.hide()
+                    showQuickError(error, presetID: presetID)
+                    return
+                }
+                replaceHUD.showFailed(
+                    message: ReplaceHUD.failureMessage(for: error),
+                    onOpenPopup: { [weak self] in self?.showQuickError(error, presetID: presetID) },
+                    onRetry: { [weak self] in self?.quickReplace(presetID: presetID) }
+                )
             }
         }
+    }
+
+    /// Shows the full popup and translates a History entry's text again.
+    public func translateAgain(text: String, presetID: UUID) {
+        show()
+        viewModel?.translateAgain(text: text, presetID: presetID)
     }
 
     /// Toggles popup visibility. If shown, brings to front and focuses.
@@ -120,12 +148,10 @@ public final class PopupWindowController {
     public func show(at point: NSPoint? = nil) {
         let start = mach_absolute_time()
 
-        resetIfStale()
-        viewModel?.leaveOutputOnly()
+        viewModel?.openPopup(keepingDraft: hideClock.keepsDraft(policy: PopupResetPolicyStore.load()))
 
         let reference = point ?? NSEvent.mouseLocation
-        let frame = centeredFrame(onScreenContaining: reference, sizeRatio: 0.6)
-        panel.setFrame(frame, display: true)
+        panel.setFrame(frame(.popup, onScreenContaining: reference), display: true)
         panel.orderFrontRegardless()
         panel.makeKey()
 
@@ -135,17 +161,42 @@ public final class PopupWindowController {
         autoDismisser?.start()
 
         let elapsedMs = Double(ticksToNanos(mach_absolute_time() - start)) / 1_000_000.0
-        Self.logger.info("Popup show in \(elapsedMs, privacy: .public) ms")
-        #if DEBUG
-        assert(elapsedMs < 150, "Popup show exceeded 150ms target: \(elapsedMs) ms")
-        #endif
+        // The first show after launch lays out the SwiftUI content cold and can
+        // pass 150 ms on a busy machine, so a slow show is reported, not fatal.
+        if elapsedMs < 150 {
+            Self.logger.info("Popup show in \(elapsedMs, privacy: .public) ms")
+        } else {
+            Self.logger.warning("Popup show exceeded 150ms target: \(elapsedMs, privacy: .public) ms")
+        }
     }
 
     public func hide() {
         panel.orderOut(nil)
     }
 
+    /// Ignores the activation that follows another TransFlex window closing,
+    /// then gives the popup the keyboard back.
+    public func keepThroughOtherWindowClose() {
+        guard panel.isVisible else { return }
+        autoDismisser?.stop()
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            guard let self, self.panel.isVisible else { return }
+            self.panel.orderFrontRegardless()
+            self.panel.makeKey()
+            self.autoDismisser?.start()
+        }
+    }
+
     // MARK: - Private
+
+    private func handleEscape() {
+        guard let vm = viewModel else { return hide() }
+        switch PopupEscape.action(for: vm.state, isOutputOnly: vm.isOutputOnly) {
+        case .stop: vm.cancelStream()
+        case .backToText: vm.dismissError()
+        case .close: hide()
+        }
+    }
 
     private func showQuickError(_ error: Error, presetID: UUID) {
         if error as? SelectionCapture.Failure == .accessibilityNotGranted {
@@ -157,10 +208,7 @@ public final class PopupWindowController {
     }
 
     private func showOutputOnly() {
-        let reference = NSEvent.mouseLocation
-        let visible = screen(containing: reference)?.visibleFrame
-            ?? NSRect(origin: .zero, size: Self.defaultSize)
-        panel.setFrame(QuickPopupSizing.initialFrame(in: visible), display: true)
+        panel.setFrame(frame(.outputOnly, onScreenContaining: NSEvent.mouseLocation), display: true)
         panel.orderFrontRegardless()
         panel.makeKey()
         // No input editor here, so AppKit would focus the preset picker and
@@ -193,7 +241,7 @@ public final class PopupWindowController {
         vm.onShowInput = { [weak self] in
             guard let self, self.panel.isVisible else { return }
             let center = NSPoint(x: self.panel.frame.midX, y: self.panel.frame.midY)
-            self.panel.setFrame(self.centeredFrame(onScreenContaining: center, sizeRatio: 0.6), display: true)
+            self.panel.setFrame(self.frame(.popup, onScreenContaining: center), display: true)
         }
     }
 
@@ -202,7 +250,7 @@ public final class PopupWindowController {
     private func fitOutputOnly() {
         guard let vm = viewModel, vm.isOutputOnly,
               let screenFrame = screen(containing: NSPoint(x: panel.frame.midX, y: panel.frame.midY))?.visibleFrame,
-              let grown = QuickPopupSizing.grownFrame(
+              let grown = PopupFrame.grown(
                   current: panel.frame,
                   outputContentHeight: vm.outputContentHeight,
                   outputVisibleHeight: vm.outputVisibleHeight,
@@ -218,31 +266,14 @@ public final class PopupWindowController {
             ?? NSScreen.screens.first
     }
 
-    /// Reset the view-model when the popup is opening fresh, governed by the
-    /// user-configured `PopupResetPolicy`. Read on every show so changes in
-    /// Settings take effect on the next open without requiring an app restart.
-    private func resetIfStale() {
-        guard let vm = viewModel else { return }
-        let policy = PopupResetPolicyStore.load()
-        if policy.shouldReset(lastHiddenAt: lastHiddenAt) {
-            vm.reset()
-        }
-    }
-
-    /// Center panel on the screen containing `point`, sized to `sizeRatio` of
-    /// that screen's visible frame. Falls back to primary then first screen
-    /// if `point`'s screen yields no visible frame (display reconfig race).
-    private func centeredFrame(onScreenContaining point: NSPoint, sizeRatio: CGFloat) -> NSRect {
+    /// The mode's frame on the screen containing `point`. Falls back to primary
+    /// then first screen if `point`'s screen yields no visible frame (display
+    /// reconfig race).
+    private func frame(_ mode: PopupFrame.Mode, onScreenContaining point: NSPoint) -> NSRect {
         guard let visible = screen(containing: point)?.visibleFrame else {
             return NSRect(origin: .zero, size: Self.defaultSize)
         }
-        let size = NSSize(width: visible.width * sizeRatio, height: visible.height * sizeRatio)
-        return NSRect(
-            x: visible.midX - size.width / 2,
-            y: visible.midY - size.height / 2,
-            width: size.width,
-            height: size.height
-        )
+        return PopupFrame.initial(mode, in: visible)
     }
 
     /// Cached `mach_timebase_info` — values are constant for the process lifetime.

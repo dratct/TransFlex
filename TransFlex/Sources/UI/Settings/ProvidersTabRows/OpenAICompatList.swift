@@ -1,43 +1,32 @@
 import SwiftUI
 
+/// The "OpenAI-compatible" section of the Providers tab.
 @MainActor
 struct OpenAICompatList: View {
     @ObservedObject var store: ProvidersStore
     @State private var editingInstance: OpenAICompatInstance?
     @State private var isAdding = false
-    @State private var errorMessage: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text("OpenAI-Compatible Endpoints")
-                    .font(.system(size: 13, weight: .semibold))
-                Spacer()
-                Button {
-                    isAdding = true
+        Section {
+            ForEach(store.config.openAICompatInstances, id: \.instanceId) { instance in
+                LabeledContent {
+                    Button("Edit…") { editingInstance = instance }
                 } label: {
-                    Image(systemName: "plus")
-                        .font(.system(size: 11))
+                    HStack(spacing: Spacing.m) {
+                        ProviderLogo(providerID: "openai-compatible:\(instance.instanceId)", name: instance.displayName)
+                        SettingsLabel(instance.displayName, caption: hostCaption(instance.baseURL))
+                    }
                 }
-                .buttonStyle(.plain)
             }
-
+            Button("Add Endpoint…") { isAdding = true }
+        } header: {
+            Text("OpenAI-compatible")
+        } footer: {
             if store.config.openAICompatInstances.isEmpty {
-                Text("No custom endpoints configured.")
-                    .font(.system(size: 12))
+                Text("Ollama, LM Studio, OpenRouter, or any server with /v1/chat/completions.")
+                    .font(.caption)
                     .foregroundStyle(.tertiary)
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 12)
-            } else {
-                ForEach(store.config.openAICompatInstances, id: \.instanceId) { instance in
-                    compatRow(instance)
-                }
-            }
-
-            if let errorMessage {
-                Text(errorMessage)
-                    .font(.system(size: 11))
-                    .foregroundStyle(.red)
             }
         }
         .sheet(isPresented: $isAdding) {
@@ -48,52 +37,8 @@ struct OpenAICompatList: View {
         }
     }
 
-    private func compatRow(_ instance: OpenAICompatInstance) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: "externaldrive.connected.to.line.below")
-                .foregroundStyle(.secondary)
-                .frame(width: 24)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(instance.displayName)
-                    .font(.system(size: 12, weight: .medium))
-                Text(instance.baseURL.host ?? instance.baseURL.absoluteString)
-                    .font(.system(size: 10, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            let hasKey = store.hasCompatAPIKey(for: instance.instanceId)
-            Image(systemName: hasKey ? "checkmark.circle.fill" : "xmark.circle")
-                .foregroundStyle(hasKey ? .green : .secondary)
-                .font(.system(size: 12))
-
-            Button {
-                editingInstance = instance
-            } label: {
-                Image(systemName: "pencil")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-
-            Button(role: .destructive) {
-                do {
-                    try store.deleteCompatInstance(instance.instanceId)
-                    errorMessage = nil
-                } catch {
-                    errorMessage = error.localizedDescription
-                }
-            } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 11))
-            }
-            .buttonStyle(.plain)
-        }
-        .padding(.vertical, 4)
-        .padding(.horizontal, 8)
-        .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
-        .clipShape(RoundedRectangle(cornerRadius: 6))
+    private func hostCaption(_ url: URL) -> String {
+        guard let host = url.host else { return url.absoluteString }
+        return url.port.map { "\(host):\($0)" } ?? host
     }
 }

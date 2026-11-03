@@ -88,8 +88,103 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertTrue(pasted.isEmpty)
     }
 
+    // MARK: - Esc is held only while a run is active
+
+    private func makeHeldCoordinator(selection: String) -> (QuickReplaceCoordinator, RecordingEscapeHold) {
+        let coordinator = makeCoordinator(selection: selection)
+        let hold = RecordingEscapeHold()
+        coordinator.escapeHold = hold
+        return (coordinator, hold)
+    }
+
+    func testEscIsReleasedAfterAPaste() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
+        try await coordinator.run(preset: preset)
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
+    func testEscIsReleasedAfterAProviderError() async {
+        provider.scriptedError = LLMError.auth
+        let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
+        _ = try? await coordinator.run(preset: preset)
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
+    func testEscIsReleasedAfterAnEmptyTranslation() async {
+        provider.scriptedEvents = [.textDelta(" "), .stop(reason: .complete)]
+        let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
+        _ = try? await coordinator.run(preset: preset)
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
+    func testEscIsReleasedWhenNothingIsSelected() async {
+        let (coordinator, hold) = makeHeldCoordinator(selection: "")
+        do {
+            try await coordinator.run(preset: preset)
+            XCTFail("Expected noSelection")
+        } catch {
+            XCTAssertEqual(error as? SelectionCapture.Failure, .noSelection)
+        }
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
+    func testEscCancelsTheRunWithoutPasting() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.holdsOpen = true
+        let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
+
+        let run = Task { try await coordinator.run(preset: preset) }
+        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        hold.press()
+
+        do {
+            _ = try await run.value
+            XCTFail("Expected cancellation")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "got \(error)")
+        }
+        XCTAssertTrue(pasted.isEmpty)
+        XCTAssertEqual(hold.log, ["hold", "release"])
+        XCTAssertFalse(coordinator.isRunning)
+    }
+
+    func testASecondPressWhileRunningNeitherHoldsNorReleasesEsc() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.holdsOpen = true
+        let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
+
+        let run = Task { try await coordinator.run(preset: preset) }
+        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        let second = try await coordinator.run(preset: preset)
+        XCTAssertFalse(second)
+        XCTAssertEqual(hold.log, ["hold"])
+
+        coordinator.cancel()
+        _ = try? await run.value
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
     func testKeepingEdgeWhitespace() {
         XCTAssertEqual(QuickReplaceCoordinator.keepingEdgeWhitespace(of: "  hi \n", around: "xin"), "  xin \n")
         XCTAssertEqual(QuickReplaceCoordinator.keepingEdgeWhitespace(of: "hi", around: "xin"), "xin")
     }
+}
+
+@MainActor
+private final class RecordingEscapeHold: EscapeHold {
+    private(set) var log: [String] = []
+    private var onPress: (() -> Void)?
+
+    func hold(onPress: @escaping () -> Void) {
+        log.append("hold")
+        self.onPress = onPress
+    }
+
+    func release() {
+        log.append("release")
+        onPress = nil
+    }
+
+    func press() { onPress?() }
 }

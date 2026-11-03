@@ -41,11 +41,12 @@ enum PopupResetPolicy: Equatable {
         }
     }
 
+    /// Read under "Keep last translation": how long the popup keeps it.
     var displayName: String {
         switch self {
-        case .always: return "Always clear"
-        case .afterMinutes(let n): return "After \(n) minute\(n == 1 ? "" : "s")"
-        case .never: return "Never"
+        case .always: return "Don’t keep"
+        case .afterMinutes(let n): return "\(n) minute\(n == 1 ? "" : "s")"
+        case .never: return "Always"
         }
     }
 
@@ -75,5 +76,20 @@ enum PopupResetPolicyStore {
 
     static func save(_ policy: PopupResetPolicy) {
         UserDefaults.standard.set(policy.rawMinutes, forKey: PopupResetPolicy.storageKey)
+    }
+}
+
+/// When the Popup itself was last hidden. Hides of the Output-only popup are
+/// ignored, so a Translate Selection neither resets nor extends the time the
+/// Popup's Draft is kept (CONTEXT.md › Rules).
+struct PopupHideClock {
+    private(set) var popupHiddenAt: Date?
+
+    mutating func recordHide(outputOnly: Bool, at date: Date = Date()) {
+        if !outputOnly { popupHiddenAt = date }
+    }
+
+    func keepsDraft(policy: PopupResetPolicy, now: Date = Date()) -> Bool {
+        !policy.shouldReset(lastHiddenAt: popupHiddenAt, now: now)
     }
 }

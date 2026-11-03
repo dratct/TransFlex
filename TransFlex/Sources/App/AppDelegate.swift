@@ -19,17 +19,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private var statusBarController: StatusBarController?
-    private var popupWindowController: PopupWindowController?
+    private(set) var popupWindowController: PopupWindowController?
     private var hotkeyManager: GlobalHotkeyManager?
     let presetStore = PresetStore()
     let providersStore = ProvidersStore()
     private(set) lazy var settingsWindowController = SettingsWindowController(presetStore: presetStore)
     private var historyStore: HistoryStore?
+    private(set) var historyWindowController: HistoryWindowController?
     private var presetCancellable: AnyCancellable?
     private var registeredPresetIDs: Set<UUID> = []
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
+        if let directory = ScreenshotMode.outputDirectory(from: CommandLine.arguments) {
+            ScreenshotMode.run(to: directory)
+            return
+        }
 
         // Register persisted OpenAI-compat endpoints into the shared registry
         // before any popup/translation path can run. Without this, compat
@@ -74,9 +79,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         self.popupWindowController = popup
         self.hotkeyManager = hotkey
+        let history = HistoryWindowController(store: historyStore, presetStore: presetStore)
+        self.historyWindowController = history
         self.statusBarController = StatusBarController(
             popupWindowController: popup,
-            historyWindowController: HistoryWindowController(store: historyStore)
+            historyWindowController: history
         )
 
         let defaults = UserDefaults.standard

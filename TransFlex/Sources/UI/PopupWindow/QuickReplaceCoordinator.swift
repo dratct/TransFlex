@@ -10,6 +10,10 @@ final class QuickReplaceCoordinator {
     private let selection: SelectionCapture
     private let historyRecorder = HistoryRecorder()
     private(set) var isRunning = false
+    private var current: Task<Void, Error>?
+
+    /// Holds Esc system-wide while a run is active, so Esc cancels it.
+    var escapeHold: EscapeHold?
 
     weak var historyStore: HistoryStore? {
         didSet { historyRecorder.historyStore = historyStore }
@@ -21,14 +25,32 @@ final class QuickReplaceCoordinator {
     }
 
     /// Returns `false` without doing anything while a previous run is still
-    /// in flight, so a repeated press cannot paste twice.
+    /// in flight, so a repeated press cannot paste twice. Throws
+    /// `CancellationError` after `cancel()`; nothing is pasted then.
     @discardableResult
     func run(preset: Preset) async throws -> Bool {
         guard !isRunning else { return false }
         isRunning = true
-        defer { isRunning = false }
+        let task = Task { try await replace(preset: preset) }
+        current = task
+        escapeHold?.hold { [weak self] in self?.cancel() }
+        // Every way out — pasted, failed, empty, cancelled — lands here.
+        defer {
+            escapeHold?.release()
+            current = nil
+            isRunning = false
+        }
+        try await task.value
+        return true
+    }
 
+    func cancel() {
+        current?.cancel()
+    }
+
+    private func replace(preset: Preset) async throws {
         let original = try await selection.copySelection()
+        try Task.checkCancellation()
         let startedAt = Date()
         var output = ""
         var inputTokens = 0
@@ -47,6 +69,8 @@ final class QuickReplaceCoordinator {
                 throw llmError
             }
         }
+        // A cancelled stream just ends; it must never paste what it had so far.
+        try Task.checkCancellation()
 
         let translated = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !translated.isEmpty else { throw EmptyResult() }
@@ -57,7 +81,6 @@ final class QuickReplaceCoordinator {
             inputTokens: inputTokens, outputTokens: outputTokens,
             hadImage: false, startTime: startedAt
         )
-        return true
     }
 
     /// Selections often include a trailing newline (triple-click a line);

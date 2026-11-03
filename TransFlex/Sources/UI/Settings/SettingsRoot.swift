@@ -1,7 +1,7 @@
 import SwiftUI
 
 enum SettingsTab: Hashable, CaseIterable {
-    case general, providers, presets, hotkeys, about
+    case general, providers, presets, about
 }
 
 @MainActor
@@ -32,7 +32,6 @@ struct SettingsRoot: View {
                 Text("General").tag(SettingsTab.general)
                 Text("Providers").tag(SettingsTab.providers)
                 Text("Presets").tag(SettingsTab.presets)
-                Text("Hotkeys").tag(SettingsTab.hotkeys)
                 Text("About").tag(SettingsTab.about)
             }
             .pickerStyle(.segmented)
@@ -47,7 +46,6 @@ struct SettingsRoot: View {
                 case .general: GeneralTab()
                 case .providers: ProvidersTab(store: providersStore)
                 case .presets: PresetsTab(providersStore: providersStore).environmentObject(presetStore)
-                case .hotkeys: HotkeysTab()
                 case .about: AboutTab()
                 }
             }

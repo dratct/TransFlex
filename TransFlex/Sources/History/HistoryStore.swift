@@ -22,6 +22,25 @@ final class HistoryStore: ObservableObject {
         self.init(dbQueue: database.dbQueue)
     }
 
+    convenience init(path: URL) throws {
+        let database = try HistoryDatabase(path: path)
+        self.init(dbQueue: database.dbQueue)
+    }
+
+    /// Today's spend: the sum of priced entries since the start of `now`'s
+    /// day (nil when none is priced) and how many of today's entries have no price.
+    func todayCost(now: Date, calendar: Calendar) throws -> (total: Double?, unpriced: Int) {
+        let day = calendar.dateInterval(of: .day, for: now) ?? DateInterval(start: calendar.startOfDay(for: now), duration: 86_400)
+        return try dbQueue.read { db in
+            let row = try Row.fetchOne(db, sql: """
+                SELECT SUM(cost_usd) AS total,
+                       COUNT(*) - COUNT(cost_usd) AS unpriced
+                FROM history_entry WHERE created_at >= ? AND created_at < ?
+                """, arguments: [day.start.timeIntervalSince1970, day.end.timeIntervalSince1970])
+            return (row?["total"], row?["unpriced"] ?? 0)
+        }
+    }
+
     func insert(_ entry: HistoryEntry) throws {
         try dbQueue.write { db in
             try entry.insert(db)

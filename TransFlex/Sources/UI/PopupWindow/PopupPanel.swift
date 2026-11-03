@@ -9,11 +9,13 @@ final class PopupPanel: NSPanel {
     /// Called whenever the panel is hidden — covers all paths (controller
     /// `hide()`, ESC via `cancelOperation`, app-activation observer in
     /// `PopupWindowController`). The controller wires this to its
-    /// `lastHiddenAt` clock so the user-configured `PopupResetPolicy` sees
+    /// `PopupHideClock` so the user-configured `PopupResetPolicy` sees
     /// an accurate "time since last hide".
     var onHide: (() -> Void)?
     /// ⌘C handler; returns true when it consumed the key.
     var onCopyCommand: (() -> Bool)?
+    /// ⌘↩ handler; returns true when it consumed the key.
+    var onTranslateAgainCommand: (() -> Bool)?
 
     init(contentRect: NSRect) {
         // Borderless panel — no `.titled`, so AppKit draws no titlebar, no
@@ -50,9 +52,25 @@ final class PopupPanel: NSPanel {
         if wasVisible { onHide?() }
     }
 
-    /// Pressing ESC dismisses (Cocoa "cancel" action).
+    /// Esc, whatever holds focus; the controller decides what it does.
+    var onEscape: (() -> Void)?
+
     override func cancelOperation(_ sender: Any?) {
-        orderOut(nil)
+        if let onEscape { onEscape() } else { orderOut(nil) }
+    }
+
+    /// Esc is caught here, before the responder chain: a focused text view
+    /// turns it into `complete:` and it would never reach `cancelOperation`.
+    /// An input method composing text (Vietnamese Telex) still gets it first.
+    override func sendEvent(_ event: NSEvent) {
+        if event.type == .keyDown, event.keyCode == 53,
+           event.modifierFlags.intersection([.command, .option, .control, .shift]).isEmpty,
+           (firstResponder as? NSTextView)?.hasMarkedText() != true,
+           let onEscape {
+            onEscape()
+            return
+        }
+        super.sendEvent(event)
     }
 
     // Intentionally NOT overriding `resignKey` to dismiss: window-key
@@ -72,6 +90,12 @@ final class PopupPanel: NSPanel {
         // Checked before the responder chain, so a text selection in the
         // result cannot turn ⌘C into a partial copy.
         if mods == .command, event.charactersIgnoringModifiers == "c", onCopyCommand?() == true {
+            return true
+        }
+        // A SwiftUI shortcut on a hidden button never fired here, and the
+        // stacked layout has no visible Translate again button to carry one.
+        if mods == .command, event.keyCode == 36 || event.keyCode == 76,
+           onTranslateAgainCommand?() == true {
             return true
         }
         return super.performKeyEquivalent(with: event)

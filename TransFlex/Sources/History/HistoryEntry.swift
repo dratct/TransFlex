@@ -11,6 +11,11 @@ public struct HistoryEntry: Codable, Identifiable, Sendable, Equatable {
     public var hadImage: Bool
     public var durationMs: Int?
     public var tokenCount: Int?
+    /// Nil for rows saved before `v2` and when the provider sent no usage.
+    public var inputTokens: Int?
+    public var outputTokens: Int?
+    /// The estimate the popup showed, kept as it was; nil means "price unknown".
+    public var costUSD: Double?
     public var createdAt: Date
 
     public init(
@@ -23,6 +28,9 @@ public struct HistoryEntry: Codable, Identifiable, Sendable, Equatable {
         hadImage: Bool = false,
         durationMs: Int? = nil,
         tokenCount: Int? = nil,
+        inputTokens: Int? = nil,
+        outputTokens: Int? = nil,
+        costUSD: Double? = nil,
         createdAt: Date = Date()
     ) {
         self.id = id
@@ -34,6 +42,9 @@ public struct HistoryEntry: Codable, Identifiable, Sendable, Equatable {
         self.hadImage = hadImage
         self.durationMs = durationMs
         self.tokenCount = tokenCount
+        self.inputTokens = inputTokens
+        self.outputTokens = outputTokens
+        self.costUSD = costUSD
         self.createdAt = createdAt
     }
 }
@@ -45,9 +56,29 @@ extension HistoryEntry: FetchableRecord, PersistableRecord {
         case id, presetID, providerID, modelID
         case inputText, outputText, hadImage
         case durationMs, tokenCount, createdAt
+        case inputTokens, outputTokens, costUSD
     }
 
-    /// Columns of the `v1` migration are snake_case; the coding keys stay
+    /// Writes every optional, nil as null: the JSON export promises the cost
+    /// fields on every row, and GRDB stores the nulls as NULL columns.
+    public func encode(to encoder: Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(id, forKey: .id)
+        try c.encode(presetID, forKey: .presetID)
+        try c.encode(providerID, forKey: .providerID)
+        try c.encode(modelID, forKey: .modelID)
+        try c.encode(inputText, forKey: .inputText)
+        try c.encode(outputText, forKey: .outputText)
+        try c.encode(hadImage, forKey: .hadImage)
+        try c.encode(durationMs, forKey: .durationMs)
+        try c.encode(tokenCount, forKey: .tokenCount)
+        try c.encode(inputTokens, forKey: .inputTokens)
+        try c.encode(outputTokens, forKey: .outputTokens)
+        try c.encode(costUSD, forKey: .costUSD)
+        try c.encode(createdAt, forKey: .createdAt)
+    }
+
+    /// Migration columns are snake_case; the coding keys stay
     /// camelCase so the JSON export keeps its field names.
     private static let columnNames: [CodingKeys: String] = [
         .id: "id",
@@ -60,6 +91,9 @@ extension HistoryEntry: FetchableRecord, PersistableRecord {
         .durationMs: "duration_ms",
         .tokenCount: "token_count",
         .createdAt: "created_at",
+        .inputTokens: "input_tokens",
+        .outputTokens: "output_tokens",
+        .costUSD: "cost_usd",
     ]
 
     public static let databaseColumnEncodingStrategy = DatabaseColumnEncodingStrategy.custom { key in

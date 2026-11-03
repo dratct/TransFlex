@@ -1,16 +1,16 @@
 import SwiftUI
 import AppKit
 
-extension Color {
-    /// App accent for primary actions and focus rings.
-    static let brandAccent = Color(red: 0.13, green: 0.70, blue: 0.55)
-}
-
+/// The Popup and the Output-only popup: header, the `TranslationColumns`
+/// (or a `Notice` card in their place), and the footer (DESIGN.md › Popup states).
 @MainActor
 struct PopupView: View {
     @StateObject private var viewModel: PopupViewModel
     @State private var showFirstRun = false
+    @State private var isWide = true
     @FocusState private var inputFocused: Bool
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     init(viewModel: PopupViewModel) {
         self._viewModel = StateObject(wrappedValue: viewModel)
@@ -18,95 +18,61 @@ struct PopupView: View {
 
     var body: some View {
         ZStack {
-            VisualEffectBackground()
+            material
 
             VStack(spacing: 0) {
                 headerBar
-                    .padding(.horizontal, 14)
-                    .padding(.top, 12)
-                    .padding(.bottom, 8)
+                    .padding(.horizontal, Spacing.l)
+                    .padding(.top, Spacing.m)
+                    .padding(.bottom, Spacing.l)
 
-                GeometryReader { geo in
-                    let isWide = geo.size.width >= 720
-                    Group {
-                        if viewModel.isOutputOnly {
-                            PopupOutputSection(viewModel: viewModel)
-                                .frame(maxHeight: .infinity)
-                        } else if isWide {
-                            HStack(alignment: .top, spacing: 10) {
-                                inputSection
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                                PopupOutputSection(viewModel: viewModel)
-                                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                            }
-                        } else {
-                            VStack(spacing: 8) {
-                                inputSection
-                                    .frame(maxHeight: isIdle ? .infinity : 140)
-                                PopupOutputSection(viewModel: viewModel)
-                                    .frame(maxHeight: .infinity)
-                            }
-                        }
-                    }
+                sheet
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+
+                if case .error(let message, .some) = viewModel.state {
+                    partialStrip(message: message)
+                        .padding(.horizontal, Spacing.l)
+                        .padding(.top, Spacing.m)
                 }
-                .padding(.horizontal, 14)
-                .padding(.top, 4)
 
                 footerBar
-                    .padding(.horizontal, 14)
-                    .padding(.top, 8)
-                    .padding(.bottom, 10)
+                    .padding(.horizontal, Spacing.l)
+                    .padding(.vertical, Spacing.m)
             }
 
             VStack {
                 Spacer()
-                HStack {
-                    Spacer()
-                    if viewModel.showToast {
-                        ToastView(message: "Copied")
-                            .padding(.trailing, 18)
-                            .padding(.bottom, 56)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
+                if viewModel.showToast {
+                    Toast(message: "Copied")
+                        .padding(.bottom, 64)
+                        .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
+            .frame(maxWidth: .infinity)
             .allowsHitTesting(false)
-            .animation(.easeInOut(duration: 0.18), value: viewModel.showToast)
+            .animation(Motion.stateSwap, value: viewModel.showToast)
         }
+        .background(hiddenShortcuts)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: Radius.window, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: Radius.window, style: .continuous)
                 .stroke(Color.white.opacity(0.08), lineWidth: 1)
         )
-        .tint(.brandAccent)
         .onAppear {
             if !viewModel.hasProviderKeyConfigured() {
                 showFirstRun = true
             }
             inputFocused = true
         }
-        .onChange(of: viewModel.inputFocusRequest) { _ in
-            // Wait for state-driven view swaps before focusing TextEditor.
-            DispatchQueue.main.async {
-                if viewModel.attachedImage == nil {
-                    inputFocused = true
-                } else {
-                    // No editor behind an image preview: AppKit would otherwise
-                    // focus the preset picker, which then swallows ⌘⏎.
-                    NSApp.keyWindow?.makeFirstResponder(nil)
-                }
-            }
-        }
-        .onChange(of: viewModel.inputText) { _ in
-            // Typing into the editor left up by a pre-send error (nothing was
-            // sent) means the user moved on: drop the banner so the editor stays.
-            if case .error(_, nil) = viewModel.state, viewModel.attachedImage == nil {
-                viewModel.dismissError()
-            }
+        .onChange(of: viewModel.inputFocusRequest) { _ in focusEditor() }
+        .onChange(of: editorIsAvailable) { available in
+            // The editor comes back after a stream, a notice card or ⌘I: focus
+            // it, or AppKit hands focus to the preset picker (audit D4, D8).
+            if available { focusEditor() }
         }
         .sheet(isPresented: $showFirstRun) {
-            FirstRunWizardView(viewModel: viewModel)
+            FirstRunWizardView()
         }
         .alert("Estimated Cost", isPresented: $viewModel.showCostConfirmation) {
             Button("Cancel", role: .cancel) { viewModel.cancelCostConfirmation() }
@@ -116,13 +82,10 @@ struct PopupView: View {
         }
     }
 
-    private var isAccessibilityCard: Bool {
-        if case .accessibilityRequired = viewModel.state { return true }
-        return false
-    }
+    // MARK: State
 
-    private var isIdle: Bool {
-        if case .idle = viewModel.state { return true }
+    private var isStreaming: Bool {
+        if case .streaming = viewModel.state { return true }
         return false
     }
 
@@ -131,219 +94,317 @@ struct PopupView: View {
             || viewModel.attachedImage != nil
     }
 
-    /// An error raised before anything was sent (e.g. an image the preset
-    /// can't read) leaves nothing to echo, so keep the editor usable.
-    private var showsEditor: Bool {
-        if isIdle { return true }
-        if case .error = viewModel.state { return !hasInput }
-        return false
+    /// False while a `Notice` card stands in for the columns.
+    private var showsColumns: Bool {
+        switch viewModel.state {
+        case .idle, .streaming, .done, .error(_, .some): return true
+        case .error(_, nil), .missingKey, .accessibilityRequired: return false
+        }
+    }
+
+    private var editorIsAvailable: Bool {
+        showsColumns && !isStreaming && !viewModel.isOutputOnly && viewModel.attachedImage == nil
+    }
+
+    private func focusEditor() {
+        // Wait for state-driven view swaps before focusing the TextEditor.
+        DispatchQueue.main.async {
+            if viewModel.attachedImage == nil {
+                inputFocused = true
+            } else {
+                // No editor behind an image preview: AppKit would otherwise
+                // focus the preset picker, which then swallows ⌘⏎.
+                NSApp.keyWindow?.makeFirstResponder(nil)
+            }
+        }
+    }
+
+    // MARK: Surfaces
+
+    /// Near-opaque, because text sits on it with no box (DESIGN.md › Colors).
+    @ViewBuilder
+    private var material: some View {
+        if reduceTransparency {
+            Color(nsColor: .windowBackgroundColor)
+        } else {
+            ZStack {
+                VisualEffectBackground()
+                Color(nsColor: .windowBackgroundColor).opacity(colorScheme == .dark ? 0.93 : 0.94)
+            }
+        }
     }
 
     private var headerBar: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: Spacing.s) {
             PresetPickerView(viewModel: viewModel)
+                .focusable(false)
             Spacer()
-            AttachButton(
-                canAttach: viewModel.canAttachImages,
-                onChooseFile: { viewModel.chooseImageFile() },
-                onPaste: { viewModel.pasteImageFromClipboard() }
-            )
-            Button {
-                AppCommands.openSettings()
-            } label: {
-                Image(systemName: "gearshape")
-                    .font(.system(size: 13, weight: .medium))
-                    .frame(width: 22, height: 22)
-                    .contentShape(Rectangle())
+            headerButton(symbol: "clock.arrow.circlepath", title: "History", keys: ["⌘", "Y"]) {
+                // The popup floats above normal windows and would cover History.
+                viewModel.onDismissRequest?()
+                AppCommands.openHistory()
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(.secondary)
+            .keyboardShortcut("y", modifiers: .command)
+            headerButton(symbol: "gearshape", title: "Settings", keys: ["⌘", ","]) {
+                AppCommands.openSettings()
+            }
             .keyboardShortcut(",", modifiers: .command)
         }
     }
 
-    private var inputSection: some View {
-        ImageDropZone { image, source, fileSizeBytes in
-            viewModel.attachImage(image, source: source, fileSizeBytes: fileSizeBytes)
-        } content: {
-            if let imageInput = viewModel.attachedImage {
-                ImagePreviewCard(
-                    image: imageInput.source,
-                    sourceType: imageInput.sourceType,
-                    canRemove: isIdle,
-                    onRemove: { viewModel.removeAttachedImage() }
-                )
-            } else {
-                inputEditor
+    private func headerButton(symbol: String, title: String, keys: [String], action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol)
+                .font(.system(size: 13, weight: .medium))
+                .frame(width: 22, height: 22)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(.secondary)
+        .focusable(false)
+        .help("\(title) · \(keys.joined())")
+        .accessibilityLabel(title)
+        .accessibilityHint(KeyHint.spokenLabel(for: keys))
+    }
+
+    @ViewBuilder
+    private var sheet: some View {
+        switch viewModel.state {
+        case .missingKey(let providerID):
+            MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
+                .padding(.horizontal, Spacing.l)
+        case .error(let message, nil):
+            Notice(.card, tone: .error, symbol: "exclamationmark.triangle",
+                   title: "Couldn’t translate", message: message) {
+                if hasInput {
+                    footerButton(PopupFooter.Item(action: .retry, prominence: .primary))
+                }
             }
+            .padding(.horizontal, Spacing.l)
+        case .accessibilityRequired(let granted):
+            ScrollView {
+                AccessibilityPermissionCard(granted: granted)
+            }
+            .padding(.horizontal, Spacing.l)
+        case .idle, .streaming, .done, .error:
+            columns
         }
     }
 
-    private var inputEditor: some View {
-        Group {
-            if showsEditor {
-                ZStack(alignment: .topLeading) {
-                    TextEditor(text: $viewModel.inputText)
-                        .font(.system(size: 14))
-                        .scrollContentBackground(.hidden)
-                        .focused($inputFocused)
-                        .background(ScrollViewOverlayStyler())
-
-                    if viewModel.inputText.isEmpty {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Type or paste text to translate…")
-                                .font(.system(size: 14))
-                                .foregroundStyle(.tertiary)
-
-                            if viewModel.attachedImage == nil, viewModel.canAttachImages {
-                                HStack(spacing: 6) {
-                                    Image(systemName: "paperclip")
-                                        .font(.system(size: 11))
-                                    Text("Attach an image  ·  ⌘⇧V to paste")
-                                        .font(.system(size: 11))
-                                }
-                                .foregroundStyle(.tertiary)
-                                .opacity(0.7)
-                            }
-                        }
-                        .padding(.leading, 5)
-                        .allowsHitTesting(false)
+    /// `TranslationColumns`: side by side from 720pt, stacked below.
+    private var columns: some View {
+        GeometryReader { geo in
+            let wide = geo.size.width >= ColumnLayout.sideBySideMinWidth
+            Group {
+                if viewModel.isOutputOnly {
+                    PopupOutputSection(viewModel: viewModel)
+                } else if wide {
+                    // Fixed, whole-point column widths: a share decided by the
+                    // content would move the seam by a point between states.
+                    let column = ((geo.size.width - 2 * ColumnLayout.sideMargin - ColumnLayout.gutter) / 2).rounded(.down)
+                    HStack(spacing: 0) {
+                        originalColumn
+                            .frame(width: column)
+                        ColumnSeam(direction: .vertical, fill: seamFill)
+                            .padding(.horizontal, ColumnLayout.gutter / 2)
+                        PopupOutputSection(viewModel: viewModel)
+                            .frame(width: column)
+                    }
+                } else {
+                    VStack(spacing: 0) {
+                        originalColumn
+                            .frame(height: geo.size.height * ColumnLayout.stackedOriginalShare)
+                        ColumnSeam(direction: .horizontal, fill: seamFill)
+                            .padding(.vertical, ColumnLayout.gutter / 2)
+                        PopupOutputSection(viewModel: viewModel)
                     }
                 }
-                .frame(minHeight: 140, maxHeight: .infinity)
-                .padding(10)
-                .background(Color(nsColor: .textBackgroundColor).opacity(0.35))
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .stroke(Color(nsColor: .separatorColor).opacity(0.4), lineWidth: 1)
-                )
-            } else {
-                ScrollView {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "quote.opening")
-                            .font(.system(size: 10, weight: .semibold))
-                            .foregroundStyle(.tertiary)
-                            .padding(.top, 3)
-                        Text(viewModel.inputText)
-                            .font(.system(size: 12))
-                            .lineSpacing(2)
-                            .foregroundStyle(.secondary)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 8)
-                }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                .background(Color.white.opacity(0.04))
-                .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 8, style: .continuous)
-                        .stroke(Color.white.opacity(0.06), lineWidth: 1)
-                )
             }
+            .padding(.horizontal, ColumnLayout.sideMargin)
+            .onAppear { isWide = wide }
+            .onChange(of: wide) { isWide = $0 }
         }
     }
+
+    private var seamFill: Double? {
+        guard case .streaming(let accumulated) = viewModel.state else { return nil }
+        return ColumnSeam.fill(translatedCount: accumulated.count, sourceCount: viewModel.inputText.count)
+    }
+
+    private var originalColumn: some View {
+        VStack(alignment: .leading, spacing: Spacing.s) {
+            ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor))
+            ImageDropZone { image, source, fileSizeBytes in
+                viewModel.attachImage(image, source: source, fileSizeBytes: fileSizeBytes)
+            } content: {
+                if let imageInput = viewModel.attachedImage {
+                    ImagePreviewCard(
+                        image: imageInput.source,
+                        sourceType: imageInput.sourceType,
+                        canRemove: !isStreaming,
+                        onRemove: { viewModel.removeAttachedImage() }
+                    )
+                } else {
+                    sourceEditor
+                }
+            }
+            if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
+                imageTip
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// Editable in every state except while a translation streams.
+    private var sourceEditor: some View {
+        ZStack(alignment: .topLeading) {
+            TextEditor(text: $viewModel.inputText)
+                .font(ReadingType.original)
+                .lineSpacing(ReadingType.originalLineSpacing)
+                .foregroundColor(Color(nsColor: .secondaryLabelColor))
+                .scrollContentBackground(.hidden)
+                .focused($inputFocused)
+                .background(ScrollViewOverlayStyler())
+                // NSTextView pads each line by 5pt; pull it back so the text
+                // starts under the column label, like the placeholder.
+                .padding(.leading, -5)
+                .disabled(isStreaming)
+                .opacity(isStreaming ? 0.55 : 1)
+
+            if viewModel.inputText.isEmpty {
+                Text("Type or paste text")
+                    .font(.system(size: 17))
+                    .foregroundStyle(.tertiary)
+                    .allowsHitTesting(false)
+            }
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var imageTip: some View {
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Spacing.xs) {
+                Text("Images work too — drop one here, press")
+                KeyHint(keys: ["⌘⇧V"])
+                Text(", or")
+                chooseFileLink
+            }
+            HStack(spacing: Spacing.xs) {
+                Text("Images: drop, press")
+                KeyHint(keys: ["⌘⇧V"])
+                Text(", or")
+                chooseFileLink
+            }
+        }
+        .font(.system(size: 12))
+        .foregroundStyle(.tertiary)
+        .lineLimit(1)
+    }
+
+    private var chooseFileLink: some View {
+        Button { viewModel.chooseImageFile() } label: {
+            Text("choose a file").underline()
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(Color.accentText)
+        .focusable(false)
+    }
+
+    private func partialStrip(message: String) -> some View {
+        let provider = viewModel.selectedPreset
+            .map { ProviderRegistry.shared.displayName(for: $0.providerID) } ?? "The provider"
+        return Notice(.strip, tone: .error, symbol: "exclamationmark.triangle.fill",
+                      title: "\(provider) stopped the translation", message: message) {
+            ForEach(PopupFooter.partialStripItems, id: \.action) { footerButton($0) }
+        }
+    }
+
+    // MARK: Footer
 
     private var footerBar: some View {
-        HStack {
-            if let cost = viewModel.costEstimate {
-                Text(cost)
-                    .font(.system(size: 10, weight: .medium, design: .monospaced))
-                    .foregroundStyle(.tertiary)
-            }
+        HStack(spacing: Spacing.m) {
+            footerMeta
             Spacer()
-            footerActions
+            ForEach(PopupFooter.items(for: viewModel.state, isOutputOnly: viewModel.isOutputOnly, isWide: isWide),
+                    id: \.action) { footerButton($0) }
         }
-        .padding(.top, 4)
     }
 
-    private var footerActions: some View {
-        HStack(spacing: 10) {
-            if viewModel.isOutputOnly, !isAccessibilityCard {
-                actionButton("Show Input", keys: ["⌘", "I"], tint: .gray) {
-                    viewModel.showInput()
-                }
-                .keyboardShortcut("i", modifiers: .command)
-            }
+    @ViewBuilder
+    private var footerMeta: some View {
+        Group {
             switch viewModel.state {
-            case .idle:
-                actionButton("Translate", keys: ["⌘", "⏎"], tint: .brandAccent) {
-                    viewModel.translate()
-                }
-                .keyboardShortcut(.return, modifiers: .command)
             case .streaming:
-                actionButton("Stop", keys: ["esc"], tint: .orange) { viewModel.cancelStream() }
-                    .keyboardShortcut(.escape, modifiers: [])
-            case .done(let result):
-                actionButton("New", keys: ["⌘", "N"], tint: .blue) {
-                    viewModel.startNewTranslation()
+                Text("Translating…")
+            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly:
+                Text("Your text is kept")
+            default:
+                if let cost = viewModel.costEstimate {
+                    Text(cost).monospacedDigit()
                 }
-                .keyboardShortcut("n", modifiers: .command)
-                // ⌘C itself is caught by `PopupPanel` so it wins over any
-                // selection in the result; the button is the click path.
-                actionButton("Copy", keys: ["⌘", "C"], tint: .purple) {
-                    viewModel.copyToClipboard(result)
-                }
-                actionButton("Re-translate", keys: ["⌘", "R"], tint: .brandAccent) {
-                    viewModel.translate()
-                }
-                .keyboardShortcut("r", modifiers: .command)
-            case .error(_, let partial):
-                if let partial {
-                    actionButton("Continue", keys: ["⌘", "P"], tint: .blue) {
-                        viewModel.inputText = partial
-                        viewModel.translate()
-                    }
-                    .keyboardShortcut("p", modifiers: .command)
-                }
-                actionButton("Dismiss", keys: ["⌘", "."], tint: .gray) {
-                    viewModel.dismissError()
-                }
-                .keyboardShortcut(".", modifiers: .command)
-                if hasInput {
-                    actionButton("Retry", keys: ["⌘", "⏎"], tint: .brandAccent) {
-                        viewModel.translate()
-                    }
-                    .keyboardShortcut(.return, modifiers: .command)
-                }
-            case .accessibilityRequired(granted: false):
-                // The card's only way forward, so it gets a filled button.
-                actionButton("Open System Settings", keys: ["⌘", "⏎"], tint: .brandAccent) {
-                    viewModel.openAccessibilitySettings()
-                }
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut(.return, modifiers: .command)
-            case .accessibilityRequired(granted: true):
-                actionButton("Done", keys: ["⌘", "⏎"], tint: .brandAccent) {
-                    viewModel.onDismissRequest?()
-                }
-                .keyboardShortcut(.return, modifiers: .command)
+            }
+        }
+        .font(.caption)
+        .foregroundStyle(.tertiary)
+    }
+
+    private func footerButton(_ item: PopupFooter.Item) -> some View {
+        FooterAction(item.action.title, keys: item.action.keys, prominence: item.prominence) {
+            perform(item.action)
+        }
+        .keyboardShortcut(shortcut(for: item.action))
+    }
+
+    /// Esc, ⌘C and ⌘↩ after a result are caught by `PopupPanel`, whatever holds
+    /// focus; stacked, Translate again keeps ⌘↩ that way without a button.
+    private func shortcut(for action: PopupFooter.Action) -> KeyboardShortcut? {
+        switch action {
+        case .showText: return KeyboardShortcut("i", modifiers: .command)
+        case .translate, .retry, .openSystemSettings, .done:
+            return KeyboardShortcut(.return, modifiers: .command)
+        case .new: return KeyboardShortcut("n", modifiers: .command)
+        case .continueFromPartial: return KeyboardShortcut("p", modifiers: .command)
+        case .stop, .backToText, .copyAndClose, .translateAgain: return nil
+        }
+    }
+
+    private func perform(_ action: PopupFooter.Action) {
+        switch action {
+        case .showText: viewModel.showInput()
+        case .translate, .translateAgain, .retry: viewModel.translate()
+        case .stop: viewModel.cancelStream()
+        case .new: viewModel.startNewTranslation()
+        case .copyAndClose: viewModel.copyResultIfShown()
+        case .backToText: viewModel.dismissError()
+        case .openSystemSettings: viewModel.openAccessibilitySettings()
+        case .done: viewModel.onDismissRequest?()
+        case .continueFromPartial:
+            if case .error(_, let partial?) = viewModel.state {
+                viewModel.inputText = partial
+                viewModel.translate()
             }
         }
     }
 
-    /// Shared footer action button with stable shortcut-hint layout.
-    private func actionButton(
-        _ title: String,
-        keys: [String],
-        tint: Color,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            HStack(spacing: 8) {
-                Text(title)
-                    .fixedSize()
-                KeyHintBadge(keys: keys, tone: .secondary)
+    /// Shortcuts with no visible button.
+    @ViewBuilder
+    private var hiddenShortcuts: some View {
+        ZStack {
+            if !viewModel.isOutputOnly {
+                hiddenButton { viewModel.pasteImageFromClipboard() }
+                    .keyboardShortcut("v", modifiers: [.command, .shift])
+                hiddenButton { viewModel.chooseImageFile() }
+                    .keyboardShortcut("o", modifiers: [.command, .shift])
             }
-            .font(.system(size: 13, weight: .medium))
-            .fixedSize(horizontal: true, vertical: false)
         }
-        .controlSize(.large)
-        .tint(tint)
     }
 
+    private func hiddenButton(action: @escaping () -> Void) -> some View {
+        Button("", action: action)
+            .frame(width: 0, height: 0)
+            .opacity(0)
+            .accessibilityHidden(true)
+    }
 }
 
 /// Forces the enclosing TextEditor scroll view to use overlay scrollers.
