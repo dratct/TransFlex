@@ -130,4 +130,52 @@ final class OpenAIProviderTests: XCTestCase {
         let models = try await provider.availableModels(apiKey: "bad")
         XCTAssertEqual(models, provider.localModels)
     }
+    // MARK: - Sampling parameters
+
+    private func capturedBody(config: ProviderConfig) async throws -> [String: Any] {
+        var captured: Data?
+        MockURLProtocol.handler = { req in
+            captured = Self.readBody(req)
+            let resp = HTTPURLResponse(url: req.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            return (resp, Data("data: [DONE]\n\n".utf8))
+        }
+        let provider = OpenAIProvider(session: session)
+        for try await _ in provider.stream(messages: [.init(role: .user, content: "hi")], image: nil, config: config) {}
+        let data = try XCTUnwrap(captured)
+        return try XCTUnwrap(JSONSerialization.jsonObject(with: data) as? [String: Any])
+    }
+
+    /// URLProtocol hands the body over as `httpBodyStream`, not `httpBody`.
+    private static func readBody(_ req: URLRequest) -> Data? {
+        if let body = req.httpBody { return body }
+        guard let stream = req.httpBodyStream else { return nil }
+        stream.open()
+        defer { stream.close() }
+        var data = Data()
+        var buffer = [UInt8](repeating: 0, count: 4096)
+        while stream.hasBytesAvailable {
+            let n = stream.read(&buffer, maxLength: buffer.count)
+            if n <= 0 { break }
+            data.append(buffer, count: n)
+        }
+        return data
+    }
+
+    /// gpt-6-luna answers 400 "Unsupported value: 'temperature' … Only the
+    /// default (1) value is supported" when a preset's temperature is sent.
+    func testCurrentModelGetsNoSampling() async throws {
+        let body = try await capturedBody(config: ProviderConfig(
+            model: "gpt-6-luna", apiKey: "k", temperature: 0.3, topP: 0.9
+        ))
+        XCTAssertNil(body["temperature"])
+        XCTAssertNil(body["top_p"])
+    }
+
+    func testGPT4oKeepsPresetSampling() async throws {
+        let body = try await capturedBody(config: ProviderConfig(
+            model: "gpt-4o-2024-08-06", apiKey: "k", temperature: 0.2, topP: 0.9
+        ))
+        XCTAssertEqual(body["temperature"] as? Double, 0.2)
+        XCTAssertEqual(body["top_p"] as? Double, 0.9)
+    }
 }

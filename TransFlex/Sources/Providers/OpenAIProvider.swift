@@ -109,12 +109,13 @@ public final class OpenAIProvider: LLMProvider {
             extraGroups: [config.extraHeaders]
         )
 
+        let sampling = OpenAIModelSupport.acceptsSampling(config.model)
         var body = OpenAIRequestBuilder.body(
             model: config.model,
             messages: messages,
             image: image,
-            temperature: config.temperature,
-            topP: config.topP,
+            temperature: sampling ? config.temperature : nil,
+            topP: sampling ? config.topP : nil,
             maxTokens: config.maxTokens,
             stream: true
         )

@@ -10,6 +10,8 @@ enum ErrorMessageHelper {
                 if let s = retry { return "Rate limited — try in \(Int(s))s." }
                 return "Rate limited — try again shortly."
             case .network: return "No internet connection."
+            case .server(let status, let body) where (400..<500).contains(status):
+                return "The provider rejected the request: \(providerReason(body) ?? "HTTP \(status)")"
             case .server: return "Provider issue. Try again."
             case .invalidResponse, .decode: return "Provider returned unexpected response."
             case .cancelled: return "Request cancelled."
@@ -31,5 +33,16 @@ enum ErrorMessageHelper {
             return te.localizedDescription
         }
         return error.localizedDescription
+    }
+
+    /// `error.message` from an OpenAI-, Anthropic- or Gemini-style error body.
+    private static func providerReason(_ body: String) -> String? {
+        guard let data = body.data(using: .utf8),
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let error = json["error"] as? [String: Any],
+              let message = error["message"] as? String,
+              !message.isEmpty
+        else { return nil }
+        return message.count > 300 ? String(message.prefix(300)) + "…" : message
     }
 }
