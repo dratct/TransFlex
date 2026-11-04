@@ -11,6 +11,9 @@ enum PopupFrame {
     static let outputOnlyMinWidth: CGFloat = 420
     static let outputOnlyMinHeight: CGFloat = 160
     static let outputOnlyMaxHeightRatio: CGFloat = 0.6
+    /// About 80 characters a line at the translation size: wider lines read badly.
+    static let outputOnlyMaxWidth: CGFloat = 660
+    private static let widthStep: CGFloat = 20
 
     static func initial(_ mode: Mode, in visible: CGRect) -> CGRect {
         switch mode {
@@ -19,14 +22,42 @@ enum PopupFrame {
             let height = min(max(visible.height * popupRatio, popupMinSize.height), visible.height)
             return CGRect(x: visible.midX - width / 2, y: visible.midY - height / 2, width: width, height: height)
         case .outputOnly:
-            // Starts short; the top edge sits where a fully grown popup would be
-            // centred, so growing with the result never moves it.
-            let width = min(max(visible.width * outputOnlyWidthRatio, outputOnlyMinWidth), visible.width)
-            let maxHeight = visible.height * outputOnlyMaxHeightRatio
-            let height = min(outputOnlyMinHeight, maxHeight)
-            let top = visible.midY + maxHeight / 2
-            return CGRect(x: visible.midX - width / 2, y: top - height, width: width, height: height)
+            return outputOnlyFrame(width: outputOnlyBaseWidth(in: visible), contentHeight: 0, in: visible)
         }
+    }
+
+    /// The output-only frame its source predicts: tall enough for
+    /// `chromeHeight` plus `textHeight(columnWidth)`, widened toward
+    /// `outputOnlyMaxWidth` only while that still overflows the height cap.
+    static func predicted(
+        textHeight: (CGFloat) -> CGFloat,
+        chromeHeight: CGFloat,
+        in visible: CGRect
+    ) -> CGRect {
+        let maxHeight = visible.height * outputOnlyMaxHeightRatio
+        let maxWidth = min(outputOnlyMaxWidth, visible.width)
+        func contentHeight(_ width: CGFloat) -> CGFloat {
+            chromeHeight + textHeight(width - 2 * ColumnLayout.sideMargin)
+        }
+        // When even the widest frame overflows, skip measuring every width between.
+        var width = contentHeight(maxWidth) > maxHeight ? maxWidth : outputOnlyBaseWidth(in: visible)
+        while contentHeight(width) > maxHeight, width < maxWidth {
+            width = min(width + widthStep, maxWidth)
+        }
+        return outputOnlyFrame(width: width, contentHeight: contentHeight(width), in: visible)
+    }
+
+    private static func outputOnlyBaseWidth(in visible: CGRect) -> CGFloat {
+        min(max(visible.width * outputOnlyWidthRatio, outputOnlyMinWidth), outputOnlyMaxWidth, visible.width)
+    }
+
+    /// The top edge sits where a fully grown popup would be centred, so
+    /// growing with the result never moves it.
+    private static func outputOnlyFrame(width: CGFloat, contentHeight: CGFloat, in visible: CGRect) -> CGRect {
+        let maxHeight = visible.height * outputOnlyMaxHeightRatio
+        let height = min(max(contentHeight, outputOnlyMinHeight), maxHeight)
+        let top = visible.midY + maxHeight / 2
+        return CGRect(x: visible.midX - width / 2, y: top - height, width: width, height: height)
     }
 
     /// The output-only frame grown downward when the result overflows, or

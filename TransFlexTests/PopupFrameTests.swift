@@ -37,9 +37,63 @@ final class PopupFrameTests: XCTestCase {
         XCTAssertEqual(frame.maxY, 800) // top of a 600pt popup centred on screen
     }
 
-    func testOutputOnlyWidthIsFortyPercentOnWideScreens() {
+    func testOutputOnlyWidthStopsAtReadableMaximum() {
         let wide = CGRect(x: 0, y: 0, width: 2000, height: 1000)
-        XCTAssertEqual(PopupFrame.initial(.outputOnly, in: wide).width, 800)
+        XCTAssertEqual(PopupFrame.initial(.outputOnly, in: wide).width, 660) // 40% is 800
+    }
+
+    // MARK: Output-only popup sized from its source
+
+    private let chrome: CGFloat = 130
+
+    func testShortSourceOpensAtMinimum() {
+        let frame = PopupFrame.predicted(textHeight: { _ in 20 }, chromeHeight: chrome, in: screen)
+        XCTAssertEqual(frame.size, CGSize(width: 420, height: 160))
+    }
+
+    func testMediumSourceOpensAtItsHeight() {
+        let frame = PopupFrame.predicted(textHeight: { _ in 300 }, chromeHeight: chrome, in: screen)
+        XCTAssertEqual(frame.size, CGSize(width: 420, height: 430))
+    }
+
+    func testLongSourceWidensUntilItFits() {
+        // Text area scales inversely with the text column width (window − 56).
+        let frame = PopupFrame.predicted(
+            textHeight: { 200_000 / $0 }, chromeHeight: chrome, in: screen
+        )
+        // 420…480 overflow the 600pt cap; 500 (column 444) is the first that fits.
+        XCTAssertEqual(frame.width, 500)
+        XCTAssertEqual(frame.height, 130 + 200_000 / 444, accuracy: 0.01)
+    }
+
+    func testTooLongSourceOpensAtMaxWidthAndHeight() {
+        let frame = PopupFrame.predicted(textHeight: { _ in 5000 }, chromeHeight: chrome, in: screen)
+        XCTAssertEqual(frame.size, CGSize(width: 660, height: 600))
+    }
+
+    func testPredictedKeepsTopEdgeAndCentre() {
+        let offset = CGRect(x: 100, y: 50, width: 1000, height: 1000)
+        for textHeight: CGFloat in [0, 300, 5000] {
+            let frame = PopupFrame.predicted(textHeight: { _ in textHeight }, chromeHeight: chrome, in: offset)
+            XCTAssertEqual(frame.midX, offset.midX)
+            XCTAssertEqual(frame.maxY, offset.midY + 300) // top of a 60% popup centred on screen
+        }
+    }
+
+    func testWideScreenNeverPassesReadableMaximum() {
+        let wide = CGRect(x: 0, y: 0, width: 2560, height: 1400)
+        let frame = PopupFrame.predicted(textHeight: { _ in 50_000 }, chromeHeight: chrome, in: wide)
+        XCTAssertEqual(frame.width, 660)
+        XCTAssertEqual(frame.height, 840)
+    }
+
+    func testPredictedStaysOnSmallScreens() {
+        let tiny = CGRect(x: 0, y: 0, width: 600, height: 400)
+        let long = PopupFrame.predicted(textHeight: { _ in 5000 }, chromeHeight: chrome, in: tiny)
+        XCTAssertEqual(long.size, CGSize(width: 600, height: 240))
+        XCTAssertTrue(tiny.contains(long))
+        let short = PopupFrame.predicted(textHeight: { _ in 0 }, chromeHeight: chrome, in: tiny)
+        XCTAssertEqual(short.size, CGSize(width: 420, height: 160))
     }
 
     func testGrowsByOverflowKeepingTopEdge() throws {

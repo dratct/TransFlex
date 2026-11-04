@@ -86,10 +86,16 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
   - Popup: 60% × 60% of the visible screen, centred, minimum 520 × 360.
     At ≥ 720pt wide the Original and Translation columns sit side by side,
     otherwise stacked, with the Original half capped at 38% of the height.
-  - Output-only popup: 40% of the screen width, minimum 420pt. Height fits
-    the content, clamped to 160pt … 60% of the screen, and grows downward
-    with a fixed top edge. Each new Translate Selection starts from its own
-    content and never from the last height.
+  - Output-only popup: opens at the size its source text predicts. The
+    source is measured in the Translation font at the column width, plus
+    10% for the translation. Height fits that estimate, clamped to
+    160pt … 60% of the screen. Width is 40% of the screen, minimum 420pt,
+    never past 660pt: about 80 characters a line at the translation size,
+    the longest line that still reads easily. When the estimate still
+    overflows, the width widens toward 660pt until it fits. A translation
+    longer than the estimate grows downward with a fixed top edge; the
+    popup never shrinks while open. Each new Translate
+    Selection starts from its own content and never from the last size.
   - ⌘I goes from the Output-only popup to the Popup frame. No transition
     keeps the other mode's layout.
 - The header (preset picker, History, Settings — no attach button) and the footer (cost, actions)
