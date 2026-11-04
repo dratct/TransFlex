@@ -29,7 +29,8 @@ enum Radius {
 enum ReadingType {
     static let original = Font.system(size: 15)
     static let originalLineSpacing: CGFloat = 6
-    static let translation = Font.system(size: 17)
+    static let translationSize: CGFloat = 17
+    static let translation = Font.system(size: translationSize)
     static let translationLineSpacing: CGFloat = 7
     /// "ORIGINAL" / "TRANSLATION" column labels.
     static let columnLabel = Font.system(size: 11, weight: .semibold)
