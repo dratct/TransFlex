@@ -313,7 +313,8 @@ final class PopupViewModel: ObservableObject {
         translationStart = nil
         isOutputOnly = false
         outputContentHeight = 0
-        outputVisibleHeight = 0
+        // outputVisibleHeight is kept: the scroll view reports it only when it
+        // changes, so a zero would stick when the next open has the same frame.
         popupSession = nil
         state = .idle
     }

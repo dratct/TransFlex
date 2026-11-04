@@ -84,9 +84,13 @@ a shortcut flow; DESIGN.md › Popup states is what each state must look like.
 1. **Open twice.** Open the popup, close it with Esc, open it again: the
    second open looks the same as the first (size, focus in the editor, no
    ring on the preset picker), and the Draft follows Keep last translation.
-2. **Quick translate, short → long → short.** Translation-only popup from a
-   selection: a short text, then a long one (grows downward, then scrolls with
-   the newest line in view), then a short one again (shrinks back).
+2. **Quick translate, short → short → medium → long → short.** Translation-only
+   popup from a selection. Each opens at the size its source predicts: one
+   sentence at 160pt, twice in a row with no jump on the second; a paragraph
+   at its own height, growing at most a line or two while it streams; a long
+   text at 60% of the screen height and no wider than 660pt, scrolling with the
+   newest line in view; a short one again back at 160pt. All share one top
+   edge and one horizontal centre.
 3. **⌘I, edit, translate again.** From the translation-only popup press ⌘I,
    edit the Original, ⌘↩: one request per press, the seam fills while it
    streams and stays at the same x in every state.
