@@ -88,7 +88,7 @@ public final class PopupWindowController {
             do {
                 let text = try await selection.copySelection()
                 viewModel?.startQuickTranslation(text: text, presetID: presetID)
-                showOutputOnly()
+                showOutputOnly(source: text)
             } catch {
                 showQuickError(error, presetID: presetID)
             }
@@ -207,8 +207,25 @@ public final class PopupWindowController {
         showOutputOnly()
     }
 
-    private func showOutputOnly() {
-        panel.setFrame(frame(.outputOnly, onScreenContaining: NSEvent.mouseLocation), display: true)
+    /// Opens at the size `source` predicts, or the shortest frame without one.
+    private func showOutputOnly(source: String? = nil) {
+        let start = mach_absolute_time()
+        let mouse = NSEvent.mouseLocation
+        if let source, let visible = screen(containing: mouse)?.visibleFrame {
+            panel.setFrame(PopupFrame.predicted(
+                textHeight: { SourceTextEstimate.height(of: source, width: $0) },
+                chromeHeight: PopupFrame.outputOnlyChrome,
+                in: visible
+            ), display: true)
+        } else {
+            panel.setFrame(frame(.outputOnly, onScreenContaining: mouse), display: true)
+        }
+        let elapsedMs = Double(ticksToNanos(mach_absolute_time() - start)) / 1_000_000.0
+        if elapsedMs < 150 {
+            Self.logger.info("Output-only show in \(elapsedMs, privacy: .public) ms")
+        } else {
+            Self.logger.warning("Output-only show exceeded 150ms target: \(elapsedMs, privacy: .public) ms")
+        }
         panel.orderFrontRegardless()
         panel.makeKey()
         // No input editor here, so AppKit would focus the preset picker and

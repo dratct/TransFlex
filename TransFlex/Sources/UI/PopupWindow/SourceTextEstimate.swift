@@ -8,7 +8,9 @@ enum SourceTextEstimate {
 
     /// Measured in the same font and line spacing as `ReadingType.translation`.
     static func height(of text: String, width: CGFloat) -> CGFloat {
-        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return 0 }
+        // A copied selection often ends in a line break, which would measure as an empty line.
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return 0 }
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = ReadingType.translationLineSpacing
         let measured = NSAttributedString(string: text, attributes: [

@@ -1,7 +1,8 @@
 import CoreGraphics
 
-/// The popup's frame, from the mode and the screen alone (DESIGN.md › Layout).
-/// Every open starts from `initial`; nothing carries over from the last open.
+/// The popup's frame, from the mode, the screen and, for Translate Selection,
+/// the size its source predicts (DESIGN.md › Layout). Nothing carries over
+/// from the last open.
 enum PopupFrame {
     enum Mode { case popup, outputOnly }
 
@@ -14,6 +15,9 @@ enum PopupFrame {
     /// About 80 characters a line at the translation size: wider lines read badly.
     static let outputOnlyMaxWidth: CGFloat = 660
     private static let widthStep: CGFloat = 20
+    /// Header, column label and footer around the Translation scroll view,
+    /// measured in the running app as panel height minus the scroll view's.
+    static let outputOnlyChrome: CGFloat = 128
 
     static func initial(_ mode: Mode, in visible: CGRect) -> CGRect {
         switch mode {

@@ -14,6 +14,14 @@ final class SourceTextEstimateTests: XCTestCase {
         XCTAssertEqual(SourceTextEstimate.height(of: "Hello", width: 400), 22)
     }
 
+    func testTrailingNewlineAddsNoLine() {
+        // A selection copied with its line break must not open a line taller.
+        XCTAssertEqual(
+            SourceTextEstimate.height(of: "Hello\n", width: 400),
+            SourceTextEstimate.height(of: "Hello", width: 400)
+        )
+    }
+
     func testMoreTextIsTaller() {
         let one = SourceTextEstimate.height(of: "Hello", width: 400)
         let two = SourceTextEstimate.height(of: "Hello\nWorld", width: 400)
