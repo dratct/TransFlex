@@ -144,8 +144,10 @@ private key does not match the app's public key.
 Make a new key pair (steps 2–5), put the new public key in `project.yml`, and
 release. Installed apps cannot check the new signature with the old key. They
 accept the update because it carries the same Developer ID team signature, then
-trust the new key from then on. This rests on the "either" rule above. It has
-not been rehearsed for TransFlex, so test it with a prerelease first.
+trust the new key from then on. This rests on the "either" rule above and has
+not been rehearsed for TransFlex. A prerelease cannot rehearse it, because the
+`latest` feed never serves one; build an old and a new version against a local
+feed instead (`TRANSFLEX_UPDATE_FEED_URL`, see `scripts/build.sh`).
 
 If both the key and the Developer ID team are lost, installed apps refuse
 every later update, and users must download a new build by hand.
