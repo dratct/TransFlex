@@ -78,6 +78,10 @@ targets:
           TRANSFLEX_APP_SUPPORT_DIR: TransFlex
           TRANSFLEX_KEYCHAIN_SERVICE: io.aiaz.transflex
           TRANSFLEX_UPDATE_FEED_URL: https://github.com/dratct/TransFlex/releases/latest/download/appcast.xml
+    postBuildScripts:
+      - name: Sign Sparkle helpers
+        script: '"$SRCROOT/scripts/sign-sparkle.sh"'
+        basedOnDependencyAnalysis: false
     dependencies:
       - package: GRDB
         product: GRDB

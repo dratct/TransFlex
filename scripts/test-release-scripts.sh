@@ -200,6 +200,8 @@ make_fixture_app() {
     -c "Add :CFBundleShortVersionString string 0.2.0" \
     -c "Add :CFBundleVersion string 7" \
     -c "Add :TransFlexKeychainBackend string $backend" \
+    -c "Add :SUFeedURL string https://github.com/dratct/TransFlex/releases/latest/download/appcast.xml" \
+    -c "Add :SUPublicEDKey string AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" \
     "$plist" >/dev/null
   if [[ -n "$entitlements" ]]; then
     codesign -f -s - --entitlements "$entitlements" "$app" 2>/dev/null
@@ -288,8 +290,45 @@ test_verify_accepts_unsigned_app_with_get_task_allow() {
   [[ "$verify_status" -eq 0 ]] || { cat "$verify_err" >&2; fail "unsigned app with get-task-allow should verify"; }
 }
 
+test_verify_rejects_empty_feed_url() {
+  local app="$TEST_TMP/verify-no-feed/TransFlex.app"
+  make_fixture_app "$app" file
+  /usr/libexec/PlistBuddy -c "Set :SUFeedURL ''" "$app/Contents/Info.plist"
+  codesign -f -s - "$app" 2>/dev/null
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "a release without an update feed should be rejected"
+  assert_file_contains "$verify_err" "SUFeedURL"
+}
+
+test_verify_rejects_placeholder_public_key() {
+  local app="$TEST_TMP/verify-key-placeholder/TransFlex.app"
+  make_fixture_app "$app" file
+  /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey SPARKLE_PUBLIC_KEY_PENDING" "$app/Contents/Info.plist"
+  codesign -f -s - "$app" 2>/dev/null
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "a release without the real Sparkle public key should be rejected"
+  assert_file_contains "$verify_err" "SUPublicEDKey"
+}
+
+# Xcode re-signs Sparkle.framework on copy but leaves its helpers ad-hoc; notarization rejects them.
+test_verify_rejects_signed_app_with_adhoc_sparkle_helper() {
+  local app="$TEST_TMP/verify-sparkle-adhoc/TransFlex.app"
+  local helper="$app/Contents/Frameworks/Sparkle.framework/Versions/B/Autoupdate"
+  make_fixture_app "$app" dataProtection
+  # Added after the app is signed: codesign refuses to seal a half-built framework.
+  mkdir -p "$(dirname "$helper")"
+  cp /usr/bin/true "$helper"
+  codesign -f -s - "$helper" 2>/dev/null
+  run_verify "$app" --signed-team TEAM123
+  [[ "$verify_status" -ne 0 ]] || fail "a signed app with an ad-hoc Sparkle helper should be rejected"
+  assert_file_contains "$verify_err" "Sparkle helper"
+}
+
 test_release_create_path
 test_release_update_path
+test_verify_rejects_empty_feed_url
+test_verify_rejects_placeholder_public_key
+test_verify_rejects_signed_app_with_adhoc_sparkle_helper
 test_regular_release_create_path
 test_regular_release_update_path
 test_invalid_prerelease_versions_are_rejected
