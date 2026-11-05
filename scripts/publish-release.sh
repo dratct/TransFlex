@@ -6,6 +6,7 @@ VERSION="${VERSION:-}"
 RELEASE_NOTES="${RELEASE_NOTES:-}"
 ARTIFACT="${ARTIFACT:-}"
 CHECKSUM="${CHECKSUM:-}"
+APPCAST="${APPCAST:-}"
 DRAFT_RELEASE="${DRAFT_RELEASE:-true}"
 PRERELEASE_RELEASE="${PRERELEASE_RELEASE:-true}"
 
@@ -57,6 +58,8 @@ fi
 require_file "RELEASE_NOTES" "$RELEASE_NOTES"
 require_file "ARTIFACT" "$ARTIFACT"
 require_file "CHECKSUM" "$CHECKSUM"
+# Installed apps read appcast.xml from the latest Release; one without it breaks every update check.
+require_file "APPCAST" "$APPCAST"
 
 create_flags=(
   --verify-tag
@@ -83,9 +86,9 @@ edit_flags+=("$draft_edit_flag" "$prerelease_edit_flag")
 
 if gh release view "$TAG" >/dev/null 2>&1; then
   echo "==> Updating existing GitHub Release: $TAG"
-  gh release upload "$TAG" "$ARTIFACT" "$CHECKSUM" --clobber
+  gh release upload "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" --clobber
   gh release edit "$TAG" "${edit_flags[@]}"
 else
   echo "==> Creating GitHub Release: $TAG"
-  gh release create "$TAG" "$ARTIFACT" "$CHECKSUM" "${create_flags[@]}"
+  gh release create "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" "${create_flags[@]}"
 fi

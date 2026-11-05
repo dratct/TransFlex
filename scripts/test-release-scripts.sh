@@ -72,10 +72,11 @@ run_publish_case() {
 
   local artifact="$case_dir/TransFlex-0.2.0-macos-universal-unsigned.zip"
   local checksum="$artifact.sha256"
+  local appcast="$case_dir/appcast.xml"
   local notes="$case_dir/release-notes.md"
   local log="$case_dir/gh.log"
 
-  touch "$artifact" "$checksum"
+  touch "$artifact" "$checksum" "$appcast"
   printf 'release notes\n' > "$notes"
   : > "$log"
 
@@ -87,6 +88,7 @@ run_publish_case() {
     RELEASE_NOTES="$notes" \
     ARTIFACT="$artifact" \
     CHECKSUM="$checksum" \
+    APPCAST="$appcast" \
     DRAFT_RELEASE="$draft_release" \
     PRERELEASE_RELEASE="$prerelease_release" \
     scripts/publish-release.sh > "$case_dir/publish.out"
@@ -99,7 +101,7 @@ test_release_create_path() {
   log="$(run_publish_case create false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/create/release-notes.md --draft --prerelease"
+  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/create/appcast.xml --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/create/release-notes.md --draft --prerelease"
   assert_file_not_contains "$log" "release upload"
   assert_file_not_contains "$log" "release edit"
 }
@@ -109,7 +111,7 @@ test_release_update_path() {
   log="$(run_publish_case update true)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 --clobber"
+  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/update/appcast.xml --clobber"
   assert_file_contains "$log" "release edit v0.2.0 --title TransFlex 0.2.0 --notes-file $TEST_TMP/update/release-notes.md --draft --prerelease"
   assert_file_not_contains "$log" "release create"
 }
@@ -119,7 +121,7 @@ test_regular_release_create_path() {
   log="$(run_publish_case stable-create false false false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-create/release-notes.md"
+  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-create/appcast.xml --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-create/release-notes.md"
   assert_file_not_contains "$log" "--draft"
   assert_file_not_contains "$log" "--prerelease"
   assert_file_not_contains "$log" "release upload"
@@ -131,7 +133,7 @@ test_regular_release_update_path() {
   log="$(run_publish_case stable-update true false false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 --clobber"
+  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-update/appcast.xml --clobber"
   assert_file_contains "$log" "release edit v0.2.0 --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-update/release-notes.md --draft=false --prerelease=false"
   assert_file_not_contains "$log" "release create"
 }
@@ -324,7 +326,117 @@ test_verify_rejects_signed_app_with_adhoc_sparkle_helper() {
   assert_file_contains "$verify_err" "Sparkle helper"
 }
 
+test_publish_requires_appcast() {
+  local case_dir="$TEST_TMP/publish-no-appcast"
+  mkdir -p "$case_dir/bin"
+  write_fake_gh "$case_dir/bin"
+  touch "$case_dir/a.zip" "$case_dir/a.zip.sha256"
+  printf 'notes\n' > "$case_dir/notes.md"
+  local status
+  set +e
+  GH_LOG="$case_dir/gh.log" PATH="$case_dir/bin:$PATH" TAG=v0.2.0 VERSION=0.2.0 \
+    RELEASE_NOTES="$case_dir/notes.md" ARTIFACT="$case_dir/a.zip" CHECKSUM="$case_dir/a.zip.sha256" \
+    scripts/publish-release.sh > /dev/null 2> "$case_dir/err"
+  status=$?
+  set -e
+  [[ "$status" -ne 0 ]] || fail "a release without appcast.xml must not be published"
+  assert_file_contains "$case_dir/err" "APPCAST"
+  [[ ! -s "$case_dir/gh.log" ]] || fail "publish must stop before calling gh when the appcast is missing"
+}
+
+FAKE_ED_KEY="ZmFrZS1wcml2YXRlLWtleS1mb3ItdGVzdHMtb25seQ=="
+
+# A generate_appcast stand-in: logs its arguments, insists on the key on stdin, and writes an
+# appcast for the archive in the folder it is given. GENERATE_APPCAST_UNSIGNED drops the signature.
+write_fake_generate_appcast() {
+  local bin_dir="$1"
+  mkdir -p "$bin_dir"
+  cat > "$bin_dir/generate_appcast" <<'EOF'
+#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" > "$GENERATE_APPCAST_LOG"
+key="$(cat)"
+[[ "$key" == "$EXPECTED_ED_KEY" ]] || { echo "fake generate_appcast: wrong key on stdin" >&2; exit 3; }
+prefix="" output="" folder=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --download-url-prefix) prefix="$2"; shift 2 ;;
+    -o) output="$2"; shift 2 ;;
+    --ed-key-file|--maximum-versions) shift 2 ;;
+    --*) shift ;;
+    *) folder="$1"; shift ;;
+  esac
+done
+zip="$(cd "$folder" && ls *.zip)"
+notes="${zip%.zip}.md"
+[[ -f "$folder/$notes" ]] || { echo "fake generate_appcast: no release notes beside the archive" >&2; exit 4; }
+signature=' sparkle:edSignature="c2lnbmF0dXJl"'
+[[ -z "${GENERATE_APPCAST_UNSIGNED:-}" ]] || signature=""
+cat > "$output" <<XML
+<rss><channel><item><sparkle:version>${FAKE_BUILD:-42}</sparkle:version>
+<enclosure url="${prefix}${zip}"${signature} length="1"/></item></channel></rss>
+XML
+EOF
+  chmod +x "$bin_dir/generate_appcast"
+}
+
+# Sets appcast_status, appcast_dir (holding out, err, args.log and dist/).
+run_make_appcast() {
+  local name="$1"
+  shift
+  appcast_dir="$TEST_TMP/$name"
+  mkdir -p "$appcast_dir/dist"
+  write_fake_generate_appcast "$appcast_dir/bin"
+  touch "$appcast_dir/dist/TransFlex-0.5.0-macos-universal-signed-notarized.zip"
+  printf '## Changes\n' > "$appcast_dir/notes.md"
+  set +e
+  env SPARKLE_BIN="$appcast_dir/bin" GENERATE_APPCAST_LOG="$appcast_dir/args.log" \
+    EXPECTED_ED_KEY="$FAKE_ED_KEY" SPARKLE_ED_PRIVATE_KEY="$FAKE_ED_KEY" \
+    ARTIFACT="$appcast_dir/dist/TransFlex-0.5.0-macos-universal-signed-notarized.zip" \
+    RELEASE_NOTES="$appcast_dir/notes.md" TAG=v0.5.0 BUILD_VERSION=42 DIST_DIR="$appcast_dir/dist" \
+    GITHUB_OUTPUT="$appcast_dir/github_output" "$@" \
+    scripts/make-appcast.sh > "$appcast_dir/out" 2> "$appcast_dir/err"
+  appcast_status=$?
+  set -e
+}
+
+test_make_appcast_points_at_the_tag_and_hides_the_key() {
+  run_make_appcast appcast-ok
+  [[ "$appcast_status" -eq 0 ]] || { cat "$appcast_dir/err" >&2; fail "make-appcast.sh should succeed"; }
+  assert_file_contains "$appcast_dir/args.log" "--ed-key-file -"
+  assert_file_contains "$appcast_dir/args.log" "--download-url-prefix https://github.com/dratct/TransFlex/releases/download/v0.5.0/"
+  assert_file_contains "$appcast_dir/args.log" "--embed-release-notes"
+  assert_file_contains "$appcast_dir/dist/appcast.xml" 'url="https://github.com/dratct/TransFlex/releases/download/v0.5.0/TransFlex-0.5.0-macos-universal-signed-notarized.zip"'
+  assert_file_contains "$appcast_dir/github_output" "appcast=$appcast_dir/dist/appcast.xml"
+  assert_file_not_contains "$appcast_dir/out" "$FAKE_ED_KEY"
+  assert_file_not_contains "$appcast_dir/err" "$FAKE_ED_KEY"
+  assert_file_not_contains "$appcast_dir/args.log" "$FAKE_ED_KEY"
+}
+
+test_make_appcast_requires_the_key() {
+  run_make_appcast appcast-no-key SPARKLE_ED_PRIVATE_KEY=
+  [[ "$appcast_status" -ne 0 ]] || fail "make-appcast.sh must fail without SPARKLE_ED_PRIVATE_KEY"
+  assert_file_contains "$appcast_dir/err" "SPARKLE_ED_PRIVATE_KEY"
+}
+
+test_make_appcast_rejects_an_unsigned_appcast() {
+  run_make_appcast appcast-unsigned GENERATE_APPCAST_UNSIGNED=1
+  [[ "$appcast_status" -ne 0 ]] || fail "an appcast without an EdDSA signature must be rejected"
+  assert_file_contains "$appcast_dir/err" "edSignature"
+}
+
+test_make_appcast_rejects_a_wrong_build_version() {
+  run_make_appcast appcast-wrong-build FAKE_BUILD=41
+  [[ "$appcast_status" -ne 0 ]] || fail "an appcast whose sparkle:version is not the build number must be rejected"
+  assert_file_contains "$appcast_dir/err" "sparkle:version"
+}
+
 test_release_create_path
+test_publish_requires_appcast
+test_make_appcast_points_at_the_tag_and_hides_the_key
+test_make_appcast_requires_the_key
+test_make_appcast_rejects_an_unsigned_appcast
+test_make_appcast_rejects_a_wrong_build_version
 test_release_update_path
 test_verify_rejects_empty_feed_url
 test_verify_rejects_placeholder_public_key
