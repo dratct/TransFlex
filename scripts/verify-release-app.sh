@@ -151,14 +151,18 @@ keychain_backend="$(plist_value TransFlexKeychainBackend 2>/dev/null || true)"
 entitlements="$(codesign -d --entitlements - --xml "$APP_PATH" 2>/dev/null || true)"
 
 if [[ -n "$SIGNED_TEAM" ]]; then
-  sparkle_dir="$APP_PATH/Contents/Frameworks/Sparkle.framework/Versions/B"
+  sparkle_framework="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+  sparkle_dir="$sparkle_framework/Versions/B"
   for helper in \
     "$sparkle_dir/XPCServices/Installer.xpc" \
     "$sparkle_dir/XPCServices/Downloader.xpc" \
     "$sparkle_dir/Autoupdate" \
     "$sparkle_dir/Updater.app"
   do
-    [[ -e "$helper" ]] || continue
+    if [[ ! -e "$helper" ]]; then
+      [[ -d "$sparkle_framework" ]] || continue
+      fail "Sparkle helper '${helper#"$APP_PATH/"}' is missing; sign-sparkle.sh signs a layout that is not there."
+    fi
     helper_info="$(codesign -dv "$helper" 2>&1 || true)"
     if ! grep -Fxq "TeamIdentifier=$SIGNED_TEAM" <<<"$helper_info" || ! grep -q 'flags=.*runtime' <<<"$helper_info"; then
       fail "Sparkle helper '${helper#"$APP_PATH/"}' is not signed by team $SIGNED_TEAM with the hardened runtime."

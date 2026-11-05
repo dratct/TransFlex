@@ -312,6 +312,25 @@ test_verify_rejects_placeholder_public_key() {
   assert_file_contains "$verify_err" "SUPublicEDKey"
 }
 
+test_verify_rejects_a_key_of_the_wrong_length() {
+  local app="$TEST_TMP/verify-key-length/TransFlex.app"
+  make_fixture_app "$app" file
+  /usr/libexec/PlistBuddy -c "Set :SUPublicEDKey AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA" "$app/Contents/Info.plist"
+  codesign -f -s - "$app" 2>/dev/null
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "a public key that is not 32 bytes of base64 should be rejected"
+  assert_file_contains "$verify_err" "SUPublicEDKey"
+}
+
+test_verify_rejects_signed_app_missing_a_sparkle_helper() {
+  local app="$TEST_TMP/verify-sparkle-missing/TransFlex.app"
+  make_fixture_app "$app" dataProtection
+  mkdir -p "$app/Contents/Frameworks/Sparkle.framework/Versions/A"
+  run_verify "$app" --signed-team TEAM123
+  [[ "$verify_status" -ne 0 ]] || fail "a signed app whose Sparkle helpers are missing should be rejected"
+  assert_file_contains "$verify_err" "is missing"
+}
+
 # Xcode re-signs Sparkle.framework on copy but leaves its helpers ad-hoc; notarization rejects them.
 test_verify_rejects_signed_app_with_adhoc_sparkle_helper() {
   local app="$TEST_TMP/verify-sparkle-adhoc/TransFlex.app"
@@ -441,6 +460,8 @@ test_release_update_path
 test_verify_rejects_empty_feed_url
 test_verify_rejects_placeholder_public_key
 test_verify_rejects_signed_app_with_adhoc_sparkle_helper
+test_verify_rejects_a_key_of_the_wrong_length
+test_verify_rejects_signed_app_missing_a_sparkle_helper
 test_regular_release_create_path
 test_regular_release_update_path
 test_invalid_prerelease_versions_are_rejected
