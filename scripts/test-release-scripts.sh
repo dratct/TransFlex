@@ -366,7 +366,8 @@ test_publish_requires_appcast() {
 FAKE_ED_KEY="ZmFrZS1wcml2YXRlLWtleS1mb3ItdGVzdHMtb25seQ=="
 
 # A generate_appcast stand-in: logs its arguments, insists on the key on stdin, and writes an
-# appcast for the archive in the folder it is given. GENERATE_APPCAST_UNSIGNED drops the signature.
+# appcast for the archive in the folder it is given. GENERATE_APPCAST_UNSIGNED drops the signature;
+# GENERATE_APPCAST_URL_PREFIX replaces the download prefix it was given.
 write_fake_generate_appcast() {
   local bin_dir="$1"
   mkdir -p "$bin_dir"
@@ -391,6 +392,7 @@ notes="${zip%.zip}.md"
 [[ -f "$folder/$notes" ]] || { echo "fake generate_appcast: no release notes beside the archive" >&2; exit 4; }
 [[ -z "${GENERATE_APPCAST_KEY_MISMATCH:-}" ]] ||
   echo "Warning: SUPublicEDKey in the app TransFlex does not match key EdDSA in the Keychain. Run generate_keys and update Info.plist to match"
+prefix="${GENERATE_APPCAST_URL_PREFIX:-$prefix}"
 signature=' sparkle:edSignature="c2lnbmF0dXJl"'
 [[ -z "${GENERATE_APPCAST_UNSIGNED:-}" ]] || signature=""
 cat > "$output" <<XML
@@ -454,6 +456,13 @@ test_make_appcast_rejects_a_key_the_app_does_not_trust() {
   assert_file_contains "$appcast_dir/err" "SUPublicEDKey"
 }
 
+test_make_appcast_rejects_an_archive_url_outside_the_tag() {
+  run_make_appcast appcast-wrong-url \
+    GENERATE_APPCAST_URL_PREFIX=https://github.com/dratct/TransFlex/releases/download/v0.4.0/
+  [[ "$appcast_status" -ne 0 ]] || fail "an appcast that points at another tag's zip must be rejected"
+  assert_file_contains "$appcast_dir/err" "does not point at"
+}
+
 test_make_appcast_rejects_a_wrong_build_version() {
   run_make_appcast appcast-wrong-build FAKE_BUILD=41
   [[ "$appcast_status" -ne 0 ]] || fail "an appcast whose sparkle:version is not the build number must be rejected"
@@ -466,6 +475,7 @@ test_make_appcast_points_at_the_tag_and_hides_the_key
 test_make_appcast_requires_the_key
 test_make_appcast_rejects_an_unsigned_appcast
 test_make_appcast_rejects_a_wrong_build_version
+test_make_appcast_rejects_an_archive_url_outside_the_tag
 test_make_appcast_rejects_a_key_the_app_does_not_trust
 test_release_update_path
 test_verify_rejects_empty_feed_url
