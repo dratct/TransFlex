@@ -14,12 +14,14 @@ struct SettingsRoot: View {
     @StateObject private var providersStore = ProvidersStore()
     @EnvironmentObject var presetStore: PresetStore
     @ObservedObject var tabState: SettingsTabState
+    let updater: AppUpdater?
     // The segmented Picker writes its binding while SwiftUI updates the view, which must not
     // publish an ObservableObject; `tabState` only carries the tab requested by `show(tab:)`.
     @State private var selected: SettingsTab
 
-    init(tabState: SettingsTabState) {
+    init(tabState: SettingsTabState, updater: AppUpdater? = nil) {
         self.tabState = tabState
+        self.updater = updater
         self._selected = State(initialValue: tabState.selected)
     }
 
@@ -46,7 +48,7 @@ struct SettingsRoot: View {
                 case .general: GeneralTab()
                 case .providers: ProvidersTab(store: providersStore)
                 case .presets: PresetsTab(providersStore: providersStore).environmentObject(presetStore)
-                case .about: AboutTab()
+                case .about: AboutTab(updater: updater)
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)

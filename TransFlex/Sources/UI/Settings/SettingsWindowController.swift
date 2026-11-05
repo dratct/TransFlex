@@ -6,12 +6,14 @@ import SwiftUI
 final class SettingsWindowController {
     private var window: NSWindow?
     private let presetStore: PresetStore
+    private let updater: AppUpdater?
     private let tabState = SettingsTabState()
     private var autoDismisser: WindowAutoDismisser?
     private var windowDelegate: SettingsWindowDelegate?
 
-    init(presetStore: PresetStore) {
+    init(presetStore: PresetStore, updater: AppUpdater? = nil) {
         self.presetStore = presetStore
+        self.updater = updater
     }
 
     func show(tab: SettingsTab = .general) {
@@ -37,7 +39,7 @@ final class SettingsWindowController {
     }
 
     private func makeWindow() -> NSWindow {
-        let view = SettingsRoot(tabState: tabState)
+        let view = SettingsRoot(tabState: tabState, updater: updater)
             .environmentObject(presetStore)
         let host = NSHostingController(rootView: view)
         let win = NSWindow(contentViewController: host)
