@@ -38,7 +38,7 @@
 	<key>SUFeedURL</key>
 	<string>$(TRANSFLEX_UPDATE_FEED_URL)</string>
 	<key>SUPublicEDKey</key>
-	<string>SPARKLE_PUBLIC_KEY_PENDING</string>
+	<string>UK6IF10CcII24JnzKlCj/eriUpus+ObnM8EKO6WEPVA=</string>
 	<key>TransFlexApplicationSupportDirectoryName</key>
 	<string>$(TRANSFLEX_APP_SUPPORT_DIR)</string>
 	<key>TransFlexKeychainBackend</key>

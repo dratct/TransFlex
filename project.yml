@@ -47,7 +47,7 @@ targets:
         TransFlexKeychainService: "$(TRANSFLEX_KEYCHAIN_SERVICE)"
         TransFlexKeychainBackend: "$(TRANSFLEX_KEYCHAIN_BACKEND)"
         SUFeedURL: "$(TRANSFLEX_UPDATE_FEED_URL)"
-        SUPublicEDKey: "SPARKLE_PUBLIC_KEY_PENDING"
+        SUPublicEDKey: "UK6IF10CcII24JnzKlCj/eriUpus+ObnM8EKO6WEPVA="
         SUEnableAutomaticChecks: true
         NSAppTransportSecurity:
           NSAllowsArbitraryLoads: false
