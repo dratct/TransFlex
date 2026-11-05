@@ -7,6 +7,7 @@ final class UpdateMenuTests: XCTestCase {
         var canCheckForUpdates = true
         var automaticallyChecksForUpdates = true
         var onUpdateFoundChange: ((Bool) -> Void)?
+        var onCanCheckChange: ((Bool) -> Void)?
         func checkForUpdates() {}
     }
 

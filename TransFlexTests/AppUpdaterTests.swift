@@ -6,10 +6,11 @@ final class AppUpdaterTests: XCTestCase {
     private final class FakeDriver: UpdaterDriver {
         var canCheckForUpdates = true
         var automaticallyChecksForUpdates = true
-        var checkCount = 0
+        var calls: [String] = []
         var onUpdateFoundChange: ((Bool) -> Void)?
+        var onCanCheckChange: ((Bool) -> Void)?
 
-        func checkForUpdates() { checkCount += 1 }
+        func checkForUpdates() { calls.append("check") }
     }
 
     func testDebugInfoIsDisabled() {
@@ -48,12 +49,32 @@ final class AppUpdaterTests: XCTestCase {
         XCTAssertFalse(updater.updateFound)
     }
 
-    func testCheckForUpdatesAsksDriver() {
+    func testCheckForUpdatesActivatesTheAppFirst() {
         let driver = FakeDriver()
-        let updater = AppUpdater(driver: driver, activateApp: {})
+        let updater = AppUpdater(driver: driver, activateApp: { driver.calls.append("activate") })
 
         updater.checkForUpdates()
 
-        XCTAssertEqual(driver.checkCount, 1)
+        XCTAssertEqual(driver.calls, ["activate", "check"])
+    }
+
+    func testCanCheckFollowsTheDriver() {
+        let driver = FakeDriver()
+        let updater = AppUpdater(driver: driver)
+        XCTAssertTrue(updater.canCheckForUpdates)
+
+        driver.onCanCheckChange?(false)
+        XCTAssertFalse(updater.canCheckForUpdates)
+    }
+
+    func testScheduledFindOutOfFocusIsLeftToTheBadge() {
+        XCTAssertTrue(AppUpdater.standardDriverShowsScheduledUpdate(immediateFocus: true))
+        XCTAssertFalse(AppUpdater.standardDriverShowsScheduledUpdate(immediateFocus: false))
+    }
+
+    func testOnlyAFindSparkleLeavesUnshownRaisesTheBadge() {
+        XCTAssertTrue(AppUpdater.badgesUpdate(handledByStandardDriver: false, userInitiated: false))
+        XCTAssertFalse(AppUpdater.badgesUpdate(handledByStandardDriver: true, userInitiated: false))
+        XCTAssertFalse(AppUpdater.badgesUpdate(handledByStandardDriver: true, userInitiated: true))
     }
 }

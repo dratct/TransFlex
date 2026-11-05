@@ -9,6 +9,8 @@ protocol UpdaterDriver: AnyObject {
     /// Called with `true` when a scheduled check finds an update the user has not seen,
     /// and with `false` once the user attends to it or the update session ends.
     var onUpdateFoundChange: ((Bool) -> Void)? { get set }
+    /// Called when `canCheckForUpdates` changes, e.g. while a check is on screen.
+    var onCanCheckChange: ((Bool) -> Void)? { get set }
     func checkForUpdates()
 }
 
@@ -17,6 +19,7 @@ protocol UpdaterDriver: AnyObject {
 @MainActor
 final class AppUpdater: ObservableObject {
     @Published private(set) var updateFound = false
+    @Published private(set) var canCheckForUpdates: Bool
 
     private let driver: UpdaterDriver
     private let activateApp: () -> Void
@@ -24,12 +27,14 @@ final class AppUpdater: ObservableObject {
     init(driver: UpdaterDriver, activateApp: (() -> Void)? = nil) {
         self.driver = driver
         self.activateApp = activateApp ?? { NSApp.activate(ignoringOtherApps: true) }
+        self.canCheckForUpdates = driver.canCheckForUpdates
         driver.onUpdateFoundChange = { [weak self] found in
             self?.updateFound = found
         }
+        driver.onCanCheckChange = { [weak self] canCheck in
+            self?.canCheckForUpdates = canCheck
+        }
     }
-
-    var canCheckForUpdates: Bool { driver.canCheckForUpdates }
 
     var automaticallyChecksForUpdates: Bool {
         get { driver.automaticallyChecksForUpdates }
@@ -44,6 +49,17 @@ final class AppUpdater: ObservableObject {
         // would open behind the frontmost app.
         activateApp()
         driver.checkForUpdates()
+    }
+
+    /// Sparkle shows a scheduled find itself only when it may take focus (just
+    /// after launch); otherwise the app badges it instead of an alert behind the
+    /// app the user is typing in.
+    nonisolated static func standardDriverShowsScheduledUpdate(immediateFocus: Bool) -> Bool {
+        immediateFocus
+    }
+
+    nonisolated static func badgesUpdate(handledByStandardDriver: Bool, userInitiated: Bool) -> Bool {
+        !handledByStandardDriver && !userInitiated
     }
 
     static func isEnabled(infoDictionary: [String: Any]) -> Bool {
@@ -67,7 +83,9 @@ import Sparkle
 @MainActor
 private final class SparkleDriver: NSObject, UpdaterDriver, SPUStandardUserDriverDelegate {
     var onUpdateFoundChange: ((Bool) -> Void)?
+    var onCanCheckChange: ((Bool) -> Void)?
     private var controller: SPUStandardUpdaterController!
+    private var canCheckObservation: NSKeyValueObservation?
 
     override init() {
         super.init()
@@ -76,6 +94,10 @@ private final class SparkleDriver: NSObject, UpdaterDriver, SPUStandardUserDrive
             updaterDelegate: nil,
             userDriverDelegate: self
         )
+        canCheckObservation = controller.updater.observe(\.canCheckForUpdates, options: [.new]) { [weak self] updater, _ in
+            let canCheck = updater.canCheckForUpdates
+            Task { @MainActor in self?.onCanCheckChange?(canCheck) }
+        }
     }
 
     var canCheckForUpdates: Bool { controller.updater.canCheckForUpdates }
@@ -98,7 +120,7 @@ private final class SparkleDriver: NSObject, UpdaterDriver, SPUStandardUserDrive
         _ update: SUAppcastItem,
         andInImmediateFocus immediateFocus: Bool
     ) -> Bool {
-        immediateFocus
+        AppUpdater.standardDriverShowsScheduledUpdate(immediateFocus: immediateFocus)
     }
 
     nonisolated func standardUserDriverWillHandleShowingUpdate(
@@ -106,7 +128,7 @@ private final class SparkleDriver: NSObject, UpdaterDriver, SPUStandardUserDrive
         forUpdate update: SUAppcastItem,
         state: SPUUserUpdateState
     ) {
-        guard !state.userInitiated else { return }
+        guard AppUpdater.badgesUpdate(handledByStandardDriver: handleShowingUpdate, userInitiated: state.userInitiated) else { return }
         MainActor.assumeIsolated { onUpdateFoundChange?(true) }
     }
 
