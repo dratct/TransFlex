@@ -298,18 +298,9 @@ grow. A Release build phase (`scripts/sign-sparkle.sh`) signs Sparkle's helpers
 with the app's identity and hardened runtime, and
 `verify-release-app.sh --signed-team` checks them before notarization.
 
-The key pair is made once with Sparkle's `generate_keys` (in
-`DerivedData/SourcePackages/artifacts/sparkle/Sparkle/bin/` after a build):
-
-```bash
-generate_keys                        # stores the key in the login keychain, prints the public key
-generate_keys -x sparkle_private.key # export; then:
-gh secret set SPARKLE_ED_PRIVATE_KEY < sparkle_private.key
-```
-
-Keep a copy of the private key outside GitHub and delete the exported file. If
-the key is lost, every installed app refuses later updates and users must
-download a new build by hand.
+The update key pair is made once, on the owner's own Mac; follow
+[Set Up The Sparkle Update Key](sparkle-signing-key.md). It also covers what to
+do if the key is lost or leaked.
 
 Do not print decoded certificate or API key material in logs. The workflow
 cleanup step removes temporary signing files, the installed profile and the

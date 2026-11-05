@@ -39,8 +39,10 @@ lives in the menu bar (`LSUIElement`).
 
 - `CFBundleVersion` (the workflow run number) must keep increasing; Sparkle
   compares it, not the marketing version.
-- Losing the private EdDSA key means shipped apps can no longer accept
-  updates; the owner keeps a copy outside GitHub.
+- Sparkle accepts an update that passes either the EdDSA check or a matching
+  Developer ID team signature, so a lost or leaked key can be replaced while
+  the team stays the same. Losing both strands installed apps; the owner keeps
+  a copy of the key outside GitHub.
 
 ## Rejected
 
