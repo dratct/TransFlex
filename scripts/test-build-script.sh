@@ -161,7 +161,15 @@ test_developer_id_writes_target_xcconfig_and_removes_it() {
     fail "developer-id should remove the generated xcconfig"
 }
 
+test_update_feed_url_override_reaches_xcodebuild() {
+  run_build_in_case feed-override without-local TRANSFLEX_UPDATE_FEED_URL=http://127.0.0.1:8123/appcast.xml
+  [[ "$run_status" -eq 0 ]] || { dump_case; fail "a feed URL override should build"; }
+  grep -Fq "TRANSFLEX_UPDATE_FEED_URL=http://127.0.0.1:8123/appcast.xml" "$case_log" ||
+    { dump_case; fail "the feed URL override should reach xcodebuild"; }
+}
+
 test_versioned_xcode_app_name_is_accepted
+test_update_feed_url_override_reaches_xcodebuild
 test_auto_without_local_builds_adhoc
 test_auto_with_local_passes_no_signing_settings
 test_adhoc_refuses_while_local_exists

@@ -28,6 +28,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private(set) var historyWindowController: HistoryWindowController?
     private var presetCancellable: AnyCancellable?
     private var registeredPresetIDs: Set<UUID> = []
+    private(set) var updater: AppUpdater?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -59,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         self.historyStore = historyStore
+        self.updater = AppUpdater.makeForMainBundle()
 
         let popup = PopupWindowController(
             presetStore: presetStore,
