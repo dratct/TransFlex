@@ -37,13 +37,20 @@ cp "$RELEASE_NOTES" "$work/${archive_name%.zip}.md"
 mkdir -p "$DIST_DIR"
 appcast="$(cd "$DIST_DIR" && pwd)/appcast.xml"
 
+tool_log="$work/generate_appcast.log"
 printf '%s' "$SPARKLE_ED_PRIVATE_KEY" | "$SPARKLE_BIN/generate_appcast" \
   --ed-key-file - \
   --download-url-prefix "$DOWNLOAD_BASE/$TAG/" \
   --embed-release-notes \
   --maximum-versions 1 \
   -o "$appcast" \
-  "$work"
+  "$work" > "$tool_log" 2>&1 || { cat "$tool_log" >&2; fail "generate_appcast failed."; }
+cat "$tool_log"
+
+# generate_appcast only warns when the key does not match the app's SUPublicEDKey.
+if grep -Fq "does not match key" "$tool_log"; then
+  fail "SPARKLE_ED_PRIVATE_KEY is not the key of SUPublicEDKey in the app; installed apps would refuse the update."
+fi
 
 grep -Fq "url=\"$DOWNLOAD_BASE/$TAG/$archive_name\"" "$appcast" ||
   fail "appcast.xml does not point at $DOWNLOAD_BASE/$TAG/$archive_name."

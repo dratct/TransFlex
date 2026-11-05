@@ -389,6 +389,8 @@ done
 zip="$(cd "$folder" && ls *.zip)"
 notes="${zip%.zip}.md"
 [[ -f "$folder/$notes" ]] || { echo "fake generate_appcast: no release notes beside the archive" >&2; exit 4; }
+[[ -z "${GENERATE_APPCAST_KEY_MISMATCH:-}" ]] ||
+  echo "Warning: SUPublicEDKey in the app TransFlex does not match key EdDSA in the Keychain. Run generate_keys and update Info.plist to match"
 signature=' sparkle:edSignature="c2lnbmF0dXJl"'
 [[ -z "${GENERATE_APPCAST_UNSIGNED:-}" ]] || signature=""
 cat > "$output" <<XML
@@ -444,6 +446,14 @@ test_make_appcast_rejects_an_unsigned_appcast() {
   assert_file_contains "$appcast_dir/err" "edSignature"
 }
 
+# generate_appcast only warns when the signing key is not the app's SUPublicEDKey; installed apps
+# would then refuse every update in the feed.
+test_make_appcast_rejects_a_key_the_app_does_not_trust() {
+  run_make_appcast appcast-key-mismatch GENERATE_APPCAST_KEY_MISMATCH=1
+  [[ "$appcast_status" -ne 0 ]] || fail "an appcast signed with a key the app does not trust must be rejected"
+  assert_file_contains "$appcast_dir/err" "SUPublicEDKey"
+}
+
 test_make_appcast_rejects_a_wrong_build_version() {
   run_make_appcast appcast-wrong-build FAKE_BUILD=41
   [[ "$appcast_status" -ne 0 ]] || fail "an appcast whose sparkle:version is not the build number must be rejected"
@@ -456,6 +466,7 @@ test_make_appcast_points_at_the_tag_and_hides_the_key
 test_make_appcast_requires_the_key
 test_make_appcast_rejects_an_unsigned_appcast
 test_make_appcast_rejects_a_wrong_build_version
+test_make_appcast_rejects_a_key_the_app_does_not_trust
 test_release_update_path
 test_verify_rejects_empty_feed_url
 test_verify_rejects_placeholder_public_key
