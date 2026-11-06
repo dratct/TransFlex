@@ -25,7 +25,7 @@ final class HistoryRecorderTests: XCTestCase {
     }
 
     func testModelWithNoPriceStoresNoCost() {
-        XCTAssertNil(entry(model: "gpt-6-luna", input: 40, output: 56).costUSD)
+        XCTAssertNil(entry(model: "unpriced-test-model", input: 40, output: 56).costUSD)
     }
 
     func testNoUsageFromTheProviderStoresNoCost() {

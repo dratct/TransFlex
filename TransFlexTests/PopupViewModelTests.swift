@@ -188,7 +188,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
     func testFooterShowsOnlyTokensWhenTheModelHasNoPrice() async throws {
         var unpriced = try XCTUnwrap(presetStore.presets.first)
-        unpriced.modelID = "gpt-6-luna"
+        unpriced.modelID = "unpriced-test-model"
         try presetStore.update(unpriced)
 
         let footer = try await footerAfterTranslating(with: unpriced)
