@@ -45,6 +45,10 @@ _Avoid_: Clear previous translation, reset policy.
   field, a page that blocks paste), it fails and leaves the translation on the
   clipboard for the user to paste. Only a focused field whose Accessibility
   text contains the selection is checked; anything else counts as pasted.
+- Replace Selection pastes only where the text was copied from. If the user
+  moved to another app, field or selection while it translated, it brings
+  that app, field and selection back first; if it cannot, it sends no ⌘V,
+  fails, and leaves the translation on the clipboard.
 - While a Replace Selection translates, Esc anywhere cancels it; the app holds
   Esc system-wide only for that run.
 - Copy (⌘C or the button) copies the result and closes the popup; the button

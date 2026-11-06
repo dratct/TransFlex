@@ -49,7 +49,8 @@ final class QuickReplaceCoordinator {
     }
 
     private func replace(preset: Preset) async throws {
-        let original = try await selection.copySelection()
+        let copied = try await selection.copyForReplace()
+        let original = copied.text
         try Task.checkCancellation()
         let startedAt = Date()
         var output = ""
@@ -77,7 +78,7 @@ final class QuickReplaceCoordinator {
 
         try await selection.paste(
             Self.keepingEdgeWhitespace(of: original, around: translated),
-            replacing: original
+            over: copied
         )
         historyRecorder.record(
             preset: preset, inputText: original, outputText: translated,

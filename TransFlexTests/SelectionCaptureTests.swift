@@ -29,7 +29,7 @@ final class SelectionCaptureTests: XCTestCase {
             isTrusted: { trusted },
             modifiersHeld: { false },
             postCommandKey: { onKey($0, pb) },
-            focusedText: { nil },
+            focus: .none,
             pollInterval: 1_000_000,
             copyTimeout: 30_000_000,
             restoreDelay: 1_000_000
@@ -80,7 +80,7 @@ final class SelectionCaptureTests: XCTestCase {
             if key == CGKeyCode(kVK_ANSI_V) { seenAtPaste = pb.string(forType: .string) }
         }
 
-        try await capture.paste("translated", replacing: "original")
+        try await capture.paste("translated", over: .init(text: "original", target: nil))
 
         XCTAssertEqual(seenAtPaste, "translated")
         XCTAssertEqual(pasteboard.string(forType: .string), "user clipboard")
@@ -93,7 +93,7 @@ final class SelectionCaptureTests: XCTestCase {
             pb.setString("copied during paste", forType: .string)
         }
 
-        try await capture.paste("translated", replacing: "original")
+        try await capture.paste("translated", over: .init(text: "original", target: nil))
 
         XCTAssertEqual(pasteboard.string(forType: .string), "copied during paste")
     }

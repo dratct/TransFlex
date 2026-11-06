@@ -13,13 +13,15 @@ final class ReplaceHUDTests: XCTestCase {
         XCTAssertTrue(ReplaceHUD.failureMessage(for: LLMError.auth).hasSuffix(" Nothing was changed."))
     }
 
-    func testIgnoredPasteSaysTheTranslationIsOnTheClipboard() {
-        let message = ReplaceHUD.failureMessage(for: SelectionCapture.Failure.pasteNotApplied)
-        XCTAssertTrue(message.contains("on the clipboard"), message)
-        XCTAssertFalse(message.contains("Nothing was changed"), message)
+    func testIgnoredOrLostPasteSaysTheTranslationIsOnTheClipboard() {
+        for failure in [SelectionCapture.Failure.pasteNotApplied, .targetLost] {
+            let message = ReplaceHUD.failureMessage(for: failure)
+            XCTAssertTrue(message.contains("on the clipboard"), message)
+            XCTAssertFalse(message.contains("Nothing was changed"), message)
+        }
     }
 
-        func testCapsuleSitsDownAndRightOfThePointer() throws {
+    func testCapsuleSitsDownAndRightOfThePointer() throws {
         let screen = try XCTUnwrap(NSScreen.main).visibleFrame
         let point = NSPoint(x: screen.midX, y: screen.midY)
         let frame = ReplaceHUD.frame(size: NSSize(width: 200, height: 30), besidePointer: point)

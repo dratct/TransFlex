@@ -27,6 +27,14 @@ reported on web forms in Chromium browsers.
   (`kAXModeBasic`, `chrome_browser_application_mac.mm`). We do not set
   `AXEnhancedUserInterface`: it turns on full screen-reader mode after a 2 s
   delay, and it is known to break window animations and window managers.
+- Note where the selection came from right after the copy: the frontmost
+  app, its focused element (kept only when two queries return the same
+  element), and the selected range. Before ⌘V, require that app in front,
+  that element focused and, when it could be read at copy time, the same
+  selected text. Otherwise activate the app, focus the element, set the
+  range, and check again once. If it is still not in place, send no ⌘V,
+  fail with `targetLost` and leave the translation on the clipboard. The
+  "did it change" check then reads that same element.
 
 ## Consequences
 
@@ -38,8 +46,16 @@ reported on web forms in Chromium browsers.
 - An app whose `AXValue` lags more than 1 s behind a real paste would get a
   false failure. The failure leaves the translation on the clipboard, so
   nothing is lost.
+- Measured in Safari through `SelectionCapture` itself: after switching to
+  Finder during the wait, the paste went back into the copied field. When
+  the tab moved to another page with a different field focused and selected,
+  it failed with `targetLost` and that field was left untouched.
+- Without an Accessibility element only the app is checked; switching to
+  another app still stops the paste.
 - The Chromium behaviour comes from reading the source and has not yet been
-  run against a real Chrome.
+  run against a real Chrome. Whether macOS lets TransFlex (an agent app)
+  activate the other app has only been run from a command-line process; if
+  it does not, restoring fails safely into `targetLost`.
 
 ## Rejected
 
