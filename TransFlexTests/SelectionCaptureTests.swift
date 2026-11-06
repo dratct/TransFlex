@@ -97,4 +97,18 @@ final class SelectionCaptureTests: XCTestCase {
 
         XCTAssertEqual(pasteboard.string(forType: .string), "copied during paste")
     }
+
+    /// A V carrying the ⌘ flag with no ⌘ key-up leaves macOS reporting ⌘ as
+    /// held (measured: the next synthetic Tab opened the app switcher), so
+    /// the ⌘ key itself must go down first and come up last, flag-free.
+    func testCommandKeyPressesAndReleasesCommandAroundTheKey() {
+        let v = CGKeyCode(kVK_ANSI_V)
+        let command = CGKeyCode(kVK_Command)
+        XCTAssertEqual(SelectionCapture.commandKeyStrokes(v), [
+            .init(keyCode: command, isDown: true, flags: .maskCommand),
+            .init(keyCode: v, isDown: true, flags: .maskCommand),
+            .init(keyCode: v, isDown: false, flags: .maskCommand),
+            .init(keyCode: command, isDown: false, flags: []),
+        ])
+    }
 }

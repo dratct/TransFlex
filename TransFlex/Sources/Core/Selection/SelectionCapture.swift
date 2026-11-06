@@ -196,11 +196,30 @@ final class SelectionCapture {
         return AXUIElementCopyAttributeValue(element, name as CFString, &value) == .success ? value : nil
     }
 
+    struct KeyStroke: Equatable {
+        let keyCode: CGKeyCode
+        let isDown: Bool
+        let flags: CGEventFlags
+    }
+
+    /// ⌘ goes down first and comes up last with no flags. A key that only
+    /// carries the ⌘ flag leaves macOS reporting ⌘ as held afterwards, so
+    /// the user's next Tab becomes ⌘Tab.
+    static func commandKeyStrokes(_ keyCode: CGKeyCode) -> [KeyStroke] {
+        let command = CGKeyCode(kVK_Command)
+        return [
+            KeyStroke(keyCode: command, isDown: true, flags: .maskCommand),
+            KeyStroke(keyCode: keyCode, isDown: true, flags: .maskCommand),
+            KeyStroke(keyCode: keyCode, isDown: false, flags: .maskCommand),
+            KeyStroke(keyCode: command, isDown: false, flags: []),
+        ]
+    }
+
     static func postCommandKey(_ keyCode: CGKeyCode) {
         let source = CGEventSource(stateID: .hidSystemState)
-        for isDown in [true, false] {
-            let event = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: isDown)
-            event?.flags = .maskCommand
+        for stroke in commandKeyStrokes(keyCode) {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: stroke.keyCode, keyDown: stroke.isDown)
+            event?.flags = stroke.flags
             event?.post(tap: .cghidEventTap)
         }
     }
