@@ -146,6 +146,7 @@ Asset names:
 ```text
 TransFlex-0.2.0-macos-universal-signed-notarized.zip
 TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
+appcast.xml
 ```
 
 Release notes must state:
@@ -218,6 +219,7 @@ Every release requires these GitHub Secrets:
 | `APPLE_NOTARY_ISSUER_ID` | App Store Connect issuer ID. |
 | `APPLE_NOTARY_KEY_BASE64` | Base64 encoded `.p8` API key. |
 | `APPLE_DEVELOPER_ID_PROFILE_BASE64` | Base64 encoded Developer ID provisioning profile for `io.aiaz.transflex`. |
+| `SPARKLE_ED_PRIVATE_KEY` | Private EdDSA key that signs the update in `appcast.xml`; its public half is `SUPublicEDKey` in `project.yml`. |
 
 Signed builds keep API keys in the data protection keychain, so the app claims
 `keychain-access-groups`, and macOS only accepts that entitlement with an
@@ -278,7 +280,27 @@ and uploads:
 ```text
 TransFlex-0.2.0-macos-universal-signed-notarized.zip
 TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
+appcast.xml
 ```
+
+## Auto Update
+
+Installed apps check
+`https://github.com/dratct/TransFlex/releases/latest/download/appcast.xml`
+once a day with Sparkle. GitHub's `latest` skips drafts and prereleases, so only
+a published regular release reaches users; a prerelease is a safe way to test
+the whole pipeline. `scripts/make-appcast.sh` writes an appcast holding only the
+new release, signed with `SPARKLE_ED_PRIVATE_KEY`, and the workflow refuses to
+publish without it.
+
+Sparkle compares `CFBundleVersion`, the workflow run number, so it must only
+grow. A Release build phase (`scripts/sign-sparkle.sh`) signs Sparkle's helpers
+with the app's identity and hardened runtime, and
+`verify-release-app.sh --signed-team` checks them before notarization.
+
+The update key pair is made once, on the owner's own Mac; follow
+[Set Up The Sparkle Update Key](sparkle-signing-key.md). It also covers what to
+do if the key is lost or leaked.
 
 Do not print decoded certificate or API key material in logs. The workflow
 cleanup step removes temporary signing files, the installed profile and the

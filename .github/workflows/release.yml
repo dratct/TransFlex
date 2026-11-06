@@ -76,6 +76,7 @@ jobs:
           APPLE_NOTARY_ISSUER_ID: ${{ secrets.APPLE_NOTARY_ISSUER_ID }}
           APPLE_NOTARY_KEY_BASE64: ${{ secrets.APPLE_NOTARY_KEY_BASE64 }}
           APPLE_DEVELOPER_ID_PROFILE_BASE64: ${{ secrets.APPLE_DEVELOPER_ID_PROFILE_BASE64 }}
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
         run: |
           missing=()
           for name in \
@@ -85,7 +86,8 @@ jobs:
             APPLE_NOTARY_KEY_ID \
             APPLE_NOTARY_ISSUER_ID \
             APPLE_NOTARY_KEY_BASE64 \
-            APPLE_DEVELOPER_ID_PROFILE_BASE64
+            APPLE_DEVELOPER_ID_PROFILE_BASE64 \
+            SPARKLE_ED_PRIVATE_KEY
           do
             if [[ -z "${!name}" ]]; then
               missing+=("$name")
@@ -231,6 +233,16 @@ jobs:
 
           echo "release_notes=$RELEASE_NOTES" >> "$GITHUB_OUTPUT"
 
+      - name: Create appcast
+        id: appcast
+        env:
+          SPARKLE_ED_PRIVATE_KEY: ${{ secrets.SPARKLE_ED_PRIVATE_KEY }}
+          ARTIFACT: ${{ steps.package.outputs.artifact }}
+          RELEASE_NOTES: ${{ steps.notes.outputs.release_notes }}
+          TAG: ${{ steps.version.outputs.tag }}
+          BUILD_VERSION: ${{ steps.version.outputs.build_number }}
+        run: scripts/make-appcast.sh
+
       - name: Upload release artifact for diagnostics
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -238,6 +250,7 @@ jobs:
           path: |
             ${{ steps.package.outputs.artifact }}
             ${{ steps.package.outputs.checksum }}
+            ${{ steps.appcast.outputs.appcast }}
           if-no-files-found: error
           retention-days: 7
 
@@ -249,6 +262,7 @@ jobs:
           RELEASE_NOTES: ${{ steps.notes.outputs.release_notes }}
           ARTIFACT: ${{ steps.package.outputs.artifact }}
           CHECKSUM: ${{ steps.package.outputs.checksum }}
+          APPCAST: ${{ steps.appcast.outputs.appcast }}
         run: scripts/publish-release.sh
 
       - name: Clean signing material

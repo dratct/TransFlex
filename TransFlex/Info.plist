@@ -33,6 +33,12 @@
 	<string>Copyright © 2026 TransFlex Contributors.</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>$(TRANSFLEX_UPDATE_FEED_URL)</string>
+	<key>SUPublicEDKey</key>
+	<string>UK6IF10CcII24JnzKlCj/eriUpus+ObnM8EKO6WEPVA=</string>
 	<key>TransFlexApplicationSupportDirectoryName</key>
 	<string>$(TRANSFLEX_APP_SUPPORT_DIR)</string>
 	<key>TransFlexKeychainBackend</key>

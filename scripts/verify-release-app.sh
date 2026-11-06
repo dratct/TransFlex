@@ -122,6 +122,16 @@ if [[ -n "$EXPECTED_BUILD_VERSION" && "$build_version" != "$EXPECTED_BUILD_VERSI
   fail "CFBundleVersion expected '$EXPECTED_BUILD_VERSION' but found '$build_version'."
 fi
 
+feed_url="$(plist_value SUFeedURL 2>/dev/null || true)"
+public_ed_key="$(plist_value SUPublicEDKey 2>/dev/null || true)"
+if [[ -z "$feed_url" ]]; then
+  fail "SUFeedURL is empty; the release could never find an update."
+fi
+# A real EdDSA public key is 32 bytes in base64.
+if [[ ! "$public_ed_key" =~ ^[A-Za-z0-9+/]{43}=$ ]]; then
+  fail "SUPublicEDKey '$public_ed_key' is not a Sparkle EdDSA public key."
+fi
+
 actual_archs="$(lipo -archs "$EXECUTABLE")"
 for expected_arch in $EXPECTED_ARCHS; do
   found_arch=false
@@ -141,6 +151,23 @@ keychain_backend="$(plist_value TransFlexKeychainBackend 2>/dev/null || true)"
 entitlements="$(codesign -d --entitlements - --xml "$APP_PATH" 2>/dev/null || true)"
 
 if [[ -n "$SIGNED_TEAM" ]]; then
+  sparkle_framework="$APP_PATH/Contents/Frameworks/Sparkle.framework"
+  sparkle_dir="$sparkle_framework/Versions/B"
+  for helper in \
+    "$sparkle_dir/XPCServices/Installer.xpc" \
+    "$sparkle_dir/XPCServices/Downloader.xpc" \
+    "$sparkle_dir/Autoupdate" \
+    "$sparkle_dir/Updater.app"
+  do
+    if [[ ! -e "$helper" ]]; then
+      [[ -d "$sparkle_framework" ]] || continue
+      fail "Sparkle helper '${helper#"$APP_PATH/"}' is missing; sign-sparkle.sh signs a layout that is not there."
+    fi
+    helper_info="$(codesign -dv "$helper" 2>&1 || true)"
+    if ! grep -Fxq "TeamIdentifier=$SIGNED_TEAM" <<<"$helper_info" || ! grep -q 'flags=.*runtime' <<<"$helper_info"; then
+      fail "Sparkle helper '${helper#"$APP_PATH/"}' is not signed by team $SIGNED_TEAM with the hardened runtime."
+    fi
+  done
   if grep -Fq "com.apple.security.get-task-allow" <<<"$entitlements"; then
     fail "signed release requests com.apple.security.get-task-allow; notarization rejects it."
   fi
@@ -171,3 +198,4 @@ echo "    CFBundleShortVersionString=$marketing_version"
 echo "    CFBundleVersion=$build_version"
 echo "    architectures=$EXPECTED_ARCHS"
 echo "    TransFlexKeychainBackend=$keychain_backend"
+echo "    SUFeedURL=$feed_url"

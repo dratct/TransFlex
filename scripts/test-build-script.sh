@@ -161,7 +161,63 @@ test_developer_id_writes_target_xcconfig_and_removes_it() {
     fail "developer-id should remove the generated xcconfig"
 }
 
+test_update_feed_url_override_reaches_xcodebuild() {
+  run_build_in_case feed-override without-local TRANSFLEX_UPDATE_FEED_URL=http://127.0.0.1:8123/appcast.xml
+  [[ "$run_status" -eq 0 ]] || { dump_case; fail "a feed URL override should build"; }
+  grep -Fq "TRANSFLEX_UPDATE_FEED_URL=http://127.0.0.1:8123/appcast.xml" "$case_log" ||
+    { dump_case; fail "the feed URL override should reach xcodebuild"; }
+}
+
+# Runs sign-sparkle.sh against a fake framework with a codesign that logs its arguments.
+run_sign_sparkle() {
+  local name="$1"
+  shift
+  local case_dir="$TEST_TMP/$name"
+  sign_log="$case_dir/codesign.log"
+  sign_out="$case_dir/sign.out"
+  local framework="$case_dir/Build/TransFlex.app/Contents/Frameworks/Sparkle.framework"
+  mkdir -p "$case_dir/bin" "$framework/Versions/B/XPCServices"
+  : > "$sign_log"
+  cat > "$case_dir/bin/codesign" <<EOF
+#!/usr/bin/env bash
+printf '%s\n' "codesign \$*" >> "$sign_log"
+EOF
+  chmod +x "$case_dir/bin/codesign"
+  set +e
+  env PATH="$case_dir/bin:/usr/bin:/bin" TARGET_BUILD_DIR="$case_dir/Build" \
+    FRAMEWORKS_FOLDER_PATH="TransFlex.app/Contents/Frameworks" "$@" \
+    scripts/sign-sparkle.sh > "$sign_out" 2>&1
+  sign_status=$?
+  set -e
+}
+
+test_sign_sparkle_signs_helpers_inside_out() {
+  run_sign_sparkle sign-team CONFIGURATION=Release EXPANDED_CODE_SIGN_IDENTITY=ABC123
+  [[ "$sign_status" -eq 0 ]] || { cat "$sign_out" "$sign_log" >&2; fail "sign-sparkle.sh should succeed"; }
+  local order
+  order="$(awk '{ sub(/.*Sparkle\.framework\/?/, "", $NF); print $NF }' "$sign_log" | tr '\n' ' ')"
+  [[ "$order" == "Versions/B/XPCServices/Installer.xpc Versions/B/XPCServices/Downloader.xpc Versions/B/Autoupdate Versions/B/Updater.app  " ]] ||
+    { cat "$sign_log" >&2; fail "helpers must be signed inside-out, framework last (got: $order)"; }
+  grep -Fq -- "--options runtime --timestamp --sign ABC123" "$sign_log" ||
+    { cat "$sign_log" >&2; fail "helpers need the hardened runtime, a timestamp and the app's identity"; }
+  grep Downloader "$sign_log" | grep -Fq -- "--preserve-metadata=entitlements" ||
+    { cat "$sign_log" >&2; fail "Downloader.xpc must keep its entitlements"; }
+  if grep -Fq -- "--deep" "$sign_log"; then
+    fail "sign-sparkle.sh must not sign with --deep"
+  fi
+}
+
+test_sign_sparkle_skips_adhoc_and_debug() {
+  run_sign_sparkle sign-adhoc CONFIGURATION=Release EXPANDED_CODE_SIGN_IDENTITY=-
+  [[ "$sign_status" -eq 0 && ! -s "$sign_log" ]] || fail "ad-hoc builds must leave Sparkle as shipped"
+  run_sign_sparkle sign-debug CONFIGURATION=Debug EXPANDED_CODE_SIGN_IDENTITY=ABC123
+  [[ "$sign_status" -eq 0 && ! -s "$sign_log" ]] || fail "Debug builds have no updater and skip the re-sign"
+}
+
 test_versioned_xcode_app_name_is_accepted
+test_sign_sparkle_signs_helpers_inside_out
+test_sign_sparkle_skips_adhoc_and_debug
+test_update_feed_url_override_reaches_xcodebuild
 test_auto_without_local_builds_adhoc
 test_auto_with_local_passes_no_signing_settings
 test_adhoc_refuses_while_local_exists

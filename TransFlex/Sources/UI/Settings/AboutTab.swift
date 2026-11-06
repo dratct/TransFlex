@@ -19,6 +19,12 @@ enum AboutInfo {
 
 @MainActor
 struct AboutTab: View {
+    var updater: AppUpdater?
+
+    static func showsUpdates(updater: AppUpdater?) -> Bool {
+        updater != nil
+    }
+
     var body: some View {
         SettingsForm {
             Section {
@@ -43,6 +49,10 @@ struct AboutTab: View {
                 .padding(.vertical, Spacing.m)
             }
 
+            if Self.showsUpdates(updater: updater), let updater {
+                UpdatesSection(updater: updater)
+            }
+
             Section {
                 SettingsRow("Source code", caption: AboutInfo.repositoryDisplayName) {
                     Link("Open GitHub", destination: AboutInfo.repositoryURL)
@@ -61,5 +71,26 @@ struct AboutTab: View {
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
         let build = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String
         return AboutInfo.versionText(version: version, build: build)
+    }
+}
+
+@MainActor
+private struct UpdatesSection: View {
+    @ObservedObject var updater: AppUpdater
+
+    var body: some View {
+        Section {
+            Toggle(isOn: Binding(
+                get: { updater.automaticallyChecksForUpdates },
+                set: { updater.automaticallyChecksForUpdates = $0 }
+            )) {
+                SettingsLabel("Automatically check for updates")
+            }
+            .toggleStyle(.switch)
+            SettingsRow(UpdateMenu.title(updateFound: updater.updateFound)) {
+                Button("Check Now") { updater.checkForUpdates() }
+                    .disabled(!updater.canCheckForUpdates)
+            }
+        }
     }
 }

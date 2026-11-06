@@ -10,6 +10,7 @@
 #
 # Release version overrides:
 #   MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
+#   TRANSFLEX_UPDATE_FEED_URL=http://127.0.0.1:8000/appcast.xml scripts/build.sh --release
 #
 # Signing modes:
 #   TRANSFLEX_SIGNING_MODE=auto         # default: team signing from Config/Local.xcconfig when it
@@ -71,6 +72,10 @@ if [[ -n "${MARKETING_VERSION:-}" ]]; then
 fi
 if [[ -n "${CURRENT_PROJECT_VERSION:-}" ]]; then
   VERSION_SETTINGS+=(CURRENT_PROJECT_VERSION="$CURRENT_PROJECT_VERSION")
+fi
+# Points a local Release build at a test appcast instead of the GitHub one.
+if [[ -n "${TRANSFLEX_UPDATE_FEED_URL:-}" ]]; then
+  VERSION_SETTINGS+=(TRANSFLEX_UPDATE_FEED_URL="$TRANSFLEX_UPDATE_FEED_URL")
 fi
 
 ADHOC_SETTINGS=(

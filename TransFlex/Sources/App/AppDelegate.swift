@@ -23,11 +23,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var hotkeyManager: GlobalHotkeyManager?
     let presetStore = PresetStore()
     let providersStore = ProvidersStore()
-    private(set) lazy var settingsWindowController = SettingsWindowController(presetStore: presetStore)
+    private(set) lazy var settingsWindowController = SettingsWindowController(presetStore: presetStore, updater: updater)
     private var historyStore: HistoryStore?
     private(set) var historyWindowController: HistoryWindowController?
     private var presetCancellable: AnyCancellable?
     private var registeredPresetIDs: Set<UUID> = []
+    private(set) var updater: AppUpdater?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApp.setActivationPolicy(.accessory)
@@ -59,6 +60,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
         }
         self.historyStore = historyStore
+        self.updater = AppUpdater.makeForMainBundle()
 
         let popup = PopupWindowController(
             presetStore: presetStore,
@@ -83,7 +85,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.historyWindowController = history
         self.statusBarController = StatusBarController(
             popupWindowController: popup,
-            historyWindowController: history
+            historyWindowController: history,
+            updater: updater
         )
 
         let defaults = UserDefaults.standard
