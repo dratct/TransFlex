@@ -40,6 +40,11 @@ _Avoid_: Clear previous translation, reset policy.
 - Replace Selection shows its progress without taking focus from the app
   being edited: a capsule beside the pointer while it translates and after it
   pastes; a failure opens a notice that says nothing was changed.
+- Replace Selection counts as done only when the focused field's text changed
+  after the paste. If the field reads the same before and after (a read-only
+  field, a page that blocks paste), it fails and leaves the translation on the
+  clipboard for the user to paste. Only a focused field whose Accessibility
+  text contains the selection is checked; anything else counts as pasted.
 - While a Replace Selection translates, Esc anywhere cancels it; the app holds
   Esc system-wide only for that run.
 - Copy (⌘C or the button) copies the result and closes the popup; the button

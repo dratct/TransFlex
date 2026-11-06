@@ -15,12 +15,19 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         pasteboard.clearContents()
         provider = MockLLMProvider()
         pasted = []
+        field = nil
+        acceptsPaste = true
     }
 
     override func tearDown() async throws {
         pasteboard.releaseGlobally()
         try await super.tearDown()
     }
+
+    /// `field` is what the focused text field shows; nil when the app does
+    /// not expose it. A paste writes into it only when `acceptsPaste`.
+    private var field: String?
+    private var acceptsPaste = true
 
     private func makeCoordinator(selection: String) -> QuickReplaceCoordinator {
         let provider = provider!
@@ -35,12 +42,16 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
                     self.pasteboard.clearContents()
                     self.pasteboard.setString(selection, forType: .string)
                 } else if key == CGKeyCode(kVK_ANSI_V) {
-                    self.pasted.append(self.pasteboard.string(forType: .string) ?? "")
+                    let text = self.pasteboard.string(forType: .string) ?? ""
+                    self.pasted.append(text)
+                    if self.acceptsPaste, self.field != nil { self.field = text }
                 }
             },
+            focusedText: { [weak self] in self?.field },
             pollInterval: 1_000_000,
             copyTimeout: 30_000_000,
-            restoreDelay: 1_000_000
+            restoreDelay: 1_000_000,
+            pasteConfirmTimeout: 50_000_000
         )
         return QuickReplaceCoordinator(translationService: service, selection: capture)
     }
@@ -58,6 +69,64 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertTrue(ran)
         XCTAssertEqual(pasted, ["Bonjour\n"])
         XCTAssertTrue(provider.capturedMessages.last?.content.contains("Hello") ?? false)
+    }
+
+    func testFieldThatIgnoresThePasteFailsAndLeavesTranslationOnClipboard() async {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        field = "Hello"
+        acceptsPaste = false
+        let coordinator = makeCoordinator(selection: "Hello")
+
+        do {
+            try await coordinator.run(preset: preset)
+            XCTFail("Expected the unchanged field to fail the replace")
+        } catch {
+            XCTAssertEqual(error as? SelectionCapture.Failure, .pasteNotApplied)
+        }
+        XCTAssertEqual(field, "Hello")
+        XCTAssertEqual(pasteboard.string(forType: .string), "Bonjour")
+        XCTAssertFalse(coordinator.isRunning)
+    }
+
+    func testFieldThatTakesThePasteSucceedsAndRestoresClipboard() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        pasteboard.clearContents()
+        pasteboard.setString("user clipboard", forType: .string)
+        field = "Hello"
+        let coordinator = makeCoordinator(selection: "Hello")
+
+        let ran = try await coordinator.run(preset: preset)
+
+        XCTAssertTrue(ran)
+        XCTAssertEqual(field, "Bonjour")
+        XCTAssertEqual(pasteboard.string(forType: .string), "user clipboard")
+    }
+
+    func testElementThatDoesNotShowTheSelectionIsNotChecked() async throws {
+        for shown in ["", "unrelated text"] {
+            provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+            pasteboard.clearContents()
+            pasteboard.setString("user clipboard", forType: .string)
+            field = shown
+            acceptsPaste = false
+            let coordinator = makeCoordinator(selection: "Hello")
+
+            let ran = try await coordinator.run(preset: preset)
+
+            XCTAssertTrue(ran, "field \"\(shown)\"")
+            XCTAssertEqual(pasteboard.string(forType: .string), "user clipboard", "field \"\(shown)\"")
+        }
+    }
+
+        func testTranslationIdenticalToSelectionIsNotTreatedAsIgnored() async throws {
+        provider.scriptedEvents = [.textDelta("OK"), .stop(reason: .complete)]
+        field = "OK"
+        acceptsPaste = false
+        let coordinator = makeCoordinator(selection: "OK")
+
+        let ran = try await coordinator.run(preset: preset)
+
+        XCTAssertTrue(ran)
     }
 
     func testProviderErrorDoesNotPaste() async {

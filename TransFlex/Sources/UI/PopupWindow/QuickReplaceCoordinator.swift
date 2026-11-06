@@ -75,7 +75,10 @@ final class QuickReplaceCoordinator {
         let translated = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !translated.isEmpty else { throw EmptyResult() }
 
-        try await selection.paste(Self.keepingEdgeWhitespace(of: original, around: translated))
+        try await selection.paste(
+            Self.keepingEdgeWhitespace(of: original, around: translated),
+            replacing: original
+        )
         historyRecorder.record(
             preset: preset, inputText: original, outputText: translated,
             inputTokens: inputTokens, outputTokens: outputTokens,
