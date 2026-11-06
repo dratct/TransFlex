@@ -56,6 +56,9 @@ final class ReplaceHUD {
         if error is QuickReplaceCoordinator.EmptyResult {
             return "The provider returned nothing. Your text was left as it was."
         }
+        if let failure = error as? SelectionCapture.Failure, [.pasteNotApplied, .targetLost].contains(failure) {
+            return ErrorMessageHelper.friendly(error)
+        }
         return ErrorMessageHelper.friendly(error) + " Nothing was changed."
     }
 

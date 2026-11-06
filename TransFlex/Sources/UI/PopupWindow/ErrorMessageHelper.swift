@@ -24,6 +24,10 @@ enum ErrorMessageHelper {
                 return "Allow \(AccessibilityPermission.listedAppName) in System Settings → Privacy & Security → \(AccessibilityPermission.settingsPaneName), then press the shortcut again."
             case .noSelection:
                 return "No text selected. Select some text, then press the shortcut again."
+            case .targetLost:
+                return "The text you selected is no longer selected — you switched apps or the page changed — so nothing was pasted. The translation is on the clipboard: select the text again and press ⌘V."
+            case .pasteNotApplied:
+                return "The app didn’t accept the paste, so the text was not replaced. The translation is on the clipboard — press ⌘V to paste it yourself."
             }
         }
         if error is QuickReplaceCoordinator.EmptyResult {
