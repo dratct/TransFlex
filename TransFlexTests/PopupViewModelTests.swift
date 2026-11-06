@@ -176,7 +176,9 @@ final class PopupViewModelQuickModeTests: XCTestCase {
     }
 
     func testFooterShowsTotalTokensThenDollarCost() async throws {
-        let priced = try XCTUnwrap(presetStore.presets.first { $0.modelID == "gpt-4o" })
+        var priced = try XCTUnwrap(presetStore.presets.first)
+        priced.modelID = "gpt-4o"
+        try presetStore.update(priced)
 
         // gpt-4o: 40 in × $0.0025/1k + 56 out × $0.01/1k = $0.00066
         let footer = try await footerAfterTranslating(with: priced)
