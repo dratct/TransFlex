@@ -84,11 +84,16 @@ if [[ -n "$prerelease_create_flag" ]]; then
 fi
 edit_flags+=("$draft_edit_flag" "$prerelease_edit_flag")
 
+# The website's download button links releases/latest/download/TransFlex-macos.zip,
+# so every Release carries the archive under that fixed name too.
+FIXED_ARTIFACT="$(dirname "$ARTIFACT")/TransFlex-macos.zip"
+cp "$ARTIFACT" "$FIXED_ARTIFACT"
+
 if gh release view "$TAG" >/dev/null 2>&1; then
   echo "==> Updating existing GitHub Release: $TAG"
-  gh release upload "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" --clobber
+  gh release upload "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" "$FIXED_ARTIFACT" --clobber
   gh release edit "$TAG" "${edit_flags[@]}"
 else
   echo "==> Creating GitHub Release: $TAG"
-  gh release create "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" "${create_flags[@]}"
+  gh release create "$TAG" "$ARTIFACT" "$CHECKSUM" "$APPCAST" "$FIXED_ARTIFACT" "${create_flags[@]}"
 fi

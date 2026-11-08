@@ -76,7 +76,8 @@ run_publish_case() {
   local notes="$case_dir/release-notes.md"
   local log="$case_dir/gh.log"
 
-  touch "$artifact" "$checksum" "$appcast"
+  printf 'zip bytes\n' > "$artifact"
+  touch "$checksum" "$appcast"
   printf 'release notes\n' > "$notes"
   : > "$log"
 
@@ -101,9 +102,11 @@ test_release_create_path() {
   log="$(run_publish_case create false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/create/appcast.xml --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/create/release-notes.md --draft --prerelease"
+  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/create/appcast.xml $TEST_TMP/create/TransFlex-macos.zip --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/create/release-notes.md --draft --prerelease"
   assert_file_not_contains "$log" "release upload"
   assert_file_not_contains "$log" "release edit"
+  cmp -s "$TEST_TMP/create/TransFlex-0.2.0-macos-universal-unsigned.zip" "$TEST_TMP/create/TransFlex-macos.zip" \
+    || fail "TransFlex-macos.zip must be a copy of the versioned zip"
 }
 
 test_release_update_path() {
@@ -111,7 +114,7 @@ test_release_update_path() {
   log="$(run_publish_case update true)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/update/appcast.xml --clobber"
+  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/update/appcast.xml $TEST_TMP/update/TransFlex-macos.zip --clobber"
   assert_file_contains "$log" "release edit v0.2.0 --title TransFlex 0.2.0 --notes-file $TEST_TMP/update/release-notes.md --draft --prerelease"
   assert_file_not_contains "$log" "release create"
 }
@@ -121,7 +124,7 @@ test_regular_release_create_path() {
   log="$(run_publish_case stable-create false false false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-create/appcast.xml --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-create/release-notes.md"
+  assert_file_contains "$log" "release create v0.2.0 $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-create/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-create/appcast.xml $TEST_TMP/stable-create/TransFlex-macos.zip --verify-tag --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-create/release-notes.md"
   assert_file_not_contains "$log" "--draft"
   assert_file_not_contains "$log" "--prerelease"
   assert_file_not_contains "$log" "release upload"
@@ -133,7 +136,7 @@ test_regular_release_update_path() {
   log="$(run_publish_case stable-update true false false)"
 
   assert_file_contains "$log" "release view v0.2.0"
-  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-update/appcast.xml --clobber"
+  assert_file_contains "$log" "release upload v0.2.0 $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip $TEST_TMP/stable-update/TransFlex-0.2.0-macos-universal-unsigned.zip.sha256 $TEST_TMP/stable-update/appcast.xml $TEST_TMP/stable-update/TransFlex-macos.zip --clobber"
   assert_file_contains "$log" "release edit v0.2.0 --title TransFlex 0.2.0 --notes-file $TEST_TMP/stable-update/release-notes.md --draft=false --prerelease=false"
   assert_file_not_contains "$log" "release create"
 }
