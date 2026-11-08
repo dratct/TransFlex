@@ -36,6 +36,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             ScreenshotMode.run(to: directory)
             return
         }
+        if let directory = ClipMode.outputDirectory(from: CommandLine.arguments) {
+            ClipMode.run(to: directory)
+            return
+        }
 
         // Register persisted OpenAI-compat endpoints into the shared registry
         // before any popup/translation path can run. Without this, compat

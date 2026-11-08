@@ -131,7 +131,7 @@ enum ScreenshotMode {
         "o3", "text-embedding-3-large", "tts-1", "whisper-1", "dall-e-3",
     ].map { Model(id: $0, name: $0, supportsVision: false, source: .fetched) }
 
-    private static func samplePresetStore() -> PresetStore {
+    static func samplePresetStore() -> PresetStore {
         let file = FileManager.default.temporaryDirectory
             .appendingPathComponent("transflex-screenshots-\(UUID().uuidString).json")
         let store = PresetStore(fileURL: file)
@@ -250,6 +250,6 @@ enum ScreenshotMode {
 }
 
 /// A borderless window that can still be key, so buttons draw as active.
-private final class KeyableWindow: NSWindow {
+final class KeyableWindow: NSWindow {
     override var canBecomeKey: Bool { true }
 }
