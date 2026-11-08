@@ -193,6 +193,18 @@ enum ScreenshotMode {
     /// Hosts the view in an off-screen window, lets SwiftUI lay it out, then
     /// draws the window's content into a bitmap. No screen-recording grant needed.
     private static func capture(_ shot: Shot, appearance: NSAppearance.Name, to url: URL) async -> Bool {
+        guard let rep = await render(shot, appearance: appearance),
+              let data = rep.representation(using: .png, properties: [:]) else { return false }
+        do {
+            try data.write(to: url)
+            return true
+        } catch {
+            logger.error("Screenshot write failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    static func render(_ shot: Shot, appearance: NSAppearance.Name) async -> NSBitmapImageRep? {
         let window = KeyableWindow(
             contentRect: NSRect(origin: NSPoint(x: -10_000, y: -10_000), size: shot.size),
             styleMask: [.borderless],
@@ -210,16 +222,30 @@ enum ScreenshotMode {
         try? await Task.sleep(nanoseconds: 600_000_000)
 
         defer { window.orderOut(nil) }
-        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return false }
+        paintSelectionMaterials(in: host, appearance: window.effectiveAppearance)
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return nil }
         host.cacheDisplay(in: host.bounds, to: rep)
-        guard let data = rep.representation(using: .png, properties: [:]) else { return false }
-        do {
-            try data.write(to: url)
-            return true
-        } catch {
-            logger.error("Screenshot write failed: \(error.localizedDescription, privacy: .public)")
-            return false
+        return rep
+    }
+
+    /// `cacheDisplay` cannot draw a backdrop material and leaves it solid black, so
+    /// the selected row of a sidebar List came out as a black pill. Swap each
+    /// selection material for the flat colour it shows in an unfocused list.
+    private static func paintSelectionMaterials(in view: NSView, appearance: NSAppearance) {
+        for case let material as NSVisualEffectView in view.subviews where material.material == .selection {
+            guard let row = material.superview else { continue }
+            let fill = NSView(frame: material.frame)
+            fill.autoresizingMask = material.autoresizingMask
+            fill.wantsLayer = true
+            appearance.performAsCurrentDrawingAppearance {
+                fill.layer?.backgroundColor = NSColor.unemphasizedSelectedContentBackgroundColor.cgColor
+            }
+            fill.layer?.cornerRadius = 5
+            fill.layer?.cornerCurve = .continuous
+            row.addSubview(fill, positioned: .below, relativeTo: material)
+            material.isHidden = true
         }
+        for subview in view.subviews { paintSelectionMaterials(in: subview, appearance: appearance) }
     }
 }
 
