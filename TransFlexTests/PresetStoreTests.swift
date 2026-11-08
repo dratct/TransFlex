@@ -32,6 +32,16 @@ final class PresetStoreTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: fileURL.path))
     }
 
+    /// `ExtraBodyMerger` drops JSON it cannot parse without a word, so a typo
+    /// here would silently turn off reasoning or thinking settings.
+    func testBuiltinExtraBodyIsAJSONObject() throws {
+        for preset in DefaultPresets.builtins {
+            guard let extraBody = preset.extraBody else { continue }
+            let parsed = try? JSONSerialization.jsonObject(with: Data(extraBody.utf8))
+            XCTAssertNotNil(parsed as? [String: Any], "\(preset.name): extraBody is not a JSON object")
+        }
+    }
+
     @MainActor
     func testSeedingIsIdempotent() throws {
         let store = PresetStore(fileURL: fileURL)

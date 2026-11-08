@@ -20,6 +20,8 @@ final class CostTableTests: XCTestCase {
         }
         let luna = try XCTUnwrap(CostTable.estimate(model: "gpt-6-luna", input: 1000, output: 1000, hadImage: false))
         XCTAssertEqual(luna, 0.0001 + 0.0005, accuracy: 1e-9)
+        let gemini = try XCTUnwrap(CostTable.estimate(model: "gemini-3.8-flash", input: 1000, output: 1000, hadImage: false))
+        XCTAssertEqual(gemini, 0.00075 + 0.00375, accuracy: 1e-9)
     }
 
     func testImageSurchargeApplied() throws {
