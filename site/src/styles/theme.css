@@ -100,7 +100,8 @@
 /* The movie sits on its still and shows only once it plays, so the still stays
    for no JavaScript, reduced motion, and the moment before the first frame.
    line-height 0: an inline still leaves a line box taller than itself, which let
-   the still's top edge show above the movie. */
+   the still's top edge show above the movie. The still is never hidden: its alt
+   is the clip's only description, as the movie is aria-hidden. */
 .clip {
   position: relative;
   line-height: 0;
@@ -117,10 +118,6 @@
 
 .clip.is-playing video {
   opacity: 1;
-}
-
-.clip.is-playing img {
-  visibility: hidden;
 }
 
 /* Facts: five short tiles, title over one line, grouped by a hairline grid rather

@@ -47,26 +47,32 @@ for (const landing of ['index.html', 'vi/index.html']) {
 // for reduced motion), a still image under each for no-JS and reduced motion, and
 // every movie the page names is in the build.
 const attrs = (tag) => new Set(tag.match(/\s[\w-]+(?==|\s|>)/g)?.map((a) => a.trim()));
+const clipSets = {};
 for (const landing of ['index.html', 'vi/index.html']) {
   const html = readFileSync(join(distDir, landing), 'utf8');
   const figures = [...html.matchAll(/<figure[^>]*class="[^"]*\bclip\b[^"]*"[^>]*>([\s\S]*?)<\/figure>/g)];
   const videos = figures.map(([, inner]) => [inner, inner.match(/<video[^>]*>/)?.[0] ?? '']);
   if (!videos.some(([, tag]) => tag.includes('data-clip="hero"'))) errors.push(`no hero clip on ${landing}`);
   if (!videos.some(([, tag]) => tag.includes('data-clip="replace"'))) errors.push(`no Replace Selection clip on ${landing}`);
+  clipSets[landing] = videos.map(([, tag]) => tag.match(/data-clip="([^"]+)"/)?.[1] ?? '?').join(' ');
   for (const [inner, tag] of videos) {
     const name = tag.match(/data-clip="([^"]+)"/)?.[1] ?? '?';
     const has = attrs(tag);
     for (const a of ['muted', 'loop', 'playsinline']) if (!has.has(a)) errors.push(`${landing} clip ${name}: no ${a}`);
+    // The script sets the movie; under reduced motion it never does, so nothing downloads.
+    if (!tag.includes('preload="none"') || /\ssrc=/.test(tag)) errors.push(`${landing} clip ${name}: downloads before the script decides`);
     // Below the fold a clip downloads only once scrolled to.
-    if (name !== 'hero' && !(has.has('data-lazy') && tag.includes('preload="none"'))) {
-      errors.push(`${landing} clip ${name}: loads before it is on screen`);
-    }
+    if (name !== 'hero' && !has.has('data-lazy')) errors.push(`${landing} clip ${name}: loads before it is on screen`);
     if (has.has('autoplay')) errors.push(`${landing} clip ${name}: autoplay plays before reduced motion is checked`);
     if ((inner.match(/<img/g) ?? []).length !== 2) errors.push(`${landing} clip ${name}: needs a light and a dark still`);
     for (const [, src] of tag.matchAll(/data-(?:light|dark)="([^"]+)"/g)) {
       if (!existsSync(join(distDir, src))) errors.push(`${landing} clip ${name}: ${src} is not in dist`);
     }
   }
+}
+
+if (clipSets['index.html'] !== clipSets['vi/index.html']) {
+  errors.push(`clips differ: English has ${clipSets['index.html']}, Vietnamese ${clipSets['vi/index.html']}`);
 }
 
 // The privacy and licence facts are a grid of exactly five tiles, the same on both pages.
