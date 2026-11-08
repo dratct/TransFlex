@@ -160,6 +160,10 @@ light and dark, swapped with the page theme (`Shot.astro`); Hero and Header
 are overridden only to keep the capture's aspect ratio and to give phones a
 language picker.
 
+The hero and Replace row are `--clips` renders of the app's views over a still
+(shown without JavaScript or motion), never `autoplay`, which runs before
+reduced motion is checked. Privacy and licence: five tiles, three over two.
+
 ## Do's and Don'ts
 
 - Do give each state exactly one prominent action, because the eye needs one
