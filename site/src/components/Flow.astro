@@ -6,10 +6,9 @@ interface Props {
   shot: string;
   alt: string;
   reverse?: boolean;
-  darkOnly?: boolean;
 }
 
-const { title, shot, alt, reverse = false, darkOnly = false } = Astro.props;
+const { title, shot, alt, reverse = false } = Astro.props;
 ---
 
 <section class:list={['flow', { reverse }]}>
@@ -17,5 +16,5 @@ const { title, shot, alt, reverse = false, darkOnly = false } = Astro.props;
     <h2>{title}</h2>
     <slot />
   </div>
-  <Shot name={shot} alt={alt} {darkOnly} />
+  <Shot name={shot} alt={alt} />
 </section>
