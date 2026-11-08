@@ -1,6 +1,101 @@
 ---
-title: TransFlex
-description: Dịch nhanh trên macOS.
+title: TransFlex — dịch ở bất kỳ đâu trên Mac
+description: Ứng dụng dịch trên thanh menu macOS. Bấm ⌥T trên bất kỳ app nào và đọc bản dịch hiện dần từ mô hình AI bạn chọn.
+template: splash
+hero:
+  title: Bấm <kbd>⌥</kbd> <kbd>T</kbd>. Đọc bằng tiếng của bạn.
+  tagline: TransFlex là ứng dụng dịch nằm trên thanh menu macOS. Nó mở ngay trên app bạn đang dùng, hiện bản dịch dần từng chữ từ mô hình AI bạn chọn, và đóng bằng Esc.
+  image:
+    dark: ../../../assets/screenshots/popup-done-dark.png
+    light: ../../../assets/screenshots/popup-done-light.png
+    alt: Cửa sổ TransFlex với một câu tiếng Anh bên trái và bản dịch tiếng Pháp bên phải.
+  actions:
+    - text: Tải về cho Mac
+      link: https://github.com/dratct/TransFlex/releases/latest/download/TransFlex-macos.zip
+      icon: download
+      variant: primary
+    - text: Mã nguồn trên GitHub
+      link: https://github.com/dratct/TransFlex
+      icon: github
+      variant: minimal
 ---
 
-TransFlex sắp có mặt ở đây.
+import Download from '../../../components/Download.astro';
+import Flow from '../../../components/Flow.astro';
+
+Miễn phí, mã nguồn mở · macOS 13 trở lên · chip Apple và Intel
+
+<Flow title="Gõ hoặc dán, rồi đọc khi bản dịch hiện dần" shot="popup-streaming" alt="Cửa sổ dịch khi bản dịch đang hiện dần.">
+  Bấm <kbd>⌥</kbd> <kbd>T</kbd> ở bất kỳ app nào. Gõ hoặc dán đoạn chữ, bấm <kbd>⌘</kbd> <kbd>⏎</kbd>, bản dịch hiện dần ngay bên cạnh. Kết quả được copy sẵn; <kbd>Esc</kbd> để đóng.
+</Flow>
+
+<Flow title="Dịch đoạn đang chọn mà không rời app" shot="replace-done" alt="Một khung nhỏ cạnh con trỏ báo đoạn chữ đã được thay." reverse>
+  Gán phím tắt riêng cho một preset. **Translate Selection** hiện bản dịch của đoạn đang chọn trong một cửa sổ nhỏ. **Replace Selection** thay đoạn đang chọn bằng bản dịch ngay chỗ bạn đang viết, và trả clipboard về như cũ.
+</Flow>
+
+<Flow title="Mỗi loại văn bản một preset" shot="settings-presets" alt="Thẻ Presets trong phần cài đặt TransFlex." darkOnly>
+  Preset chọn nhà cung cấp, mô hình và chỉ dẫn dịch. TransFlex có sẵn Natural EN ↔ VI, Technical Doc EN ↔ VI và Any → English; bạn sửa chúng hoặc tự viết preset mới, mỗi preset có phím tắt riêng.
+</Flow>
+
+## Còn có
+
+- **Ảnh** — thả ảnh chụp màn hình hay ảnh chụp vào cửa sổ dịch, dán bằng <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, hoặc chọn file, để dịch chữ trong ảnh. Cần bật *Reads images* trong preset trước.
+- **Lịch sử** — mọi bản dịch nằm trên máy Mac của bạn. Tìm kiếm, xoá từng mục, hoặc xuất ra JSON hay Markdown.
+- **Nhà cung cấp** — OpenAI, Anthropic, Gemini, hoặc bất kỳ máy chủ tương thích OpenAI nào, kể cả máy chủ chạy ngay trên Mac của bạn như Ollama.
+- **Chi phí trên từng kết quả** — cửa sổ dịch hiện số token và chi phí của mỗi lần dịch.
+
+## Key của bạn, nhà cung cấp của bạn
+
+TransFlex không có tài khoản, không có máy chủ riêng. API key nằm trong Keychain của macOS, và văn bản đi thẳng từ Mac của bạn tới nhà cung cấp bạn chọn. Không có telemetry; kết nối duy nhất khác là kiểm tra bản cập nhật.
+
+## Miễn phí và mã nguồn mở
+
+TransFlex miễn phí, giấy phép MIT. Bạn chỉ trả tiền cho nhà cung cấp AI theo mức dùng. Nếu app giúp bạn tiết kiệm thời gian, bạn có thể [ủng hộ việc phát triển](https://paypal.me/truongtc1109).
+
+## Câu hỏi thường gặp
+
+<details>
+<summary>Có cần API key không?</summary>
+
+Có: key của OpenAI, Anthropic hoặc Google Gemini, hoặc địa chỉ một máy chủ tương thích OpenAI. Lần mở đầu tiên app sẽ hướng dẫn bạn thêm key.
+
+</details>
+
+<details>
+<summary>Có dùng được khi không có mạng không?</summary>
+
+Chỉ khi mô hình chạy ngay trên Mac của bạn qua một máy chủ tương thích OpenAI, như Ollama. Các nhà cung cấp đám mây cần kết nối internet.
+
+</details>
+
+<details>
+<summary>Dịch được những ngôn ngữ nào?</summary>
+
+Mọi ngôn ngữ mô hình biết. Preset cho mô hình biết dịch sang tiếng gì, nên muốn thêm cặp ngôn ngữ thì tạo preset mới.
+
+</details>
+
+<details>
+<summary>Giao diện app có tiếng Việt không?</summary>
+
+Chưa. Giao diện app hiện chỉ có tiếng Anh; nội dung dịch thì theo preset bạn chọn.
+
+</details>
+
+<details>
+<summary>Vì sao app xin quyền Accessibility?</summary>
+
+Chỉ Translate Selection và Replace Selection cần quyền này: chúng copy đoạn bạn chọn và dán kết quả trở lại. Cửa sổ dịch dùng được mà không cần quyền.
+
+</details>
+
+<details>
+<summary>Có bản Windows hay Linux không?</summary>
+
+Không. TransFlex là app macOS native; bản đa nền tảng trước đây đã ngừng phát triển.
+
+</details>
+
+## Tải TransFlex
+
+<Download label="Tải về cho Mac" allReleases="Mọi phiên bản" note="Miễn phí · macOS 13 trở lên · chip Apple và Intel · đã được Apple ký và kiểm định" />

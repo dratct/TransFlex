@@ -11,3 +11,88 @@
   --sl-color-accent: #0f7a5f;
   --sl-color-accent-high: #0f7a5f;
 }
+
+:root {
+  --tf-radius: 0.625rem; /* rounded 10 in DESIGN.md: panes and cards */
+  --tf-shadow: 0 1.25rem 3rem -1rem rgb(0 0 0 / 0.35);
+}
+
+/* Content keycaps only: Starlight's search button has its own `kbd`, hidden on phones by a
+   layered rule that an unlayered `display` would override. */
+.sl-markdown-content kbd,
+.hero kbd {
+  display: inline-block;
+  min-width: 1.6em;
+  padding: 0 0.3em;
+  border: 1px solid var(--sl-color-gray-4);
+  border-bottom-width: 3px;
+  border-radius: 0.375rem;
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  font: inherit;
+  font-size: 0.85em;
+  line-height: 1.4;
+  text-align: center;
+}
+
+.hero h1 kbd {
+  font-size: 0.8em;
+  border-color: var(--sl-color-accent);
+  color: var(--sl-color-accent-high);
+}
+
+.shot {
+  margin: 0;
+}
+
+/* No `display` here: Starlight hides the other theme's image with a layered `display: none`,
+   and an unlayered `display` would win over it and show both. */
+.shot img {
+  vertical-align: middle;
+  width: 100%;
+  height: auto;
+  border-radius: var(--tf-radius);
+  box-shadow: var(--tf-shadow);
+}
+
+.flow {
+  display: grid;
+  gap: 1.5rem;
+  align-items: center;
+  margin-block: 4rem;
+}
+
+.flow-text h2 {
+  margin-top: 0;
+}
+
+@media (min-width: 50rem) {
+  .flow {
+    grid-template-columns: 1fr 1.4fr;
+    gap: 3rem;
+  }
+
+  .flow.reverse .flow-text {
+    order: 2;
+  }
+}
+
+.download {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.5rem;
+}
+
+.download-note {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--sl-color-gray-3);
+  font-size: var(--sl-text-sm);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    transition: none !important;
+  }
+}

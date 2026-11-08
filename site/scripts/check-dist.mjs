@@ -35,6 +35,14 @@ for (const file of walk(distDir).filter((p) => p.endsWith('.html'))) {
   }
 }
 
+// The release workflow attaches the archive under this fixed name (scripts/publish-release.sh).
+const downloadHref = 'href="https://github.com/dratct/TransFlex/releases/latest/download/TransFlex-macos.zip"';
+for (const landing of ['index.html', 'vi/index.html']) {
+  if (!readFileSync(join(distDir, landing), 'utf8').includes(downloadHref)) {
+    errors.push(`no download link on ${landing}`);
+  }
+}
+
 if (errors.length > 0) {
   console.error(errors.join('\n'));
   process.exit(1);

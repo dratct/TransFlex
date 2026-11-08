@@ -1,0 +1,21 @@
+---
+import Shot from './Shot.astro';
+
+interface Props {
+  title: string;
+  shot: string;
+  alt: string;
+  reverse?: boolean;
+  darkOnly?: boolean;
+}
+
+const { title, shot, alt, reverse = false, darkOnly = false } = Astro.props;
+---
+
+<section class:list={['flow', { reverse }]}>
+  <div class="flow-text">
+    <h2>{title}</h2>
+    <slot />
+  </div>
+  <Shot name={shot} alt={alt} {darkOnly} />
+</section>

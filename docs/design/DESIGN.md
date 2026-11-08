@@ -150,6 +150,16 @@ Its failures use the banner window, never an Output-only popup with an empty
 sheet. 4xx errors show the provider's reason; 5xx read "<Provider> is having
 trouble. Try again in a moment." Esc always closes, whatever holds focus.
 
+### Website (`site/`)
+
+The site at transflex.aiaz.io is Starlight with the app's tokens
+(`site/src/styles/theme.css`): the same accent, SF Pro first. The landing page
+persuades; Docs and Blog are read. Its one bold move is the shortcut drawn as
+keycaps in the headline. Every picture is a real `--screenshots` capture,
+light and dark, swapped with the page theme (`Shot.astro`); Hero and Header
+are overridden only to keep the capture's aspect ratio and to give phones a
+language picker.
+
 ## Do's and Don'ts
 
 - Do give each state exactly one prominent action, because the eye needs one
@@ -181,3 +191,6 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
   capsule. History's daily total is the window subtitle.
 - Don't open a window behind another one of the app's windows. Settings and
   History come to the front and cascade by 24pt.
+- Don't style an element's `display` from the site's unlayered CSS where
+  Starlight hides it with a layered utility (`light:sl-hidden`, `md:sl-hidden`):
+  the unlayered rule wins and both theme images, or the phone-hidden ⌘K, show.

@@ -1,0 +1,19 @@
+---
+import { LinkButton } from '@astrojs/starlight/components';
+
+interface Props {
+  label: string;
+  allReleases: string;
+  note: string;
+}
+
+const { label, allReleases, note } = Astro.props;
+// The release workflow attaches the archive under this fixed name (scripts/publish-release.sh).
+const href = 'https://github.com/dratct/TransFlex/releases/latest/download/TransFlex-macos.zip';
+---
+
+<div class="download not-content">
+  <LinkButton href={href} icon="download" iconPlacement="start">{label}</LinkButton>
+  <a class="download-all" href="https://github.com/dratct/TransFlex/releases">{allReleases}</a>
+  <p class="download-note">{note}</p>
+</div>
