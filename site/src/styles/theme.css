@@ -96,3 +96,22 @@
     transition: none !important;
   }
 }
+
+/* The movie sits on its still and shows only once it plays, so the still stays
+   for no JavaScript, reduced motion, and the moment before the first frame. */
+.clip {
+  position: relative;
+}
+
+.clip video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--tf-radius);
+  opacity: 0;
+}
+
+.clip.is-playing video {
+  opacity: 1;
+}

@@ -1,10 +1,13 @@
 ---
-// Starlight's Hero with one change: the image keeps its own aspect ratio.
-// The default renders it as a 400×400 square, which crops a wide app window.
+// Starlight's Hero with two changes: the image keeps its own aspect ratio (the
+// default renders a 400×400 square, which crops a wide app window), and a page
+// can show a looping clip there instead (`heroClip` in its frontmatter).
 import { LinkButton } from '@astrojs/starlight/components';
 import { Image } from 'astro:assets';
+import Clip from './Clip.astro';
 
 const { data } = Astro.locals.starlightRoute.entry;
+const clip = data.heroClip;
 const { title = data.title, tagline, image, actions = [] } = data.hero || {};
 const pair = image && 'dark' in image ? image : undefined;
 const imageAttrs = {
@@ -17,8 +20,9 @@ const imageAttrs = {
 ---
 
 <div class="hero">
+  {clip && <Clip name={clip.name} alt={clip.alt} sizes={imageAttrs.sizes} />}
   {
-    pair && (
+    !clip && pair && (
       <figure class="shot">
         <Image src={pair.dark} class="light:sl-hidden" {...imageAttrs} />
         <Image src={pair.light} class="dark:sl-hidden" {...imageAttrs} />
@@ -56,7 +60,7 @@ const imageAttrs = {
     }
 
     /* The headline and Download come first on a phone; the picture follows. */
-    .hero > .shot {
+    .hero > :global(.shot) {
       order: 2;
     }
 
