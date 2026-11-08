@@ -20,8 +20,9 @@ enum ClipMode {
 
     static func run(to directory: URL) {
         NSApp.activate(ignoringOtherApps: true)
-        guard !ClipScript.sampleTranslation.isEmpty else {
-            fail("Clips: SampleText.json is missing from the app bundle; nothing written")
+        let missing = SampleText.missingKeys(in: SampleText.vietnamese)
+        guard missing.isEmpty else {
+            fail("Clips: SampleText.json lacks \(missing.joined(separator: ", ")); nothing written")
         }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         Task { @MainActor in
@@ -187,6 +188,13 @@ enum SampleText {
               let strings = try? JSONDecoder().decode([String: String].self, from: data) else { return [:] }
         return strings
     }()
+
+    /// Every sample `--screenshots` and `--clips` draw.
+    static let keys = ["translation", "historyShort", "historyTomorrow", "historyFixSource"]
+
+    static func missingKeys(in strings: [String: String]) -> [String] {
+        keys.filter { (strings[$0] ?? "").isEmpty }
+    }
 }
 
 // MARK: - Scene

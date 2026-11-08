@@ -22,6 +22,14 @@ enum ScreenshotMode {
 
     static func run(to directory: URL) {
         NSApp.activate(ignoringOtherApps: true)
+        let missing = SampleText.missingKeys(in: SampleText.vietnamese)
+        guard missing.isEmpty else {
+            // Non-zero, so the screenshots workflow fails instead of committing empty samples.
+            let message = "Screenshots: SampleText.json lacks \(missing.joined(separator: ", ")); nothing written"
+            logger.error("\(message, privacy: .public)")
+            print(message)
+            exit(1)
+        }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let shots = makeShots()
         Task { @MainActor in
