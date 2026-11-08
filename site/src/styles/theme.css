@@ -122,3 +122,46 @@
 .clip.is-playing img {
   visibility: hidden;
 }
+
+/* Facts: five short tiles, title over one line, grouped by a hairline grid rather
+   than five floating cards. */
+.facts ul {
+  display: grid;
+  gap: 1px;
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: var(--tf-radius);
+  background: var(--sl-color-hairline);
+  overflow: hidden;
+}
+
+.facts li {
+  margin: 0;
+  padding: 1.25rem;
+  background: var(--sl-color-bg);
+  color: var(--sl-color-gray-2);
+  line-height: 1.5;
+}
+
+.facts strong {
+  color: var(--sl-color-white);
+}
+
+/* Wide: three tiles over two, so no tile is left alone on its row. */
+@media (min-width: 50rem) {
+  .facts ul {
+    grid-template-columns: repeat(6, 1fr);
+  }
+  .facts li {
+    grid-column: span 2;
+  }
+  .facts li:nth-child(n + 4) {
+    grid-column: span 3;
+  }
+}
+
+.facts a {
+  color: var(--sl-color-text-accent);
+}

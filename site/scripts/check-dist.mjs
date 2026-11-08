@@ -69,6 +69,14 @@ for (const landing of ['index.html', 'vi/index.html']) {
   }
 }
 
+// The privacy and licence facts are a grid of exactly five tiles, the same on both pages.
+for (const landing of ['index.html', 'vi/index.html']) {
+  const html = readFileSync(join(distDir, landing), 'utf8');
+  const grid = html.match(/<div[^>]*class="[^"]*\bfacts\b[^"]*"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
+  const tiles = (grid.match(/<li\b/g) ?? []).length;
+  if (tiles !== 5) errors.push(`${landing}: ${tiles} fact tiles, want 5`);
+}
+
 if (errors.length > 0) {
   console.error(errors.join('\n'));
   process.exit(1);
