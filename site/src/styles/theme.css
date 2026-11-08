@@ -1,0 +1,13 @@
+/* Colors from docs/design/DESIGN.md: accent for links and buttons, brand only in the logo. */
+:root {
+  --sl-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  --sl-color-accent-low: #0b3d31;
+  --sl-color-accent: #0e8466;
+  --sl-color-accent-high: #3dd6ac;
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent-low: #c9ede2;
+  --sl-color-accent: #0f7a5f;
+  --sl-color-accent-high: #0f7a5f;
+}
