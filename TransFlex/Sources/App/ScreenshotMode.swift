@@ -43,8 +43,8 @@ enum ScreenshotMode {
 
     private static func makeShots() -> [Shot] {
         let presets = samplePresetStore()
-        let source = "Please review the release notes before Friday and flag anything that blocks the launch."
-        let result = "Merci de relire les notes de version avant vendredi et de signaler tout ce qui bloque le lancement."
+        let source = ClipScript.sampleSource
+        let result = ClipScript.sampleTranslation
         let wide = NSSize(width: 832, height: 520)
         let narrow = NSSize(width: 640, height: 520)
 
@@ -149,11 +149,12 @@ enum ScreenshotMode {
         }
         let now = Date()
         let preset = presets.presets.first?.id ?? UUID()
+        let vietnamese = SampleText.vietnamese
         let samples: [(String, String, UUID, String, Double?, TimeInterval)] = [
-            ("Please review the release notes before Friday.", "Merci de relire les notes de version avant vendredi.",
+            ("Please review the release notes before Friday.", vietnamese["historyShort"] ?? "",
              preset, "gpt-4o", 0.0004, -600),
-            ("See you tomorrow.", "A demain.", preset, "gpt-6-luna", nil, -1_200),
-            ("Cette version corrige le bug de connexion.", "This release fixes the sign-in bug.",
+            ("See you tomorrow.", vietnamese["historyTomorrow"] ?? "", preset, "gpt-6-luna", nil, -1_200),
+            (vietnamese["historyFixSource"] ?? "", "This release fixes the sign-in bug.",
              UUID(), "gpt-4o", 0.0004, -86_400),
         ]
         for (input, output, presetID, model, cost, offset) in samples {
@@ -178,7 +179,7 @@ enum ScreenshotMode {
             store = try HistoryStore(inMemory: true)
             try store.insert(HistoryEntry(
                 presetID: presets.presets.first?.id ?? UUID(), providerID: "openai", modelID: "gpt-4o",
-                inputText: nil, outputText: "Merci de relire les notes de version avant vendredi.",
+                inputText: nil, outputText: SampleText.vietnamese["historyShort"] ?? "",
                 hadImage: true, durationMs: 1_400, tokenCount: 880,
                 inputTokens: 820, outputTokens: 60, costUSD: 0.0027
             ))

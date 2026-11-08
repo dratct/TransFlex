@@ -178,7 +178,7 @@ struct ClipScript {
     }
 }
 
-/// Sample output in Vietnamese for `--clips`. It lives in
+/// Sample output in Vietnamese for `--clips` and `--screenshots`. It lives in
 /// SampleText.json because app source stays English (UserFacingEnglishTextTests).
 enum SampleText {
     static let vietnamese: [String: String] = {
