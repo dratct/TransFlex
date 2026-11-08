@@ -52,10 +52,15 @@ for (const landing of ['index.html', 'vi/index.html']) {
   const figures = [...html.matchAll(/<figure[^>]*class="[^"]*\bclip\b[^"]*"[^>]*>([\s\S]*?)<\/figure>/g)];
   const videos = figures.map(([, inner]) => [inner, inner.match(/<video[^>]*>/)?.[0] ?? '']);
   if (!videos.some(([, tag]) => tag.includes('data-clip="hero"'))) errors.push(`no hero clip on ${landing}`);
+  if (!videos.some(([, tag]) => tag.includes('data-clip="replace"'))) errors.push(`no Replace Selection clip on ${landing}`);
   for (const [inner, tag] of videos) {
     const name = tag.match(/data-clip="([^"]+)"/)?.[1] ?? '?';
     const has = attrs(tag);
     for (const a of ['muted', 'loop', 'playsinline']) if (!has.has(a)) errors.push(`${landing} clip ${name}: no ${a}`);
+    // Below the fold a clip downloads only once scrolled to.
+    if (name !== 'hero' && !(has.has('data-lazy') && tag.includes('preload="none"'))) {
+      errors.push(`${landing} clip ${name}: loads before it is on screen`);
+    }
     if (has.has('autoplay')) errors.push(`${landing} clip ${name}: autoplay plays before reduced motion is checked`);
     if ((inner.match(/<img/g) ?? []).length !== 2) errors.push(`${landing} clip ${name}: needs a light and a dark still`);
     for (const [, src] of tag.matchAll(/data-(?:light|dark)="([^"]+)"/g)) {
