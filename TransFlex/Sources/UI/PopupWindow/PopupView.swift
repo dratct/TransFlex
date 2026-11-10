@@ -236,6 +236,8 @@ struct PopupView: View {
             ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor))
             ImageDropZone { image, source, fileSizeBytes in
                 viewModel.attachImage(image, source: source, fileSizeBytes: fileSizeBytes)
+            } onRejected: { reason in
+                viewModel.reportAttachRejected(reason)
             } content: {
                 if let imageInput = viewModel.attachedImage {
                     ImagePreviewCard(
@@ -248,7 +250,12 @@ struct PopupView: View {
                     sourceEditor
                 }
             }
-            if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
+            if let attachError = viewModel.attachError {
+                Text(attachError)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
                 imageTip
             }
         }
@@ -385,7 +392,7 @@ struct PopupView: View {
     private var hiddenShortcuts: some View {
         ZStack {
             if !viewModel.isOutputOnly {
-                hiddenButton { viewModel.pasteImageFromClipboard() }
+                hiddenButton { viewModel.pasteImageAndTranslate() }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
                 hiddenButton { viewModel.chooseImageFile() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])

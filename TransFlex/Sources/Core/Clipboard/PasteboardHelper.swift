@@ -35,6 +35,14 @@ public final class PasteboardHelper {
         return objects.first
     }
 
+    /// The image a copied file points at, as Finder's Copy puts only the URL.
+    public func readFileURLImage() -> NSImage? {
+        guard let urls = pasteboard.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
+              let url = urls.first
+        else { return nil }
+        return NSImage(contentsOf: url)
+    }
+
     @discardableResult
     public func writeImage(_ image: NSImage) -> Bool {
         pasteboard.clearContents()

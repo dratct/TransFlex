@@ -7,11 +7,15 @@ final class PopupViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "PopupViewModel")
 
     @Published var state: PopupState = .idle
-    @Published var inputText: String = ""
+    @Published var inputText: String = "" {
+        didSet { if inputText != oldValue, !inputText.isEmpty { attachError = nil } }
+    }
     @Published var selectedPresetID: UUID?
     @Published var costEstimate: String?
     @Published var showToast: Bool = false
     @Published var attachedImage: ImageInput?
+    /// Why the last attach failed, shown under the Original column.
+    @Published var attachError: String?
     @Published var showCostConfirmation: Bool = false
     /// Counter the view observes via `.onChange` to drive `@FocusState`. The
     /// value itself is meaningless — only the change matters, so a monotonic
@@ -27,6 +31,9 @@ final class PopupViewModel: ObservableObject {
     @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
+    /// What the user had typed before an image replaced it; removing the
+    /// image brings it back.
+    private var textBeforeImage: String?
     /// The Popup's Draft and result, set aside while a selection shortcut
     /// uses the panel; `openPopup(keepingDraft:)` hands it back.
     private var popupSession: PopupSession?
@@ -99,6 +106,8 @@ final class PopupViewModel: ObservableObject {
 
     func removeAttachedImage() {
         attachedImage = nil
+        if inputText.isEmpty, let typed = textBeforeImage { inputText = typed }
+        textBeforeImage = nil
     }
 
     /// Opens NSOpenPanel asynchronously and attaches the picked image. The
@@ -108,7 +117,7 @@ final class PopupViewModel: ObservableObject {
         Task { @MainActor in
             guard let picked = await ImageFilePicker.choose() else { return }
             if let errorMessage = picked.errorMessage {
-                state = .error(message: errorMessage, partial: nil)
+                attachError = errorMessage
                 return
             }
             guard let image = picked.image else { return }
@@ -120,38 +129,52 @@ final class PopupViewModel: ObservableObject {
     /// needing the TextEditor to have focus (which `.onPasteCommand` requires).
     /// Falls back to file-URL on the pasteboard for cases like "Copy" from
     /// Finder which only exposes the URL, not raw image data.
-    func pasteImageFromClipboard() {
-        if let image = NSImage(pasteboard: .general) {
-            handleAttach(image: image, source: .paste, fileSizeBytes: nil)
-            return
-        }
-        let pb = NSPasteboard.general
-        if let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           let url = urls.first,
-           let image = NSImage(contentsOf: url) {
-            handleAttach(image: image, source: .paste, fileSizeBytes: nil)
-            return
-        }
-        state = .error(message: "Clipboard does not contain an image.", partial: nil)
+    /// ⌘⇧V: attach the clipboard image and translate it at once.
+    func pasteImageAndTranslate() {
+        guard pasteImageFromClipboard() else { return }
+        translate()
     }
 
-    private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) {
+    /// Reads the injected pasteboard, not the TextEditor's paste, so the
+    /// shortcut works whatever holds focus. A Finder copy carries only the
+    /// file URL, which is read as a fallback.
+    @discardableResult
+    func pasteImageFromClipboard() -> Bool {
+        guard let image = pasteboard.readImage() ?? pasteboard.readFileURLImage() else {
+            attachError = "Clipboard does not contain an image."
+            return false
+        }
+        return handleAttach(image: image, source: .paste, fileSizeBytes: nil)
+    }
+
+    /// A failure leaves the text, the result and the state as they were and
+    /// says why under the Original column.
+    @discardableResult
+    private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) -> Bool {
         if let preset = selectedPreset, !preset.supportsVision {
-            state = .error(message: Self.visionOffMessage, partial: nil)
-            return
+            attachError = Self.visionOffMessage
+            return false
         }
         switch ImageTranslationCoordinator.validateAndWrap(image, source: source, fileSizeBytes: fileSizeBytes) {
         case .ok(let input):
+            attachError = nil
             attachedImage = input
-            // Image-only mode: any text typed before attach is hidden by
-            // the preview anyway, so clear it to avoid sending phantom
-            // accompanying text the user can no longer see/edit.
+            // Image-only mode: the preview hides the editor, so the typed
+            // text is set aside rather than sent unseen.
+            if !inputText.isEmpty { textBeforeImage = inputText }
             inputText = ""
+            return true
         case .tooLarge(let reason):
-            state = .error(message: reason, partial: nil)
+            attachError = reason
         case .unsupportedFormat:
-            state = .error(message: "Unsupported image format.", partial: nil)
+            attachError = "Unsupported image format."
         }
+        return false
+    }
+
+    /// Shown when a file drop is refused before it is read.
+    func reportAttachRejected(_ reason: String) {
+        attachError = reason
     }
 
     /// Providers that cannot work without an API key. OpenAI-compatible
@@ -159,7 +182,7 @@ final class PopupViewModel: ObservableObject {
     static let keyedProviderIDs = ["openai", "anthropic", "gemini"]
 
     static let visionOffMessage =
-        "This preset can't read images. Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
+        "This preset can't read images. Turn on Reads images in Settings → Presets, or switch to a preset that has it on."
 
     var canAttachImages: Bool { selectedPreset?.supportsVision ?? false }
 
@@ -322,6 +345,8 @@ final class PopupViewModel: ObservableObject {
         accessibilityPoll = nil
         inputText = ""
         attachedImage = nil
+        attachError = nil
+        textBeforeImage = nil
         pendingImageTranslation = nil
         showCostConfirmation = false
         showToast = false

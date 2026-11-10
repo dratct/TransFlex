@@ -52,7 +52,7 @@ final class ProviderRegistryTests: XCTestCase {
         let message = TranslationError.visionUnsupported(providerID: "openai", modelID: "gpt-4o").localizedDescription
         XCTAssertTrue(message.contains("OpenAI"), message)
         XCTAssertFalse(message.contains("openai"), message)
-        XCTAssertTrue(message.contains("Supports Vision"), message)
+        XCTAssertTrue(message.contains("Reads images"), message)
     }
 
     func testRegisterRejectsNonHTTPScheme() {

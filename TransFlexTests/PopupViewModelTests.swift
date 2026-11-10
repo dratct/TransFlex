@@ -321,23 +321,104 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.inputText, "selected text")
     }
 
-    func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
-        let vm = makeViewModel()
-        let preset = try XCTUnwrap(vm.selectedPreset)
-        XCTAssertFalse(preset.supportsVision)
-        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+    // MARK: Attaching images
+
+    private static func makeImage() -> NSImage {
+        NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
             NSColor.red.setFill()
             rect.fill()
             return true
         }
+    }
 
-        vm.attachImage(image, source: .paste)
+    private func imageViewModel(vision: Bool, clipboardImage: Bool) throws -> PopupViewModel {
+        if vision {
+            var preset = try XCTUnwrap(presetStore.presets.first)
+            preset.supportsVision = true
+            try presetStore.update(preset)
+        }
+        let board = NSPasteboard(name: .init("PopupVMImage-\(UUID().uuidString)"))
+        board.clearContents()
+        if clipboardImage { board.writeObjects([Self.makeImage()]) }
+        let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
+        return PopupViewModel(translationService: service, presetStore: presetStore, pasteboard: PasteboardHelper(pasteboard: board))
+    }
+
+    func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
+        let vm = try imageViewModel(vision: false, clipboardImage: false)
+        XCTAssertFalse(try XCTUnwrap(vm.selectedPreset).supportsVision)
+
+        vm.attachImage(Self.makeImage(), source: .paste)
 
         XCTAssertNil(vm.attachedImage)
-        guard case .error(let message, nil) = vm.state else {
-            return XCTFail("expected an error, got \(vm.state)")
+        XCTAssertEqual(vm.state, .idle, "a failed attach is a note, not an error state")
+        let message = try XCTUnwrap(vm.attachError)
+        XCTAssertTrue(message.contains("Reads images"), message)
+    }
+
+    func testPasteImageTranslatesAtOnce() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = try imageViewModel(vision: true, clipboardImage: true)
+
+        vm.pasteImageAndTranslate()
+
+        XCTAssertNotNil(vm.attachedImage)
+        for _ in 0..<200 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
         }
-        XCTAssertTrue(message.contains("Supports Vision"), message)
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertNotNil(provider.capturedImage, "the pasted image was sent")
+    }
+
+    func testPasteImageWhenPresetCannotReadImagesDoesNotSend() async throws {
+        let vm = try imageViewModel(vision: false, clipboardImage: true)
+
+        vm.pasteImageAndTranslate()
+        try await Task.sleep(nanoseconds: 20_000_000)
+
+        XCTAssertNil(provider.capturedConfig, "nothing is sent")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertNotNil(vm.attachError)
+    }
+
+    func testAttachFailureKeepsStateAndText() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.inputText = "typed"
+        vm.state = .done(result: "Bonjour")
+
+        vm.pasteImageFromClipboard()
+
+        XCTAssertEqual(vm.attachError, "Clipboard does not contain an image.")
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertEqual(vm.inputText, "typed")
+    }
+
+    func testTypingClearsAttachError() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.pasteImageFromClipboard()
+        XCTAssertNotNil(vm.attachError)
+
+        vm.inputText = "a"
+
+        XCTAssertNil(vm.attachError)
+    }
+
+    func testRemovingImageRestoresTypedText() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.inputText = "typed"
+
+        vm.attachImage(Self.makeImage(), source: .paste)
+        XCTAssertNotNil(vm.attachedImage)
+        XCTAssertEqual(vm.inputText, "")
+        vm.removeAttachedImage()
+
+        XCTAssertEqual(vm.inputText, "typed")
+    }
+
+    func testDropZoneRejectsOversizedFileWithReason() {
+        XCTAssertEqual(ImageDropRules.rejection(forFileSize: ImageTranslationCoordinator.maxFileSizeBytes + 1),
+                       "Image is too large (max 20 MB).")
+        XCTAssertNil(ImageDropRules.rejection(forFileSize: 1_024))
     }
 
     // MARK: Stop
