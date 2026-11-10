@@ -30,4 +30,8 @@ final class ErrorMessageHelperTests: XCTestCase {
             "Anthropic is having trouble. Try again in a moment."
         )
     }
+
+    func testNetworkErrorSaysTheProviderWasNotReached() {
+        XCTAssertEqual(ErrorMessageHelper.friendly(LLMError.network("timed out")), "Couldn't reach the provider.")
+    }
 }

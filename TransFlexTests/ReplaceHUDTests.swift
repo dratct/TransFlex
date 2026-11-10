@@ -116,4 +116,78 @@ final class ReplaceHUDTests: XCTestCase {
         hud.hideBanner()
         XCTAssertTrue(hud.isShowing)
     }
+
+    // MARK: - Translate Selection banner (C-8)
+
+    private final class ManualScheduler {
+        var pending: [(seconds: TimeInterval, work: () -> Void, cancelled: Bool)] = []
+        var live: [Int] { pending.indices.filter { !pending[$0].cancelled } }
+
+        var scheduler: ReplaceHUD.Scheduler {
+            { [unowned self] seconds, work in
+                pending.append((seconds, work, false))
+                let index = pending.count - 1
+                return { [unowned self] in pending[index].cancelled = true }
+            }
+        }
+
+        func fireLive() { for i in live { pending[i].work() } }
+    }
+
+    private let nothingSelected = SelectionBanner(title: "Nothing selected", message: "Select some text first.", canRetry: false)
+
+    func testSelectionBannerDoesNotHoldEscape() {
+        let hold = RecordingEscapeHold()
+        let hud = ReplaceHUD(escapeHold: hold)
+        addTeardownBlock { hud.hide() }
+        hud.showSelectionFailed(nothingSelected) {}
+        XCTAssertTrue(hud.isShowing)
+        XCTAssertEqual(hud.model.phase, .selectionFailed(nothingSelected))
+        XCTAssertEqual(hold.log, [])
+    }
+
+    func testSelectionBannerHidesAfterTimeout() {
+        let clock = ManualScheduler()
+        let hud = ReplaceHUD(escapeHold: RecordingEscapeHold(), scheduler: clock.scheduler)
+        addTeardownBlock { hud.hide() }
+        hud.showSelectionFailed(nothingSelected) {}
+        XCTAssertEqual(clock.live.map { clock.pending[$0].seconds }, [ReplaceHUD.selectionBannerDuration])
+        clock.fireLive()
+        XCTAssertFalse(hud.isShowing)
+    }
+
+    func testHoverPausesAndExitRestartsTimer() {
+        let clock = ManualScheduler()
+        let hud = ReplaceHUD(escapeHold: RecordingEscapeHold(), scheduler: clock.scheduler)
+        addTeardownBlock { hud.hide() }
+        hud.showSelectionFailed(nothingSelected) {}
+        hud.model.onHover(true)
+        XCTAssertTrue(clock.live.isEmpty, "the pointer on the banner stops the countdown")
+        hud.model.onHover(false)
+        XCTAssertEqual(clock.live.map { clock.pending[$0].seconds }, [ReplaceHUD.selectionBannerDuration])
+        clock.fireLive()
+        XCTAssertFalse(hud.isShowing)
+    }
+
+    func testSelectionRetryHidesAndRetries() {
+        let hud = ReplaceHUD(escapeHold: RecordingEscapeHold())
+        addTeardownBlock { hud.hide() }
+        var retried = false
+        hud.showSelectionFailed(SelectionBanner(title: "You're offline", message: "x", canRetry: true)) { retried = true }
+        hud.model.onRetry()
+        XCTAssertTrue(retried)
+        XCTAssertFalse(hud.isShowing)
+    }
+
+    func testStaleHoverDoesNotHideANewRun() {
+        let clock = ManualScheduler()
+        let hud = ReplaceHUD(escapeHold: RecordingEscapeHold(), scheduler: clock.scheduler)
+        addTeardownBlock { hud.hide() }
+        hud.showSelectionFailed(nothingSelected) {}
+        hud.showTranslating(presetName: "EN") {}
+        hud.model.onHover(false)
+        clock.fireLive()
+        XCTAssertEqual(hud.model.phase, .translating(presetName: "EN"))
+        XCTAssertTrue(hud.isShowing)
+    }
 }

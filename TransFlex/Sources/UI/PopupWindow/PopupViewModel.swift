@@ -88,6 +88,10 @@ final class PopupViewModel: ObservableObject {
         self.selectedPresetID = presetStore.presets.first?.id
     }
 
+    /// A stream failed before any text in output-only mode with an error that
+    /// has a banner; the controller hides the popup and shows the banner.
+    var onOutputOnlyFailure: ((Error) -> Void)?
+
     /// General setting "Copy result automatically"; off unless set.
     static let copyResultAutomaticallyKey = "copyResultAutomatically"
 
@@ -296,6 +300,11 @@ final class PopupViewModel: ObservableObject {
                     self.state = .keyRejected(providerID: preset.providerID)
                 } else {
                     self.state = .error(message: message, partial: accumulated.isEmpty ? nil : accumulated)
+                }
+                if self.isOutputOnly, accumulated.isEmpty, case .banner = SelectionFailure.route(
+                    for: error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
+                ) {
+                    self.onOutputOnlyFailure?(error)
                 }
             }
         }

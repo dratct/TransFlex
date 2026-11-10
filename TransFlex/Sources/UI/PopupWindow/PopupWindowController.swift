@@ -16,6 +16,7 @@ public final class PopupWindowController {
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
     private let selection = SelectionCapture()
+    private let copySelectionOverride: (@MainActor () async throws -> String)?
     private let replaceCoordinator: QuickReplaceCoordinator
     let replaceHUD: ReplaceHUD
     private var cancellables: Set<AnyCancellable> = []
@@ -30,16 +31,19 @@ public final class PopupWindowController {
         presetStore: PresetStore,
         historyStore: HistoryStore? = nil,
         escapeHold: EscapeHold? = nil,
-        hud: ReplaceHUD? = nil
+        hud: ReplaceHUD? = nil,
+        copySelection: (@MainActor () async throws -> String)? = nil,
+        translationService: TranslationService? = nil
     ) {
         let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
+        self.copySelectionOverride = copySelection
         self.replaceHUD = hud ?? ReplaceHUD(escapeHold: escapeHold)
         let frame = NSRect(origin: .zero, size: Self.defaultSize)
         self.panel = PopupPanel(contentRect: frame)
 
         let keychain = KeychainStore()
-        let service = TranslationService(
+        let service = translationService ?? TranslationService(
             registry: ProviderRegistry.shared,
             apiKey: { preset in
                 if preset.providerID.hasPrefix("openai-compatible:") {
@@ -67,6 +71,10 @@ public final class PopupWindowController {
             self?.autoDismisser?.stop()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
+        vm.onOutputOnlyFailure = { [weak self, weak vm] error in
+            guard let vm, let presetID = vm.selectedPresetID else { return }
+            self?.showSelectionFailure(error, presetID: presetID, copiedText: vm.inputText)
+        }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
         self.panel.onOpenSettings = { [weak vm] in
             AppCommands.openSettings(tab: vm.map { PopupViewModel.settingsTab(for: $0.state) } ?? .general)
@@ -100,15 +108,51 @@ public final class PopupWindowController {
     /// The panel is hidden first: while it is key, ⌘C would hit the popup.
     public func quickTranslate(presetID: UUID) {
         hide()
+        replaceHUD.hideBanner()
         Task { @MainActor in
             do {
-                let text = try await selection.copySelection()
-                viewModel?.startQuickTranslation(text: text, presetID: presetID)
-                showOutputOnly(source: text)
+                let text = try await copySelectedText()
+                translateSelection(text, presetID: presetID)
             } catch {
-                showQuickError(error, presetID: presetID)
+                showSelectionFailure(error, presetID: presetID, copiedText: nil)
             }
         }
+    }
+
+    private func translateSelection(_ text: String, presetID: UUID) {
+        viewModel?.startQuickTranslation(text: text, presetID: presetID)
+        showOutputOnly(source: text)
+    }
+
+    /// A banner for what the user can fix elsewhere or retry; the popup only
+    /// for cards that need it. Retry reuses the copied text: by then the
+    /// selection may be gone.
+    private func showSelectionFailure(_ error: Error, presetID: UUID, copiedText: String?) {
+        let providerID = presetStore.presets.first { $0.id == presetID }?.providerID ?? ""
+        switch SelectionFailure.route(for: error, providerName: ProviderRegistry.shared.displayName(for: providerID)) {
+        case .ignore:
+            return
+        case .popupCard:
+            showQuickError(error, presetID: presetID)
+        case .banner where replaceHUD.isRunning:
+            // The HUD shows a Replace run; the banner would take its place.
+            showQuickError(error, presetID: presetID)
+        case .banner(let banner):
+            hide()
+            replaceHUD.showSelectionFailed(banner) { [weak self] in
+                guard let self else { return }
+                if let copiedText {
+                    translateSelection(copiedText, presetID: presetID)
+                } else {
+                    quickTranslate(presetID: presetID)
+                }
+            }
+        }
+    }
+
+    private func copySelectedText() async throws -> String {
+        if let copySelectionOverride { return try await copySelectionOverride() }
+        return try await selection.copySelection()
     }
 
     /// Translates the frontmost app's selection and pastes the result over it.

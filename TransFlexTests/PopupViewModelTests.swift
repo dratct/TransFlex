@@ -666,6 +666,41 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertFalse(vm.isOutputOnly)
         XCTAssertFalse(notified)
     }
+
+    // MARK: Translate Selection banner (C-8)
+
+    func testStreamErrorBeforeTextCallsOutputOnlyFailure() async throws {
+        provider.scriptedError = LLMError.offline
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        for _ in 0..<100 where reported == nil { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertEqual(reported as? LLMError, .offline)
+    }
+
+    func testStreamErrorAfterTextKeepsPopup() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.scriptedError = LLMError.offline
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        for _ in 0..<100 where !(vm.state.isError) { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertNil(reported, "text already shown stays in the popup with Retry")
+        if case .error(_, let partial) = vm.state { XCTAssertEqual(partial, "Bon") } else { XCTFail("\(vm.state)") }
+    }
+
+    func testRejectedKeyInStreamKeepsPopupCard() async throws {
+        provider.scriptedError = LLMError.auth
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        for _ in 0..<100 where !(vm.state.isKeyRejected) { try await Task.sleep(nanoseconds: 5_000_000) }
+        XCTAssertNil(reported)
+        XCTAssertTrue(vm.state.isKeyRejected)
+    }
 }
 
 @MainActor
@@ -801,4 +836,9 @@ final class PopupEscapeTests: XCTestCase {
         XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: true), .close)
         XCTAssertEqual(PopupEscape.action(for: .accessibilityRequired(granted: false), isOutputOnly: true), .close)
     }
+}
+
+private extension PopupState {
+    var isError: Bool { if case .error = self { return true }; return false }
+    var isKeyRejected: Bool { if case .keyRejected = self { return true }; return false }
 }
