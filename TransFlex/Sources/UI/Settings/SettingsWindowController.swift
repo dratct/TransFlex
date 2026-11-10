@@ -8,13 +8,16 @@ final class SettingsWindowController {
     private let presetStore: PresetStore
     private let updater: AppUpdater?
     private let tabState = SettingsTabState()
-    private var autoDismisser: WindowAutoDismisser?
     private var windowDelegate: SettingsWindowDelegate?
 
     init(presetStore: PresetStore, updater: AppUpdater? = nil) {
         self.presetStore = presetStore
         self.updater = updater
     }
+
+    var isVisible: Bool { window?.isVisible ?? false }
+
+    func close() { window?.close() }
 
     func show(tab: SettingsTab = .general) {
         tabState.selected = tab
@@ -29,13 +32,6 @@ final class SettingsWindowController {
         // On first show AppKit gives the tab bar initial focus and draws its
         // ring at a stale position beside the first tab.
         DispatchQueue.main.async { win.makeFirstResponder(nil) }
-
-        if autoDismisser == nil {
-            autoDismisser = WindowAutoDismisser(window: win, label: "settings") {
-                DockVisibilityController.shared.hideDockIcon(for: .settings)
-            }
-        }
-        autoDismisser?.start()
     }
 
     private func makeWindow() -> NSWindow {
@@ -47,8 +43,7 @@ final class SettingsWindowController {
         win.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         win.isReleasedWhenClosed = false
         win.setContentSize(NSSize(width: 720, height: 520))
-        let delegate = SettingsWindowDelegate { [weak self] in
-            self?.autoDismisser?.stop()
+        let delegate = SettingsWindowDelegate {
             DockVisibilityController.shared.hideDockIcon(for: .settings)
             AppCommands.keepPopupAfterWindowClose()
         }
