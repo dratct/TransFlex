@@ -5,7 +5,7 @@ import SwiftUI
 /// changes (docs/design/mockups.html › Welcome and menu bar).
 @MainActor
 struct WelcomeView: View {
-    static let size = NSSize(width: 720, height: 460)
+    static let size = NSSize(width: 800, height: 500)
 
     let onClose: (Bool) -> Void
 
@@ -133,6 +133,8 @@ private struct WelcomeProgress: View {
 private struct WelcomeTextButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(.secondary)
             .padding(.horizontal, Spacing.s)
             .padding(.vertical, 5)
