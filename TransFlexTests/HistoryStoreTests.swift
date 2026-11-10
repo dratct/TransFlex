@@ -78,6 +78,14 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(rest.last?.inputText, "note 0")
     }
 
+    func testInsertPostsChange() throws {
+        let posted = expectation(forNotification: .historyDidChange, object: store)
+
+        try store.insert(entry("Hello", output: "Xin chào", at: 1_700_000_000))
+
+        wait(for: [posted], timeout: 1)
+    }
+
     func testPruneDeletesOnlyEntriesOlderThanCutoff() throws {
         let old = entry("old", output: "cũ", at: 1_700_000_000)
         let recent = entry("new", output: "mới", at: 1_700_100_000)

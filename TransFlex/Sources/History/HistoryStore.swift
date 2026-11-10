@@ -45,6 +45,7 @@ final class HistoryStore: ObservableObject {
         try dbQueue.write { db in
             try entry.insert(db)
         }
+        NotificationCenter.default.post(name: .historyDidChange, object: self)
     }
 
     func fetchPage(offset: Int, limit: Int = 50) throws -> [HistoryEntry] {
@@ -111,4 +112,9 @@ final class HistoryStore: ObservableObject {
             .map { "\"\($0)\"*" }
             .joined(separator: " ")
     }
+}
+
+extension Notification.Name {
+    /// Posted by a `HistoryStore` after it saves a new entry; the object is the store.
+    static let historyDidChange = Notification.Name("io.aiaz.transflex.historyDidChange")
 }

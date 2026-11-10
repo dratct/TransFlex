@@ -44,6 +44,9 @@ struct HistorySplitView: View {
                 Text("Every saved translation is removed. This can’t be undone.")
             }
             .onAppear(perform: loadFirstPage)
+            .onReceive(NotificationCenter.default.publisher(for: .historyDidChange, object: store)) { _ in
+                reloadAfterInsert()
+            }
     }
 
     @ViewBuilder
@@ -126,6 +129,18 @@ struct HistorySplitView: View {
         selectedEntryID = entries.first?.id
         // ↑/↓ browse at once; otherwise the first key view is a detail button.
         listFocused = true
+        refreshToday()
+    }
+
+    /// Puts a new entry at the top of the list, and of the results when it matches the
+    /// search being typed, without losing the selection or how far the list was scrolled.
+    private func reloadAfterInsert() {
+        entries = (try? store.fetchPage(offset: 0, limit: max(pageSize, entries.count + 1))) ?? entries
+        hasLoaded = true
+        if let shown = searchResults {
+            searchResults = (try? store.search(query: searchQuery, limit: max(searchPageSize, shown.count + 1))) ?? shown
+        }
+        if selectedEntryID == nil { selectedEntryID = (searchResults ?? entries).first?.id }
         refreshToday()
     }
 
