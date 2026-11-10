@@ -56,11 +56,6 @@ final class PopupWindowControllerTests: XCTestCase {
         hud.showFailed(message: "Boom.", onOpenPopup: {}, onRetry: {})
     }
 
-    private func waitUntil(_ condition: () -> Bool, _ message: String = "") async throws {
-        for _ in 0..<200 where !condition() { try await Task.sleep(nanoseconds: 5_000_000) }
-        XCTAssertTrue(condition(), message)
-    }
-
     private var selectionBanner: SelectionBanner? {
         if case .selectionFailed(let banner) = hud.model.phase, hud.isShowing { return banner }
         return nil
