@@ -27,11 +27,16 @@ could not be copied from a browser into the Add Key sheet.
   result. CONTEXT.md's Output-only popup entry is narrowed to match. This
   banner hides itself after about four seconds (paused while the pointer is
   on it) and does not hold Esc: it is frequent and carries nothing to keep.
+  While a Replace Selection is still running, a Translate Selection failure
+  goes to the Output-only popup instead, so the banner does not replace the
+  Replace capsule and its Cancel.
 - Esc stays held system-wide after a Replace Selection failure while its
   banner is showing, and closes the banner; the banner never hides by itself.
   This extends 2026-11-01-replace-selection-holds-escape. Opening any
   TransFlex window hides the banner and releases Esc first, so the window's
-  own Esc keeps working.
+  own Esc keeps working. A Replace failure that happens while the Popup is
+  open shows in the Popup, with no banner and no Esc hold, so the first Esc
+  still reaches the Popup.
 - Settings no longer auto-dismisses; it behaves like History.
 - A key combination belongs to one action; a duplicate recording is refused.
 - Saving the first provider key, when it is for Anthropic or Gemini, moves
