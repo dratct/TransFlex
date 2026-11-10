@@ -12,14 +12,15 @@ TEST_SIGNING := $(if $(wildcard Config/Local.xcconfig),,CODE_SIGN_IDENTITY=- COD
 # Team-signed builds keep their designated requirement, so macOS keeps honouring the
 # privacy grants across rebuilds; only ad-hoc builds need them reset.
 BUILD_PERMISSIONS_RESET := $(if $(wildcard Config/Local.xcconfig),,permissions-reset)
-# A Debug keychain of its own (see Config/Local.xcconfig.example), unlocked with a password kept
-# next to Local.xcconfig, so a rebuilt app reads its keys without a login-keychain prompt.
+# A Debug keychain of its own (see Config/Local.xcconfig.example) with a password kept next to
+# Local.xcconfig: the app unlocks it with that file, and open-debug hands its items to each new
+# build, so a rebuilt app reads its keys without a prompt.
 DEV_KEYCHAIN := $(HOME)/Library/Keychains/transflex-dev.keychain-db
 DEV_KEYCHAIN_PASSWORD := Config/Local.keychain-password
 # An App Store Connect team API key for provisioning without an Xcode account.
 ASC_AUTH := $(if $(ASC_KEY_PATH),-authenticationKeyPath "$(ASC_KEY_PATH)" -authenticationKeyID "$(ASC_KEY_ID)" -authenticationKeyIssuerID "$(ASC_ISSUER_ID)")
 
-.PHONY: dev-keychain _dev-keychain-unlock permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
+.PHONY: dev-keychain _dev-keychain-stamp permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
 
 build: kill-debug _build $(BUILD_PERMISSIONS_RESET) open-debug
 	@echo "==> launched $(DEBUG_APP)"
@@ -52,7 +53,7 @@ _build-fast:
 release:
 	@scripts/build.sh --release
 
-test: _dev-keychain-unlock
+test:
 	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test
 
 # Once per machine: creates the Debug build's own keychain and its password file. Running it
@@ -63,12 +64,18 @@ dev-keychain:
 	@if [ -f "$(DEV_KEYCHAIN)" ]; then echo "==> $(DEV_KEYCHAIN) already exists, kept"; \
 	else security create-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" && \
 	security set-keychain-settings "$(DEV_KEYCHAIN)" && echo "==> created $(DEV_KEYCHAIN)"; fi
-	@echo "==> Config/Local.xcconfig needs: TRANSFLEX_KEYCHAIN_PATH[config=Debug] = \$$(HOME)/Library/Keychains/transflex-dev.keychain-db"
+	@echo "==> Config/Local.xcconfig needs:"
+	@echo "    TRANSFLEX_KEYCHAIN_PATH[config=Debug] = \$$(HOME)/Library/Keychains/transflex-dev.keychain-db"
+	@echo "    TRANSFLEX_KEYCHAIN_PASSWORD_FILE[config=Debug] = \$$(SRCROOT)/Config/Local.keychain-password"
 
-# A restart locks the keychain; unlock it before the app or the tests read keys.
-_dev-keychain-unlock:
-	@if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ] && [ -f "$(DEV_KEYCHAIN)" ]; then \
-	security unlock-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)"; fi
+# macOS ties each item the app saves to the code hash of the build that saved it, so a rebuild
+# would ask for the keychain password. Hand every Debug item to the build about to open.
+_dev-keychain-stamp:
+	@if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ] && [ -f "$(DEV_KEYCHAIN)" ] && [ -d "$(DEBUG_APP)" ]; then \
+	cdhash=$$(codesign -dvvv "$(DEBUG_APP)" 2>&1 | sed -n 's/^CDHash=//p'); \
+	security set-generic-password-partition-list -s $(DEBUG_BUNDLE_ID) -S "cdhash:$$cdhash" \
+	-k "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" >/dev/null 2>&1 \
+	&& echo "==> Debug keys handed to build $$cdhash" || true; fi
 
 # Once per machine after creating Config/Local.xcconfig: creates the development certificate,
 # registers this Mac and fetches the team profile. Later builds reuse the cached profile.
@@ -88,8 +95,9 @@ kill-all: kill-debug kill-release
 
 open: open-debug
 
-open-debug: _dev-keychain-unlock
+open-debug:
 	@if [ ! -d "$(DEBUG_APP)" ]; then echo "==> Debug app not found, building..."; scripts/build.sh --no-gen; fi
+	@$(MAKE) --no-print-directory _dev-keychain-stamp
 	@open $(DEBUG_APP)
 	@echo "==> opened $(DEBUG_APP)"
 
