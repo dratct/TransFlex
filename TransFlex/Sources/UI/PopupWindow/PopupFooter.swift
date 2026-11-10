@@ -6,8 +6,8 @@ enum PopupFooter {
     enum Action: Hashable {
         case showText, translate, stop, new, translateAgain, copyAndClose
         case backToText, openSystemSettings, done
-        /// Strip actions after a partial result.
-        case continueFromPartial, retry
+        /// Strip action after a partial result.
+        case retry
 
         var title: String {
             switch self {
@@ -20,7 +20,6 @@ enum PopupFooter {
             case .backToText: return "Back to text"
             case .openSystemSettings: return "Open System Settings"
             case .done: return "Done"
-            case .continueFromPartial: return "Continue"
             case .retry: return "Retry"
             }
         }
@@ -32,7 +31,6 @@ enum PopupFooter {
             case .stop, .backToText: return ["esc"]
             case .new: return ["⌘", "N"]
             case .copyAndClose: return ["⌘", "C"]
-            case .continueFromPartial: return ["⌘", "P"]
             }
         }
     }
@@ -72,7 +70,6 @@ enum PopupFooter {
 
     /// The `Notice` strip's buttons after a partial result.
     static let partialStripItems = [
-        Item(action: .continueFromPartial, prominence: .secondary),
         Item(action: .retry, prominence: .primary),
     ]
 }

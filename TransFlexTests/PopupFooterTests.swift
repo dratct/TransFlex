@@ -35,6 +35,15 @@ final class PopupFooterTests: XCTestCase {
         )
     }
 
+    func testPartialStripOffersRetryOnly() {
+        XCTAssertEqual(PopupFooter.partialStripItems.map(\.action), [.retry])
+    }
+
+    func testStoppedResultFooterMatchesDone() {
+        XCTAssertEqual(actions(.done(result: "a", stopped: true)), actions(.done(result: "a")))
+        XCTAssertEqual(actions(.done(result: "a", stopped: true), outputOnly: true), actions(.done(result: "a"), outputOnly: true))
+    }
+
     func testNarrowDoneDropsTheTranslateAgainButton() {
         XCTAssertEqual(actions(.done(result: "a"), wide: false), [.new, .copyAndClose])
     }

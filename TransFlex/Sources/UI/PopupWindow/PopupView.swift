@@ -363,7 +363,6 @@ struct PopupView: View {
         case .translate, .retry, .openSystemSettings, .done:
             return KeyboardShortcut(.return, modifiers: .command)
         case .new: return KeyboardShortcut("n", modifiers: .command)
-        case .continueFromPartial: return KeyboardShortcut("p", modifiers: .command)
         case .stop, .backToText, .copyAndClose, .translateAgain: return nil
         }
     }
@@ -372,17 +371,12 @@ struct PopupView: View {
         switch action {
         case .showText: viewModel.showInput()
         case .translate, .translateAgain, .retry: viewModel.translate()
-        case .stop: viewModel.cancelStream()
+        case .stop: viewModel.stop()
         case .new: viewModel.startNewTranslation()
         case .copyAndClose: viewModel.copyResultIfShown()
         case .backToText: viewModel.dismissError()
         case .openSystemSettings: viewModel.openAccessibilitySettings()
         case .done: viewModel.onDismissRequest?()
-        case .continueFromPartial:
-            if case .error(_, let partial?) = viewModel.state {
-                viewModel.inputText = partial
-                viewModel.translate()
-            }
         }
     }
 

@@ -283,6 +283,16 @@ final class PopupViewModel: ObservableObject {
         inputFocusRequest &+= 1
     }
 
+    /// Stop button and Esc while streaming.
+    func stop() {
+        guard case .streaming(let received) = state else { return cancelStream() }
+        cancelStream()
+        guard !received.isEmpty else { return }
+        state = .done(result: received, stopped: true)
+        // Usage arrives with the last event, so a stopped run has no cost to show.
+        costEstimate = nil
+    }
+
     func cancelStream() {
         activeTask?.cancel()
         activeTask = nil
@@ -452,7 +462,7 @@ final class PopupViewModel: ObservableObject {
     /// otherwise, so the key goes on to the editor's own copy.
     @discardableResult
     func copyResultIfShown() -> Bool {
-        guard case .done(let result) = state else { return false }
+        guard case .done(let result, _) = state else { return false }
         copyToClipboard(result)
         return true
     }
@@ -528,7 +538,8 @@ final class PopupViewModel: ObservableObject {
 enum PopupState: Equatable {
     case idle
     case streaming(accumulated: String)
-    case done(result: String)
+    /// `stopped`: the user pressed Stop; the text is what arrived before it.
+    case done(result: String, stopped: Bool = false)
     case error(message: String, partial: String?)
     /// A selection shortcut needs the Accessibility grant; `granted` flips
     /// once the user enables it in System Settings.

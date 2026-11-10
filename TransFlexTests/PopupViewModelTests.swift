@@ -340,6 +340,49 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertTrue(message.contains("Supports Vision"), message)
     }
 
+    // MARK: Stop
+
+    private func streamingViewModel(received: String, history: HistoryStore? = nil) async throws -> PopupViewModel {
+        provider.scriptedEvents = received.isEmpty ? [] : [.textDelta(received)]
+        provider.holdsOpen = true
+        let vm = makeViewModel()
+        vm.historyStore = history
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .streaming(accumulated: received) {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .streaming(accumulated: received))
+        return vm
+    }
+
+    func testStopKeepsReceivedTextAsStoppedResult() async throws {
+        let vm = try await streamingViewModel(received: "Bonj")
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .done(result: "Bonj", stopped: true))
+        XCTAssertTrue(vm.copyResultIfShown(), "Copy works on a stopped result")
+    }
+
+    func testStopBeforeAnyTextReturnsToIdle() async throws {
+        let vm = try await streamingViewModel(received: "")
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .idle)
+    }
+
+    func testStoppedResultIsNotRecorded() async throws {
+        let history = try HistoryStore(inMemory: true)
+        let vm = try await streamingViewModel(received: "Bonj", history: history)
+
+        vm.stop()
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertEqual(try history.allEntries().count, 0, "History keeps only finished translations")
+    }
+
     // MARK: Copy result automatically
 
     private func translateToDone(autoCopy: Bool?) async throws -> NSPasteboard {
@@ -544,6 +587,10 @@ final class PopupHideClockTests: XCTestCase {
 }
 
 final class PopupEscapeTests: XCTestCase {
+    func testStoppedResultClosesLikeDone() {
+        XCTAssertEqual(PopupEscape.action(for: .done(result: "x", stopped: true), isOutputOnly: false), .close)
+    }
+
     func testStreamingStops() {
         XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: "x"), isOutputOnly: false), .stop)
         XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: ""), isOutputOnly: true), .stop)

@@ -192,7 +192,7 @@ public final class PopupWindowController {
     private func handleEscape() {
         guard let vm = viewModel else { return hide() }
         switch PopupEscape.action(for: vm.state, isOutputOnly: vm.isOutputOnly) {
-        case .stop: vm.cancelStream()
+        case .stop: vm.stop()
         case .backToText: vm.dismissError()
         case .close: hide()
         }
