@@ -31,8 +31,8 @@ Measured on macOS 27.2 with the app running in the desktop session:
   `Config/Local.keychain-password` (git-ignored, mode 600). The keychain never
   joins the user's search list and never times out.
 - `KeychainBackend.fileAt` scopes every query to that keychain. When it is
-  locked, the app unlocks it with the password file; a missing or wrong file
-  throws, and nothing falls back to the login keychain.
+  locked, the app unlocks it with the password file; no file named, a missing file or a wrong
+  password throws, and nothing falls back to the login keychain.
 - `make open-debug`, which every build target ends with, sets every Debug
   item's partition to the build about to open.
 - Release clears both settings in `Config/Signing.xcconfig`, and

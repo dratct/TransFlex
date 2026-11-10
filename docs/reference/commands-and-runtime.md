@@ -11,7 +11,8 @@
 | `MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release` | Build Release app with CI-style bundle versions. |
 | `scripts/verify-release-app.sh --app DerivedData/Build/Products/Release/TransFlex.app` | Verify release app minimum macOS, bundle versions, and architectures. |
 | `VERSION=0.2.0 SIGNING_LABEL=unsigned scripts/package-release.sh DerivedData/Build/Products/Release/TransFlex.app` | Create release zip and checksum under `dist/`. |
-| `make test` | Run unit tests (team-signed when `Config/Local.xcconfig` exists, otherwise ad-hoc). |
+| `make test` | Run unit tests (signed as `Config/Local.xcconfig` sets when it exists, otherwise ad-hoc). |
+| `make dev-keychain` | Once per Mac without a team: the Debug build's own keychain and its password file. |
 | `make provision` | Once per Mac with `Config/Local.xcconfig`: development certificate, device registration, profile. |
 | `make run` | Kill `TransFlexDev`, build fast, open Debug app. |
 | `make xcode` | Generate and open the Xcode project. |
