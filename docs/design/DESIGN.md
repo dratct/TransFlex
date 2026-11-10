@@ -122,16 +122,16 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `TranslationColumns` | Airy columns (chosen 2026-11-01): no inner box. **Original** (15pt, `on-surface-variant`) on the leading side, **Translation** (17pt, `on-surface`) on the trailing side, 28pt side margins, 26pt gutter, divided by the `ColumnSeam`. Labels are 11pt semibold uppercase with 0.06em tracking: `faint` for Original, `accent-text` for Translation. Under 720pt wide they stack with a horizontal `ColumnSeam`. |
 | `ColumnSeam` | The rule between the columns (chosen 2026-11-02): 1pt `hair-2`, fading out at both ends, broken at its midpoint by a 10pt ✦ spark in `accent-text`. While a translation streams the spark hides and the rule fills with `accent-text` from the start, led by a 7pt dot whose glow breathes (1.2 s); a short light runs down the filled part every 1.4 s, and down the whole rule before the first token arrives, so the seam never stands still. The fill follows translation length over source length in characters, eased toward 92% (`0.92 × (1 − e^(−1.6 × ratio))`) so it keeps moving when the translation outgrows its source and never reads as finished. Done, Stop or an error returns it to the neutral rule with the spark. Under Reduce Motion there is no running light, no breathing and no easing: only the fill and the dot. Stacked, it runs left to right. |
 | `FooterAction` | Title + `KeyHint`. Exactly one `.borderedProminent` per state (the primary); secondary actions `.bordered`; "New" is borderless. System button styles only, at `.controlSize(.large)` in the popup footer, `Notice` actions and sheet action rows: macOS 26 and later draw these as capsules (grey fill for secondary, accent fill for primary), macOS 13–15 as classic push buttons. Buttons inside `SettingsRow` stay at the regular size. No custom `ButtonStyle`, no `.glass`/`.glassProminent`, no `.tint`: the accent comes from the AccentColor asset. |
-| `KeyHint` | 10.5pt keycaps in capsules on a faint fill (white at 22% inside the primary button). Read by VoiceOver as part of the button label ("Command Return"). |
-| `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Continue/Retry; **banner window** — a 440pt standalone panel near the top of the screen for Translate Selection failures (nothing selected, offline, permission granted). |
+| `KeyHint` | 10.5pt keycaps in capsules on a faint fill (white at 22% inside the primary button). One keycap per key (`⌘`, `⇧`, `V`), so VoiceOver reads it as part of the button label ("Command Shift V"). |
+| `Notice` | Errors and requests never render inside the `TranslationColumns`. Three forms: **card** — replaces the sheet when there is nothing to show (missing key, permission): 52pt tinted symbol tile, 15pt title, one line of body, actions; **strip** — docked between the sheet and the footer when a partial result exists: symbol, title, the provider's reason, Retry; **banner window** — a 440pt standalone panel for failures that happen while the user is in another app (see Translate Selection and `ReplaceCapsule`), with a ✕ to close. |
 | `HistoryEntry` | Sidebar row: the text, then "preset · time · cost" in `.secondary` (the model when the preset was deleted). Detail: "Today at 4:29 PM" with Delete… and Translate again on the same row, then "model · duration · tokens · cost" at full width so the cost is never truncated; below, the entry as `TranslationColumns` with 24pt side margins to line up with the header (stacked under 720pt; Translation alone when there is no original text, an image without a caption), each column with a copy icon beside its label that shows a checkmark for 1.5 s. The window opens at 1000×560 so the columns start side by side; a sidebar dragged past 280pt stacks them. Delete… asks first; Translate again opens the full popup with the entry's text and preset; it is disabled with the reason as its tooltip when the preset was deleted or now uses another model ("This preset now uses gpt-5.2, not gpt-4o."), and hidden for any translation that had an image, caption or not. The window subtitle holds "Today: $X · N unpriced", hidden when nothing today has a price. |
 | `EmptyState` | Tinted symbol tile, 15pt title, one line that says how to fill it. History empty / no results, model picker no match. |
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
 | `ReadsImages` | A per-preset switch the user sets. The app does not detect image support: OpenAI and Gemini model lists do not report it (checked 2026-11-01). |
 | `SettingsRow` | Label (+ optional one-line explanation in `faint`) leading, one control trailing; rows grouped in a `content` box with hairline separators. |
-| `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed. When the focused field did not change after ⌘V, or the copied-from field could not be brought back before pasting, the banner says the translation is on the clipboard instead. Never takes key focus. |
+| `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed, offers Open Popup and Retry, and stays until closed: it holds Esc system-wide so Esc closes it from any app. When the popup is already showing, the failure goes into the popup as a card instead. When the focused field did not change after ⌘V, or the copied-from field could not be brought back before pasting, the banner says the translation is on the clipboard instead. Never takes key focus. |
 | `ProviderLogo` | The provider's own mark from `Assets.xcassets` (`ProviderOpenAI`, `ProviderAnthropic`, `ProviderGemini`) in a 28pt tile; OpenAI-compatible endpoints use initials. Used in Providers, the Provider row of a preset, and Welcome. |
-| `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". |
+| `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". With Settings › General › "Copy result automatically" on, a finished translation is already on the clipboard; off (the default), only Copy puts it there. |
 | `Welcome` | 800×500, two panes. Left, 290pt: the brand panel, `brand-deep` from the top to just past the text (white text reads at 7.7:1), lightening to `brand` at the bottom, behind a small drawing of the popup; it never changes between steps. Right: "Step N of 4" (12pt, `.tertiary`), a 20pt semibold title and a `.secondary` lead, the step, then a footer with 4 progress bars on the leading side and the buttons trailing. Steps: Intro (Get Started) → Provider (Back · Skip for now · Continue) → Shortcut (Back · Continue) → Done (Back · Open Translator). Back and Skip are text buttons; the primary is the one filled button and takes Return. Continue on Provider saves the key first and stays with the error if it cannot. Shortcut and Done show the shortcut as 22pt keycaps. |
 | `ProviderSetupForm` | Shared by Welcome's Provider step and the popup's First-run sheet: three cards (`ProviderLogo`, name, one line in `.tertiary`; the chosen one ringed 2pt in the accent), "<Provider> API key" and a secure field, the error in red under it, then "Where do I get a key? ↗" to the provider's key page. Changing card clears the typed key. First-run: "Skip for now" · **Save & Start**. |
 
@@ -143,12 +143,37 @@ Popup states (footer primary in **bold**):
 | streaming | Original dimmed and read-only; Translation streams with a caret; the `ColumnSeam` fills | Stop esc (not prominent) |
 | done | both halves; Original editable | New ⌘N · Translate again ⌘↩ · **Copy & Close ⌘C** |
 | error, nothing received | replaced by a `Notice` card | Back to text esc + the card's own actions |
-| error, partial received | partial text marked "incomplete" + `Notice` strip | New ⌘N · strip: Continue ⌘P · **Retry ⌘↩** |
+| stopped | the text that arrived before Stop, Translation labelled "stopped"; not saved to History | as done |
+| error, partial received | partial text marked "incomplete" + `Notice` strip | New ⌘N · strip: **Retry ⌘↩** |
 
 The Output-only popup shows only the Translation half and adds Show text ⌘I.
 Its failures use the banner window, never an Output-only popup with an empty
 sheet. 4xx errors show the provider's reason; 5xx read "<Provider> is having
 trouble. Try again in a moment." Esc always closes, whatever holds focus.
+
+VoiceOver hears what only changes on screen: "Translation ready", "Translation
+stopped", "Couldn’t translate. <reason>", "Copied", and for Replace "Replaced
+with the translation" or "Couldn’t replace the selection". The typing dots
+read as "Translating".
+
+## Translate Selection
+
+A failure the user can fix where they are goes to a banner window near the
+top of the pointer's screen: "Nothing selected" (no Retry), "You're offline",
+"Couldn't reach <Provider>", "<Provider> refused the request" with its reason,
+"<Provider> is having trouble". It hides itself 4 s after it shows unless the
+pointer rests on it, and never holds Esc, so Esc stays with the app in front.
+A failure that needs the popup — the Accessibility permission, a rejected key,
+a broken preset — opens the popup with its card instead.
+
+## History
+
+Search matches every typed word as the start of a word in the text or its
+translation ("transl" finds "translation"); punctuation separates words, so
+"example.com" finds "example.com". Results load 100 at a time as the list
+scrolls. A translation finished while History is open appears at the top, and
+the subtitle total updates. Export… asks for the format in a sheet, then opens
+the save panel on the History window; a failed write shows an alert.
 
 ## Do's and Don'ts
 
@@ -181,3 +206,5 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
   capsule. History's daily total is the window subtitle.
 - Don't open a window behind another one of the app's windows. Settings and
   History come to the front and cascade by 24pt.
+- Don't hide Settings or History when another app comes forward. They float
+  only while TransFlex is active and stay open behind the other app.

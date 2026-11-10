@@ -381,7 +381,7 @@ figcaption b { color: var(--label); font-weight: 600; }
           <div class="half out"><div class="lang">Translation <span class="muted">· incomplete</span></div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và</div></div>
         </div>
         <div class="strip"><svg class="i ic"><use href="#warn"/></svg><div class="tx"><b>OpenAI stopped the translation</b><span>Unsupported value: ‘temperature’ does not support 0.3 with this model.</span></div>
-          <span class="btn">Continue<span class="kc"><i>⌘</i><i>P</i></span></span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div>
+          <span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div>
         <div class="p-foot"><span class="sp"></span><span class="btn ghost">New<span class="kc"><i>⌘</i><i>N</i></span></span></div>
       </div>
       <figcaption><b>Failed midway.</b> The partial text stays in the sheet, marked incomplete; the error is a strip outside it with the provider’s own reason. Server errors (5xx) read “OpenAI is having trouble. Try again in a moment.”</figcaption>
@@ -389,16 +389,15 @@ figcaption b { color: var(--label); font-weight: 600; }
 
     <figure>
       <div class="banner-win"><div class="badge acc"><svg class="i l"><use href="#cursor"/></svg></div>
-        <div class="body"><h4>Nothing selected</h4><p>Select text in any app, then press <span class="kc"><i>⌘</i><i>⇧</i><i>D</i></span> again.</p>
-          <div class="row"><span class="btn">Open Popup</span><span class="btn primary">OK<span class="kc"><i>esc</i></span></span></div></div></div>
-      <figcaption><b>Translate Selection, nothing selected.</b> A small banner window near the top of the screen — no translation chrome, no empty sheet.</figcaption>
+        <div class="body"><h4>Nothing selected</h4><p>Select some text first.</p></div><span class="muted" aria-label="Close">✕</span></div>
+      <figcaption><b>Translate Selection, nothing selected.</b> A small banner window near the top of the screen — no translation chrome, no empty sheet. It hides itself after 4 s unless the pointer rests on it, and leaves Esc to the app in front.</figcaption>
     </figure>
 
     <figure>
       <div class="banner-win"><div class="badge err"><svg class="i l"><use href="#wifi"/></svg></div>
-        <div class="body"><h4>You’re offline</h4><p>“Release notes before Friday…” will translate when you retry.</p>
-          <div class="row"><span class="btn">Close<span class="kc"><i>esc</i></span></span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div>
-      <figcaption><b>Translate Selection, failed.</b> Same banner, with the first words of the selection so the user knows which one failed.</figcaption>
+        <div class="body"><h4>You’re offline</h4><p>Check your connection and try again.</p>
+          <div class="row"><span class="btn primary">Retry</span></div></div><span class="muted" aria-label="Close">✕</span></div>
+      <figcaption><b>Translate Selection, failed.</b> Same banner and timing, with Retry when trying again can help.</figcaption>
     </figure>
 
     <figure>
@@ -449,7 +448,7 @@ figcaption b { color: var(--label); font-weight: 600; }
   <div class="stage">
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so <span class="sel">please hold the release until Friday</span> and keep the team posted.</div><span class="hud" style="left:150px;top:96px"><span class="spin"></span>Translating with Natural EN ↔ VI<span class="x">esc to cancel</span></span></div><figcaption><b>Translating.</b> Appears beside the pointer within 100 ms of the shortcut. Clicking it also cancels.</figcaption></figure>
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so vui lòng hoãn phát hành đến thứ Sáu and keep the team posted.</div><span class="hud" style="left:270px;top:96px"><svg class="i s" style="color:var(--ok)"><use href="#check"/></svg>Replaced · ⌘Z to undo</span></div><figcaption><b>Replaced.</b> Fades after 1.5 s. The other app’s text cannot be highlighted, so the capsule is the only confirmation.</figcaption></figure>
-    <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
+    <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed and stays until closed; Esc closes it from any app. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
   </div>
 </section>
 
