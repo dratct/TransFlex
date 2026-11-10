@@ -11,6 +11,8 @@ struct HistorySplitView: View {
     @State private var searchQuery = ""
     @State private var searchResults: [HistoryEntry]?
     @State private var showExportSheet = false
+    @State private var pendingExport: ExportFormat?
+    @State private var exportError: String?
     @State private var showDeleteConfirm = false
     @State private var todayLabel: String?
     @State private var searchFocusRequest = 0
@@ -35,8 +37,16 @@ struct HistorySplitView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showExportSheet) {
-                HistoryExportSheet(store: store, isPresented: $showExportSheet)
+            .sheet(isPresented: $showExportSheet, onDismiss: startPendingExport) {
+                HistoryExportSheet(isPresented: $showExportSheet) { pendingExport = $0 }
+            }
+            .alert(
+                "Couldn’t export history",
+                isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+            ) {
+                Button("OK") {}
+            } message: {
+                Text(exportError ?? "")
             }
             .confirmationDialog("Delete all history?", isPresented: $showDeleteConfirm) {
                 Button("Delete All", role: .destructive) { deleteAll() }
@@ -169,6 +179,25 @@ struct HistorySplitView: View {
               let next = try? store.search(query: searchQuery, offset: shown.count, limit: searchPageSize),
               !next.isEmpty else { return }
         searchResults?.append(contentsOf: next)
+    }
+
+    /// Runs after the format sheet has gone, so the save panel attaches to the History
+    /// window rather than to the closing sheet.
+    private func startPendingExport() {
+        guard let format = pendingExport else { return }
+        pendingExport = nil
+        do {
+            let all = try store.allEntries()
+            guard let window = NSApp.keyWindow else {
+                exportError = "The History window wasn’t in front. Try Export… again."
+                return
+            }
+            HistoryExporter.export(entries: all, as: format, from: window) { error in
+                exportError = error.localizedDescription
+            }
+        } catch {
+            exportError = error.localizedDescription
+        }
     }
 
     private func deleteEntry(_ id: UUID) {
