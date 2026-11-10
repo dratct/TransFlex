@@ -81,6 +81,18 @@ final class AppIdentityTests: XCTestCase {
         XCTAssertEqual(identity.keychainBackend, .fileAt(path: "/Users/me/Library/Keychains/transflex-dev.keychain-db"))
     }
 
+    func testKeychainPasswordFileGoesWithPath() {
+        let identity = AppIdentity(infoDictionary: [
+            "TransFlexKeychainPath": "/tmp/dev.keychain-db",
+            "TransFlexKeychainPasswordFile": "/repo/Config/Local.keychain-password",
+        ])
+        XCTAssertEqual(identity.keychainBackend, .fileAt(path: "/tmp/dev.keychain-db", passwordFile: "/repo/Config/Local.keychain-password"))
+        XCTAssertEqual(AppIdentity(infoDictionary: [
+            "TransFlexKeychainPath": "/tmp/dev.keychain-db",
+            "TransFlexKeychainPasswordFile": "$(TRANSFLEX_KEYCHAIN_PASSWORD_FILE)",
+        ]).keychainBackend, .fileAt(path: "/tmp/dev.keychain-db"))
+    }
+
     func testKeychainPathWinsOverDataProtection() {
         let identity = AppIdentity(infoDictionary: [
             "TransFlexKeychainBackend": "dataProtection",

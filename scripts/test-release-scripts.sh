@@ -249,6 +249,17 @@ test_verify_rejects_app_with_a_dev_keychain_path() {
   assert_file_contains "$verify_err" "must not set TransFlexKeychainPath"
 }
 
+test_verify_rejects_app_with_a_dev_keychain_password_file() {
+  local app="$TEST_TMP/verify-keychain-password/TransFlex.app"
+  make_fixture_app "$app" file
+  /usr/libexec/PlistBuddy -c "Add :TransFlexKeychainPasswordFile string /repo/Config/Local.keychain-password" \
+    "$app/Contents/Info.plist" >/dev/null
+  codesign -f -s - "$app" 2>/dev/null
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "a release carrying a dev keychain password file should be rejected"
+  assert_file_contains "$verify_err" "must not set TransFlexKeychainPasswordFile"
+}
+
 test_verify_rejects_unsigned_app_with_access_group() {
   local case_dir="$TEST_TMP/verify-unsigned-group"
   mkdir -p "$case_dir"
@@ -502,6 +513,7 @@ test_verify_accepts_unsigned_app_on_file_keychain
 test_verify_rejects_unsigned_app_on_data_protection_keychain
 test_verify_rejects_unsigned_app_with_access_group
 test_verify_rejects_app_with_a_dev_keychain_path
+test_verify_rejects_app_with_a_dev_keychain_password_file
 test_verify_rejects_signed_app_without_profile
 test_verify_rejects_signed_app_with_get_task_allow
 test_verify_accepts_unsigned_app_with_get_task_allow

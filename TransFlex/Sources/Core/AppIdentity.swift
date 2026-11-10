@@ -39,7 +39,10 @@ struct AppIdentity {
             in: infoDictionary
         ) ?? bundleIdentifier
         if let keychainPath = Self.value(for: "TransFlexKeychainPath", in: infoDictionary) {
-            self.keychainBackend = .fileAt(path: keychainPath)
+            self.keychainBackend = .fileAt(
+                path: keychainPath,
+                passwordFile: Self.value(for: "TransFlexKeychainPasswordFile", in: infoDictionary)
+            )
         } else {
             self.keychainBackend = Self.value(
                 for: "TransFlexKeychainBackend",

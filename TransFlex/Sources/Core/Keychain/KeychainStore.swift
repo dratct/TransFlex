@@ -134,7 +134,7 @@ public final class KeychainStore {
     /// for an add, a one-entry search list otherwise, so nothing reads or lands in the
     /// login keychain. A keychain file that cannot be opened throws instead.
     private func scoped(_ query: [String: Any], adding: Bool = false) throws -> [String: Any] {
-        guard case .fileAt(let path) = backend else { return query }
+        guard case .fileAt(let path, let passwordFile) = backend else { return query }
         var keychain: SecKeychain?
         var status = SecKeychainOpen(path, &keychain)
         guard status == errSecSuccess, let keychain else { throw KeychainError(status: status) }
@@ -142,6 +142,14 @@ public final class KeychainStore {
         var keychainStatus: SecKeychainStatus = 0
         status = SecKeychainGetStatus(keychain, &keychainStatus)
         guard status == errSecSuccess else { throw KeychainError(status: status) }
+        // Unlocking is per login session, so the app unlocks the keychain itself rather than
+        // relying on a shell that may run in another session (ssh).
+        if keychainStatus & SecKeychainStatus(kSecUnlockStateStatus) == 0, let passwordFile {
+            guard let password = try? String(contentsOfFile: passwordFile, encoding: .utf8)
+                .trimmingCharacters(in: .newlines) else { throw KeychainError(status: errSecAuthFailed) }
+            status = SecKeychainUnlock(keychain, UInt32(password.utf8.count), password, true)
+            guard status == errSecSuccess else { throw KeychainError(status: status) }
+        }
         var scoped = query
         if adding {
             scoped[kSecUseKeychain as String] = keychain

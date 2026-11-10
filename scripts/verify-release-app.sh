@@ -151,9 +151,11 @@ keychain_backend="$(plist_value TransFlexKeychainBackend 2>/dev/null || true)"
 entitlements="$(codesign -d --entitlements - --xml "$APP_PATH" 2>/dev/null || true)"
 
 # A keychain path points at one developer's own Debug keychain; a shipped app must never carry it.
-if [[ -n "$(plist_value TransFlexKeychainPath 2>/dev/null || true)" ]]; then
-  fail "release must not set TransFlexKeychainPath; it is for local Debug builds only."
-fi
+for dev_key in TransFlexKeychainPath TransFlexKeychainPasswordFile; do
+  if [[ -n "$(plist_value "$dev_key" 2>/dev/null || true)" ]]; then
+    fail "release must not set $dev_key; it is for local Debug builds only."
+  fi
+done
 
 if [[ -n "$SIGNED_TEAM" ]]; then
   sparkle_framework="$APP_PATH/Contents/Frameworks/Sparkle.framework"

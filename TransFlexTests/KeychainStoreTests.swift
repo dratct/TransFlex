@@ -132,9 +132,12 @@ final class KeychainStoreFileAtTests: XCTestCase {
         let status = SecKeychainCreate(path, UInt32(password.utf8.count), password, false, nil, &keychain)
         XCTAssertEqual(status, errSecSuccess)
         service = "io.aiaz.transflex.tests.fileAt.\(UUID().uuidString)"
+        // A locked keychain must fail, not put a password dialog on the screen.
+        SecKeychainSetUserInteractionAllowed(false)
     }
 
     override func tearDownWithError() throws {
+        SecKeychainSetUserInteractionAllowed(true)
         try? KeychainStore(service: service, backend: .file).deleteAll()
         if let keychain { SecKeychainDelete(keychain) }
         try? FileManager.default.removeItem(at: directory)
@@ -163,6 +166,38 @@ final class KeychainStoreFileAtTests: XCTestCase {
         try store.deleteAll()
         XCTAssertNil(try store.get("one"))
         XCTAssertNil(try store.get("two"))
+    }
+
+    private func lockedStore(passwordFile contents: String?) throws -> KeychainStore {
+        try store.set("sk-secret", forKey: "provider.openai.apiKey")
+        let passwordFile = directory.appendingPathComponent("keychain-password").path
+        if let contents { try contents.write(toFile: passwordFile, atomically: true, encoding: .utf8) }
+        XCTAssertEqual(SecKeychainLock(keychain), errSecSuccess)
+        return KeychainStore(service: service, backend: .fileAt(path: path, passwordFile: passwordFile))
+    }
+
+    private func isUnlocked() -> Bool {
+        var status: SecKeychainStatus = 0
+        SecKeychainGetStatus(keychain, &status)
+        return status & SecKeychainStatus(kSecUnlockStateStatus) != 0
+    }
+
+    func testLockedKeychainUnlocksWithItsPasswordFile() throws {
+        let locked = try lockedStore(passwordFile: "test-password\n")
+        XCTAssertEqual(try locked.get("provider.openai.apiKey"), "sk-secret")
+        XCTAssertTrue(isUnlocked())
+    }
+
+    func testWrongPasswordFileThrows() throws {
+        let locked = try lockedStore(passwordFile: "not-the-password")
+        XCTAssertThrowsError(try locked.get("provider.openai.apiKey"))
+        XCTAssertFalse(isUnlocked())
+    }
+
+    func testMissingPasswordFileThrows() throws {
+        let locked = try lockedStore(passwordFile: nil)
+        XCTAssertThrowsError(try locked.get("provider.openai.apiKey"))
+        XCTAssertFalse(isUnlocked())
     }
 
     func testMissingKeychainFileThrowsInsteadOfUsingLogin() {

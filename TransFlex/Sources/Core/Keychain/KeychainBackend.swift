@@ -11,5 +11,5 @@ public enum KeychainBackend: Equatable {
     /// A file keychain of its own at `path`, opened with its own password, never added to the
     /// user's search list. Items in it carry no code-hash partition, so a rebuilt app signed by
     /// the same certificate reads them without a prompt. Used by local Debug builds only.
-    case fileAt(path: String)
+    case fileAt(path: String, passwordFile: String? = nil)
 }
