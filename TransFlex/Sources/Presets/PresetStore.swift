@@ -67,6 +67,9 @@ public final class PresetStore: ObservableObject {
         try replaceAll(with: next)
     }
 
+    /// The popup needs one preset to translate with, so the last one stays.
+    var canDelete: Bool { presets.count > 1 }
+
     public func delete(id: UUID) throws {
         let next = presets.filter { $0.id != id }
         guard next.count != presets.count else { return }
