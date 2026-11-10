@@ -7,8 +7,11 @@ it shows the source editor and the result.
 _Avoid_: main window, translator window.
 
 **Output-only popup** — the same panel showing only the result of a
-Translate Selection shortcut, or the error or permission card that shortcut
-raised. ⌘I (Show Input) turns it into the Popup.
+Translate Selection shortcut, the partial result of a translation that
+failed midway, or the card for a failure the user must act on (Accessibility
+permission, missing or rejected key). Its other failures (nothing selected,
+offline, provider error before any text arrived) show in the banner window
+instead. ⌘I (Show Input) turns it into the Popup.
 _Avoid_: quick popup, mini popup.
 
 **Translate Selection** — a per-preset shortcut that copies the selection in
@@ -50,6 +53,24 @@ _Avoid_: Clear previous translation, reset policy.
   that app, field and selection back first; if it cannot, it sends no ⌘V,
   fails, and leaves the translation on the clipboard.
 - While a Replace Selection translates, Esc anywhere cancels it; the app holds
-  Esc system-wide only for that run.
+  Esc system-wide only for that run and, after a failure, while its banner is
+  showing, where Esc closes the banner. The banner never hides by itself.
+- Stop keeps the text received so far as the result, marked "stopped"; Copy
+  and Translate again work on it as on a finished result.
 - Copy (⌘C or the button) copies the result and closes the popup; the button
   says so ("Copy & Close").
+- A finished translation reaches the clipboard only through Copy, unless the
+  General setting **Copy result automatically** (off by default) is on.
+- A key combination belongs to one action at most. Recording a combination
+  another action already uses is refused, and the recorder names that action.
+- Saving the first provider key, when it is for Anthropic or Gemini, moves
+  the built-in presets the user has not edited (name and instructions
+  unchanged) to that provider: a preset on a fast model gets the provider's
+  fast model, one on a strong model its strong model. A new preset starts on
+  a provider that has a key.
+- Pasting an image with ⌘⇧V attaches it and translates at once; an image
+  dropped or chosen from a file waits for ⌘↩.
+- After a partial result the popup offers Retry, which translates the whole
+  source again; it never sends the partial result as new source.
+- Settings and History are ordinary windows: they stay open when the user
+  switches to another app, until the user closes them.
