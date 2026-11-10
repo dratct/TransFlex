@@ -43,6 +43,7 @@ final class PopupViewModel: ObservableObject {
     private let presetStore: PresetStore
     private let pasteboard: PasteboardHelper
     private let keychain: KeychainStore
+    private let defaults: UserDefaults
     weak var historyStore: HistoryStore? {
         didSet { historyRecorder.historyStore = historyStore }
     }
@@ -64,6 +65,7 @@ final class PopupViewModel: ObservableObject {
         presetStore: PresetStore,
         pasteboard: PasteboardHelper = PasteboardHelper(),
         keychain: KeychainStore = KeychainStore(),
+        defaults: UserDefaults = .standard,
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
         openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
         hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
@@ -75,8 +77,12 @@ final class PopupViewModel: ObservableObject {
         self.presetStore = presetStore
         self.pasteboard = pasteboard
         self.keychain = keychain
+        self.defaults = defaults
         self.selectedPresetID = presetStore.presets.first?.id
     }
+
+    /// General setting "Copy result automatically"; off unless set.
+    static let copyResultAutomaticallyKey = "copyResultAutomatically"
 
     var presets: [Preset] { presetStore.presets }
     var selectedPreset: Preset? {
@@ -487,6 +493,7 @@ final class PopupViewModel: ObservableObject {
     }
 
     private func autoCopyIfEnabled(_ text: String) {
+        guard defaults.bool(forKey: Self.copyResultAutomaticallyKey) else { return }
         pasteboard.writeText(text)
         triggerToast()
     }

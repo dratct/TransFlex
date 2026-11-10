@@ -340,6 +340,39 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertTrue(message.contains("Supports Vision"), message)
     }
 
+    // MARK: Copy result automatically
+
+    private func translateToDone(autoCopy: Bool?) async throws -> NSPasteboard {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let board = NSPasteboard(name: .init("PopupVMAutoCopy-\(UUID().uuidString)"))
+        board.clearContents()
+        board.setString("user clipboard", forType: .string)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: "PopupVMAutoCopy-\(UUID().uuidString)"))
+        if let autoCopy { defaults.set(autoCopy, forKey: PopupViewModel.copyResultAutomaticallyKey) }
+        let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
+        let vm = PopupViewModel(
+            translationService: service, presetStore: presetStore,
+            pasteboard: PasteboardHelper(pasteboard: board), defaults: defaults
+        )
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        return board
+    }
+
+    func testFinishedTranslationLeavesClipboardWhenAutoCopyOff() async throws {
+        let board = try await translateToDone(autoCopy: nil)
+        XCTAssertEqual(board.string(forType: .string), "user clipboard", "off by default: the clipboard is the user's")
+    }
+
+    func testFinishedTranslationCopiesWhenAutoCopyOn() async throws {
+        let board = try await translateToDone(autoCopy: true)
+        XCTAssertEqual(board.string(forType: .string), "Bonjour")
+    }
+
     func testCopyResultCopiesOnlyWhenATranslationIsShown() async throws {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         let board = NSPasteboard(name: .init("PopupVMCopy-\(UUID().uuidString)"))
