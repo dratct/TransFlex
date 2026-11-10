@@ -74,7 +74,7 @@ public final class PopupWindowController {
 
     public var isVisible: Bool { panel.isVisible }
 
-    /// Activates a preset by ID. Cancels any in-flight stream.
+    /// Activates a preset by ID; a stream in flight stops and keeps its text.
     public func activatePreset(id: UUID) {
         guard let vm = viewModel else { return }
         vm.switchPreset(id)

@@ -383,6 +383,36 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(try history.allEntries().count, 0, "History keeps only finished translations")
     }
 
+    // MARK: Switching preset (CONTEXT.md: the last result stays until ⌘↩)
+
+    func testSwitchPresetKeepsResultAndCost() throws {
+        let vm = makeViewModel()
+        vm.state = .done(result: "Bonjour")
+        vm.costEstimate = "96 tokens · $0.0004"
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertEqual(vm.costEstimate, "96 tokens · $0.0004")
+    }
+
+    func testSwitchPresetMidStreamKeepsReceivedText() async throws {
+        let vm = try await streamingViewModel(received: "Bonj")
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .done(result: "Bonj", stopped: true))
+    }
+
+    func testSwitchPresetClearsMissingKeyCard() throws {
+        let vm = makeViewModel()
+        vm.state = .missingKey(providerID: "openai")
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .idle, "a card about the old preset no longer applies")
+    }
+
     // MARK: Copy result automatically
 
     private func translateToDone(autoCopy: Bool?) async throws -> NSPasteboard {

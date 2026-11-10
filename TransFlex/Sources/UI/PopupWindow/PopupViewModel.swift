@@ -441,9 +441,13 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
+    /// The shown result and its cost stay until ⌘↩ translates with the new
+    /// preset; a stream in flight stops and keeps what arrived. Cards about
+    /// the old preset (missing key, errors) go away.
     func switchPreset(_ id: UUID) {
-        cancelStream()
+        stop()
         selectedPresetID = id
+        if case .done = state { return }
         state = .idle
         costEstimate = nil
     }
