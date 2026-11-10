@@ -20,7 +20,18 @@ final class ErrorMessageHelperTests: XCTestCase {
     func testServerFailureKeepsRetryHint() {
         XCTAssertEqual(
             ErrorMessageHelper.friendly(LLMError.server(status: 503, body: "{}")),
-            "Provider issue. Try again."
+            "The provider is having trouble. Try again in a moment."
         )
+    }
+
+    func testServerErrorNamesProvider() {
+        XCTAssertEqual(
+            ErrorMessageHelper.friendly(LLMError.server(status: 503, body: "{}"), providerName: "Anthropic"),
+            "Anthropic is having trouble. Try again in a moment."
+        )
+    }
+
+    func testNetworkErrorSaysTheProviderWasNotReached() {
+        XCTAssertEqual(ErrorMessageHelper.friendly(LLMError.network("timed out")), "Couldn't reach the provider.")
     }
 }

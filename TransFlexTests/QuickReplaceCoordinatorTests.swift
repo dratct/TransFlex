@@ -295,21 +295,3 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertEqual(QuickReplaceCoordinator.keepingEdgeWhitespace(of: "hi", around: "xin"), "xin")
     }
 }
-
-@MainActor
-private final class RecordingEscapeHold: EscapeHold {
-    private(set) var log: [String] = []
-    private var onPress: (() -> Void)?
-
-    func hold(onPress: @escaping () -> Void) {
-        log.append("hold")
-        self.onPress = onPress
-    }
-
-    func release() {
-        log.append("release")
-        onPress = nil
-    }
-
-    func press() { onPress?() }
-}

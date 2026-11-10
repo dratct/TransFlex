@@ -16,21 +16,36 @@ public final class PopupWindowController {
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
     private let selection = SelectionCapture()
+    private let copySelectionOverride: (@MainActor () async throws -> String)?
     private let replaceCoordinator: QuickReplaceCoordinator
-    private let replaceHUD = ReplaceHUD()
+    let replaceHUD: ReplaceHUD
     private var cancellables: Set<AnyCancellable> = []
 
     public convenience init() {
         self.init(presetStore: PresetStore())
     }
 
-    init(presetStore: PresetStore, historyStore: HistoryStore? = nil) {
+    /// One `escapeHold` serves both the run and the failure banner, so only
+    /// one of them registers Esc at a time.
+    init(
+        presetStore: PresetStore,
+        historyStore: HistoryStore? = nil,
+        escapeHold: EscapeHold? = nil,
+        hud: ReplaceHUD? = nil,
+        copySelection: (@MainActor () async throws -> String)? = nil,
+        translationService: TranslationService? = nil,
+        pasteboard: PasteboardHelper = PasteboardHelper(),
+        defaults: UserDefaults = .standard
+    ) {
+        let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
+        self.copySelectionOverride = copySelection
+        self.replaceHUD = hud ?? ReplaceHUD(escapeHold: escapeHold)
         let frame = NSRect(origin: .zero, size: Self.defaultSize)
         self.panel = PopupPanel(contentRect: frame)
 
         let keychain = KeychainStore()
-        let service = TranslationService(
+        let service = translationService ?? TranslationService(
             registry: ProviderRegistry.shared,
             apiKey: { preset in
                 if preset.providerID.hasPrefix("openai-compatible:") {
@@ -43,7 +58,9 @@ public final class PopupWindowController {
         let vm = PopupViewModel(
             translationService: service,
             presetStore: presetStore,
+            pasteboard: pasteboard,
             keychain: keychain,
+            defaults: defaults,
             hasAPIKey: { preset in
                 guard PopupViewModel.keyedProviderIDs.contains(preset.providerID) else { return true }
                 return keychain.exists("provider.\(preset.providerID).apiKey")
@@ -52,13 +69,24 @@ public final class PopupWindowController {
         vm.historyStore = historyStore
         self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
         self.replaceCoordinator.historyStore = historyStore
-        self.replaceCoordinator.escapeHold = GlobalEscapeHold()
+        self.replaceCoordinator.escapeHold = escapeHold
         self.panel.onHide = { [weak self, weak vm] in
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
+        vm.onOutputOnlyFailure = { [weak self, weak vm] error in
+            guard let vm, let presetID = vm.selectedPresetID else { return }
+            self?.showSelectionFailure(error, presetID: presetID, copiedText: vm.inputText)
+        }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
+        self.panel.onOpenSettings = { [weak vm] in
+            AppCommands.openSettings(tab: vm.map { PopupViewModel.settingsTab(for: $0.state) } ?? .general)
+        }
+        // Back from Settings with a key saved: the missing-key card clears.
+        NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification, object: self.panel)
+            .sink { [weak vm] _ in vm?.recheckProviderKey() }
+            .store(in: &cancellables)
         self.panel.onTranslateAgainCommand = { [weak vm] in vm?.translateAgainIfShown() ?? false }
         self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
@@ -73,8 +101,9 @@ public final class PopupWindowController {
     }
 
     public var isVisible: Bool { panel.isVisible }
+    var panelFrame: NSRect { panel.frame }
 
-    /// Activates a preset by ID. Cancels any in-flight stream.
+    /// Activates a preset by ID; a stream in flight stops and keeps its text.
     public func activatePreset(id: UUID) {
         guard let vm = viewModel else { return }
         vm.switchPreset(id)
@@ -84,15 +113,51 @@ public final class PopupWindowController {
     /// The panel is hidden first: while it is key, ⌘C would hit the popup.
     public func quickTranslate(presetID: UUID) {
         hide()
+        replaceHUD.hideBanner()
         Task { @MainActor in
             do {
-                let text = try await selection.copySelection()
-                viewModel?.startQuickTranslation(text: text, presetID: presetID)
-                showOutputOnly(source: text)
+                let text = try await copySelectedText()
+                translateSelection(text, presetID: presetID)
             } catch {
-                showQuickError(error, presetID: presetID)
+                showSelectionFailure(error, presetID: presetID, copiedText: nil)
             }
         }
+    }
+
+    private func translateSelection(_ text: String, presetID: UUID) {
+        viewModel?.startQuickTranslation(text: text, presetID: presetID)
+        showOutputOnly(source: text)
+    }
+
+    /// A banner for what the user can fix elsewhere or retry; the popup only
+    /// for cards that need it. Retry reuses the copied text: by then the
+    /// selection may be gone.
+    private func showSelectionFailure(_ error: Error, presetID: UUID, copiedText: String?) {
+        let providerID = presetStore.presets.first { $0.id == presetID }?.providerID ?? ""
+        switch SelectionFailure.route(for: error, providerName: ProviderRegistry.shared.displayName(for: providerID)) {
+        case .ignore:
+            return
+        case .popupCard:
+            showQuickError(error, presetID: presetID)
+        case .banner where replaceHUD.isRunning:
+            // The HUD shows a Replace run; the banner would take its place.
+            showQuickError(error, presetID: presetID)
+        case .banner(let banner):
+            hide()
+            replaceHUD.showSelectionFailed(banner) { [weak self] in
+                guard let self else { return }
+                if let copiedText {
+                    translateSelection(copiedText, presetID: presetID)
+                } else {
+                    quickTranslate(presetID: presetID)
+                }
+            }
+        }
+    }
+
+    private func copySelectedText() async throws -> String {
+        if let copySelectionOverride { return try await copySelectionOverride() }
+        return try await selection.copySelection()
     }
 
     /// Translates the frontmost app's selection and pastes the result over it.
@@ -113,18 +178,33 @@ public final class PopupWindowController {
                 replaceHUD.hide()
             } catch {
                 Self.logger.error("Quick replace failed: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
-                if error as? SelectionCapture.Failure == .accessibilityNotGranted {
-                    replaceHUD.hide()
-                    showQuickError(error, presetID: presetID)
-                    return
-                }
-                replaceHUD.showFailed(
-                    message: ReplaceHUD.failureMessage(for: error),
-                    onOpenPopup: { [weak self] in self?.showQuickError(error, presetID: presetID) },
-                    onRetry: { [weak self] in self?.quickReplace(presetID: presetID) }
-                )
+                reportReplaceFailure(error, presetID: presetID)
             }
         }
+    }
+
+    /// The banner reports to someone still in the other app; with the popup
+    /// open, the error goes there and Esc stays with the popup.
+    func reportReplaceFailure(_ error: Error, presetID: UUID) {
+        if panel.isVisible || error as? SelectionCapture.Failure == .accessibilityNotGranted {
+            replaceHUD.hide()
+            showQuickError(error, presetID: presetID)
+            return
+        }
+        let providerID = presetStore.presets.first { $0.id == presetID }?.providerID ?? ""
+        replaceHUD.showFailed(
+            message: ReplaceHUD.failureMessage(
+                for: error, providerName: ProviderRegistry.shared.displayName(for: providerID)
+            ),
+            onOpenPopup: { [weak self] in self?.showQuickError(error, presetID: presetID) },
+            onRetry: { [weak self] in self?.quickReplace(presetID: presetID) }
+        )
+    }
+
+    /// Hides the Replace failure banner and gives Esc back, before another
+    /// TransFlex window opens.
+    public func hideReplaceBanner() {
+        replaceHUD.hideBanner()
     }
 
     /// Shows the full popup and translates a History entry's text again.
@@ -147,6 +227,7 @@ public final class PopupWindowController {
     /// every show adapts to monitor changes between invocations.
     public func show(at point: NSPoint? = nil) {
         let start = mach_absolute_time()
+        replaceHUD.hideBanner()
 
         viewModel?.openPopup(keepingDraft: hideClock.keepsDraft(policy: PopupResetPolicyStore.load()))
 
@@ -192,7 +273,7 @@ public final class PopupWindowController {
     private func handleEscape() {
         guard let vm = viewModel else { return hide() }
         switch PopupEscape.action(for: vm.state, isOutputOnly: vm.isOutputOnly) {
-        case .stop: vm.cancelStream()
+        case .stop: vm.stop()
         case .backToText: vm.dismissError()
         case .close: hide()
         }
@@ -202,7 +283,7 @@ public final class PopupWindowController {
         if error as? SelectionCapture.Failure == .accessibilityNotGranted {
             viewModel?.presentAccessibilityRequired(presetID: presetID)
         } else {
-            viewModel?.presentQuickError(ErrorMessageHelper.friendly(error), presetID: presetID)
+            viewModel?.presentQuickFailure(error, presetID: presetID)
         }
         showOutputOnly()
     }
@@ -210,6 +291,7 @@ public final class PopupWindowController {
     /// Opens at the size `source` predicts, or the shortest frame without one.
     private func showOutputOnly(source: String? = nil) {
         let start = mach_absolute_time()
+        replaceHUD.hideBanner()
         let mouse = NSEvent.mouseLocation
         if let source, let visible = screen(containing: mouse)?.visibleFrame {
             panel.setFrame(PopupFrame.predicted(

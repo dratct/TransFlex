@@ -2,17 +2,18 @@ import Foundation
 
 /// Maps LLM/Translation errors to user-facing strings.
 enum ErrorMessageHelper {
-    static func friendly(_ error: Error) -> String {
+    static func friendly(_ error: Error, providerName: String? = nil) -> String {
         if let llm = error as? LLMError {
             switch llm {
             case .auth: return "API key invalid. Update in Settings."
             case .rateLimit(let retry):
                 if let s = retry { return "Rate limited — try in \(Int(s))s." }
                 return "Rate limited — try again shortly."
-            case .network: return "No internet connection."
+            case .offline: return "You're offline. Check your connection and try again."
+            case .network: return "Couldn't reach the provider."
             case .server(let status, let body) where (400..<500).contains(status):
                 return "The provider rejected the request: \(providerReason(body) ?? "HTTP \(status)")"
-            case .server: return "Provider issue. Try again."
+            case .server: return "\(providerName ?? "The provider") is having trouble. Try again in a moment."
             case .invalidResponse, .decode: return "Provider returned unexpected response."
             case .cancelled: return "Request cancelled."
             case .providerMessage(let msg): return msg
@@ -40,7 +41,7 @@ enum ErrorMessageHelper {
     }
 
     /// `error.message` from an OpenAI-, Anthropic- or Gemini-style error body.
-    private static func providerReason(_ body: String) -> String? {
+    static func providerReason(_ body: String) -> String? {
         guard let data = body.data(using: .utf8),
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let error = json["error"] as? [String: Any],

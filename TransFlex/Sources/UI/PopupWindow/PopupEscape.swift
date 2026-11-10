@@ -11,7 +11,7 @@ enum PopupEscape: Equatable {
         switch state {
         case .streaming:
             return .stop
-        case .error(_, nil), .missingKey:
+        case .error(_, nil), .missingKey, .keyRejected:
             return isOutputOnly ? .close : .backToText
         case .idle, .done, .error, .accessibilityRequired:
             return .close

@@ -85,7 +85,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         self.historyWindowController = history
         self.statusBarController = StatusBarController(
             popupWindowController: popup,
-            historyWindowController: history,
             updater: updater
         )
 

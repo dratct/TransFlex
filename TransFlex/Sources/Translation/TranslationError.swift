@@ -17,7 +17,7 @@ extension TranslationError: LocalizedError {
             return "Model \(model) not found on \(pid). Open Settings → Presets to select a valid model."
         case .visionUnsupported(let pid, let model):
             let provider = ProviderRegistry.shared.displayName(for: pid)
-            return "This preset can't read images (\(provider) \(model)). Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
+            return "This preset can't read images (\(provider) \(model)). Turn on Reads images in Settings → Presets, or switch to a preset that has it on."
         }
     }
 }

@@ -9,7 +9,6 @@ final class StatusBarController: NSObject {
 
     private let statusItem: NSStatusItem
     private weak var popupWindowController: PopupWindowController?
-    private var historyWindowController: HistoryWindowController?
     private let updater: AppUpdater?
     private var updateItem: NSMenuItem?
     private var baseIcon: NSImage?
@@ -17,12 +16,10 @@ final class StatusBarController: NSObject {
 
     init(
         popupWindowController: PopupWindowController? = nil,
-        historyWindowController: HistoryWindowController? = nil,
         updater: AppUpdater? = nil
     ) {
         self.statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         self.popupWindowController = popupWindowController
-        self.historyWindowController = historyWindowController
         self.updater = updater
         super.init()
         configureButton()
@@ -93,7 +90,7 @@ final class StatusBarController: NSObject {
     @objc private func openHistory() {
         // The popup floats above normal windows and would cover History.
         popupWindowController?.hide()
-        historyWindowController?.show()
+        AppCommands.openHistory()
     }
 
     @objc private func checkForUpdates() {

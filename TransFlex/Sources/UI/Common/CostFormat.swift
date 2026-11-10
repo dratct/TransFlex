@@ -6,6 +6,11 @@ enum CostFormat {
         "$" + String(format: "%.4f", amount)
     }
 
+    /// A model with no price in the table says so rather than showing $0.
+    static func usd(_ amount: Double?) -> String {
+        amount.map(usd) ?? "price unknown"
+    }
+
     /// Input and output together, the count History stores.
     static func tokens(_ count: Int) -> String {
         "\(count.formatted()) tokens"

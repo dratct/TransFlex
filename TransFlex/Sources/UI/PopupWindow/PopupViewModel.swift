@@ -7,11 +7,15 @@ final class PopupViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "PopupViewModel")
 
     @Published var state: PopupState = .idle
-    @Published var inputText: String = ""
+    @Published var inputText: String = "" {
+        didSet { if inputText != oldValue, !inputText.isEmpty { attachError = nil } }
+    }
     @Published var selectedPresetID: UUID?
     @Published var costEstimate: String?
     @Published var showToast: Bool = false
     @Published var attachedImage: ImageInput?
+    /// Why the last attach failed, shown under the Original column.
+    @Published var attachError: String?
     @Published var showCostConfirmation: Bool = false
     /// Counter the view observes via `.onChange` to drive `@FocusState`. The
     /// value itself is meaningless — only the change matters, so a monotonic
@@ -27,6 +31,9 @@ final class PopupViewModel: ObservableObject {
     @Published var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
+    /// What the user had typed before an image replaced it; removing the
+    /// image brings it back.
+    private var textBeforeImage: String?
     /// The Popup's Draft and result, set aside while a selection shortcut
     /// uses the panel; `openPopup(keepingDraft:)` hands it back.
     private var popupSession: PopupSession?
@@ -43,6 +50,7 @@ final class PopupViewModel: ObservableObject {
     private let presetStore: PresetStore
     private let pasteboard: PasteboardHelper
     private let keychain: KeychainStore
+    private let defaults: UserDefaults
     weak var historyStore: HistoryStore? {
         didSet { historyRecorder.historyStore = historyStore }
     }
@@ -64,6 +72,7 @@ final class PopupViewModel: ObservableObject {
         presetStore: PresetStore,
         pasteboard: PasteboardHelper = PasteboardHelper(),
         keychain: KeychainStore = KeychainStore(),
+        defaults: UserDefaults = .standard,
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
         openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
         hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
@@ -75,8 +84,16 @@ final class PopupViewModel: ObservableObject {
         self.presetStore = presetStore
         self.pasteboard = pasteboard
         self.keychain = keychain
+        self.defaults = defaults
         self.selectedPresetID = presetStore.presets.first?.id
     }
+
+    /// A stream failed before any text in output-only mode with an error that
+    /// has a banner; the controller hides the popup and shows the banner.
+    var onOutputOnlyFailure: ((Error) -> Void)?
+
+    /// General setting "Copy result automatically"; off unless set.
+    static let copyResultAutomaticallyKey = "copyResultAutomatically"
 
     var presets: [Preset] { presetStore.presets }
     var selectedPreset: Preset? {
@@ -93,6 +110,8 @@ final class PopupViewModel: ObservableObject {
 
     func removeAttachedImage() {
         attachedImage = nil
+        if inputText.isEmpty, let typed = textBeforeImage { inputText = typed }
+        textBeforeImage = nil
     }
 
     /// Opens NSOpenPanel asynchronously and attaches the picked image. The
@@ -102,7 +121,7 @@ final class PopupViewModel: ObservableObject {
         Task { @MainActor in
             guard let picked = await ImageFilePicker.choose() else { return }
             if let errorMessage = picked.errorMessage {
-                state = .error(message: errorMessage, partial: nil)
+                attachError = errorMessage
                 return
             }
             guard let image = picked.image else { return }
@@ -110,42 +129,52 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
-    /// Reads `NSPasteboard.general` directly so the menu item works without
-    /// needing the TextEditor to have focus (which `.onPasteCommand` requires).
-    /// Falls back to file-URL on the pasteboard for cases like "Copy" from
-    /// Finder which only exposes the URL, not raw image data.
-    func pasteImageFromClipboard() {
-        if let image = NSImage(pasteboard: .general) {
-            handleAttach(image: image, source: .paste, fileSizeBytes: nil)
-            return
-        }
-        let pb = NSPasteboard.general
-        if let urls = pb.readObjects(forClasses: [NSURL.self], options: nil) as? [URL],
-           let url = urls.first,
-           let image = NSImage(contentsOf: url) {
-            handleAttach(image: image, source: .paste, fileSizeBytes: nil)
-            return
-        }
-        state = .error(message: "Clipboard does not contain an image.", partial: nil)
+    /// ⌘⇧V: attach the clipboard image and translate it at once.
+    func pasteImageAndTranslate() {
+        guard pasteImageFromClipboard() else { return }
+        translate()
     }
 
-    private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) {
+    /// Reads the injected pasteboard, not the TextEditor's paste, so the
+    /// shortcut works whatever holds focus. A Finder copy carries only the
+    /// file URL, which is read as a fallback.
+    @discardableResult
+    func pasteImageFromClipboard() -> Bool {
+        guard let image = pasteboard.readImage() ?? pasteboard.readFileURLImage() else {
+            attachError = "Clipboard does not contain an image."
+            return false
+        }
+        return handleAttach(image: image, source: .paste, fileSizeBytes: nil)
+    }
+
+    /// A failure leaves the text, the result and the state as they were and
+    /// says why under the Original column.
+    @discardableResult
+    private func handleAttach(image: NSImage, source: ImageSource, fileSizeBytes: Int?) -> Bool {
         if let preset = selectedPreset, !preset.supportsVision {
-            state = .error(message: Self.visionOffMessage, partial: nil)
-            return
+            attachError = Self.visionOffMessage
+            return false
         }
         switch ImageTranslationCoordinator.validateAndWrap(image, source: source, fileSizeBytes: fileSizeBytes) {
         case .ok(let input):
+            attachError = nil
             attachedImage = input
-            // Image-only mode: any text typed before attach is hidden by
-            // the preview anyway, so clear it to avoid sending phantom
-            // accompanying text the user can no longer see/edit.
+            // Image-only mode: the preview hides the editor, so the typed
+            // text is set aside rather than sent unseen.
+            if !inputText.isEmpty { textBeforeImage = inputText }
             inputText = ""
+            return true
         case .tooLarge(let reason):
-            state = .error(message: reason, partial: nil)
+            attachError = reason
         case .unsupportedFormat:
-            state = .error(message: "Unsupported image format.", partial: nil)
+            attachError = "Unsupported image format."
         }
+        return false
+    }
+
+    /// Shown when a file drop is refused before it is read.
+    func reportAttachRejected(_ reason: String) {
+        attachError = reason
     }
 
     /// Providers that cannot work without an API key. OpenAI-compatible
@@ -153,7 +182,7 @@ final class PopupViewModel: ObservableObject {
     static let keyedProviderIDs = ["openai", "anthropic", "gemini"]
 
     static let visionOffMessage =
-        "This preset can't read images. Turn on Supports Vision in Settings → Presets, or switch to a preset that has it on."
+        "This preset can't read images. Turn on Reads images in Settings → Presets, or switch to a preset that has it on."
 
     var canAttachImages: Bool { selectedPreset?.supportsVision ?? false }
 
@@ -161,6 +190,7 @@ final class PopupViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasImage = attachedImage != nil
         guard !text.isEmpty || hasImage, let preset = selectedPreset else { return }
+        attachError = nil
         guard hasAPIKey(preset) else {
             cancelStream()
             state = .missingKey(providerID: preset.providerID)
@@ -260,10 +290,18 @@ final class PopupViewModel: ObservableObject {
             } catch {
                 guard self.translationSequence == sequence else { return }
                 Self.logger.error("Stream error: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
-                if accumulated.isEmpty {
-                    self.state = .error(message: ErrorMessageHelper.friendly(error), partial: nil)
+                let message = ErrorMessageHelper.friendly(
+                    error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
+                )
+                if accumulated.isEmpty, case LLMError.auth = error {
+                    self.state = .keyRejected(providerID: preset.providerID)
                 } else {
-                    self.state = .error(message: ErrorMessageHelper.friendly(error), partial: accumulated)
+                    self.state = .error(message: message, partial: accumulated.isEmpty ? nil : accumulated)
+                }
+                if self.isOutputOnly, accumulated.isEmpty, case .banner = SelectionFailure.route(
+                    for: error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
+                ) {
+                    self.onOutputOnlyFailure?(error)
                 }
             }
         }
@@ -275,6 +313,16 @@ final class PopupViewModel: ObservableObject {
     /// `.onChange` even when the editor was already focused.
     func requestInputFocus() {
         inputFocusRequest &+= 1
+    }
+
+    /// Stop button and Esc while streaming.
+    func stop() {
+        guard case .streaming(let received) = state else { return cancelStream() }
+        cancelStream()
+        guard !received.isEmpty else { return }
+        state = .done(result: received, stopped: true)
+        // Usage arrives with the last event, so a stopped run has no cost to show.
+        costEstimate = nil
     }
 
     func cancelStream() {
@@ -306,6 +354,8 @@ final class PopupViewModel: ObservableObject {
         accessibilityPoll = nil
         inputText = ""
         attachedImage = nil
+        attachError = nil
+        textBeforeImage = nil
         pendingImageTranslation = nil
         showCostConfirmation = false
         showToast = false
@@ -357,6 +407,34 @@ final class PopupViewModel: ObservableObject {
         selectedPresetID = presetID
         inputText = text
         translate()
+    }
+
+    /// Replace's Open Popup and selection failures with no banner: a rejected
+    /// key gets its own card, anything else the error card.
+    func presentQuickFailure(_ error: Error, presetID: UUID) {
+        let providerName = presetStore.presets.first { $0.id == presetID }
+            .map { ProviderRegistry.shared.displayName(for: $0.providerID) }
+        presentQuickError(ErrorMessageHelper.friendly(error, providerName: providerName), presetID: presetID)
+        if case LLMError.auth = error, let preset = selectedPreset {
+            state = .keyRejected(providerID: preset.providerID)
+        }
+    }
+
+    /// Which Settings tab ⌘, opens from this state.
+    static func settingsTab(for state: PopupState) -> SettingsTab {
+        switch state {
+        case .missingKey, .keyRejected: return .providers
+        default: return .general
+        }
+    }
+
+    /// Called when the popup becomes key: a key saved meanwhile clears the
+    /// missing-key card.
+    func recheckProviderKey() {
+        guard case .missingKey = state, let preset = selectedPreset, hasAPIKey(preset) else { return }
+        // Idle needs the input editor, which output-only mode hides.
+        showInput()
+        state = .idle
     }
 
     /// Surfaces a selection-translate failure in the output-only popup.
@@ -425,9 +503,18 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
+    /// The shown result and its cost stay until ⌘↩ translates with the new
+    /// preset; a stream in flight stops and keeps what arrived. Cards about
+    /// the old preset (missing key, errors) go away.
     func switchPreset(_ id: UUID) {
-        cancelStream()
+        stop()
         selectedPresetID = id
+        attachError = nil
+        // Text already on screen stays until ⌘↩ translates again.
+        switch state {
+        case .done, .error(_, partial: .some): return
+        default: break
+        }
         state = .idle
         costEstimate = nil
     }
@@ -446,7 +533,7 @@ final class PopupViewModel: ObservableObject {
     /// otherwise, so the key goes on to the editor's own copy.
     @discardableResult
     func copyResultIfShown() -> Bool {
-        guard case .done(let result) = state else { return false }
+        guard case .done(let result, _) = state else { return false }
         copyToClipboard(result)
         return true
     }
@@ -487,6 +574,7 @@ final class PopupViewModel: ObservableObject {
     }
 
     private func autoCopyIfEnabled(_ text: String) {
+        guard defaults.bool(forKey: Self.copyResultAutomaticallyKey) else { return }
         pasteboard.writeText(text)
         triggerToast()
     }
@@ -508,12 +596,8 @@ final class PopupViewModel: ObservableObject {
             costEstimate = nil
             return
         }
-        let tokens = CostFormat.tokens(input + output)
-        if let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage) {
-            costEstimate = tokens + " · " + CostFormat.usd(cost)
-        } else {
-            costEstimate = tokens
-        }
+        let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage)
+        costEstimate = CostFormat.tokens(input + output) + " · " + CostFormat.usd(cost)
     }
 
 }
@@ -521,11 +605,14 @@ final class PopupViewModel: ObservableObject {
 enum PopupState: Equatable {
     case idle
     case streaming(accumulated: String)
-    case done(result: String)
+    /// `stopped`: the user pressed Stop; the text is what arrived before it.
+    case done(result: String, stopped: Bool = false)
     case error(message: String, partial: String?)
     /// A selection shortcut needs the Accessibility grant; `granted` flips
     /// once the user enables it in System Settings.
     case accessibilityRequired(granted: Bool)
     /// The preset's provider needs a key and none is saved; nothing was sent.
     case missingKey(providerID: String)
+    /// The provider refused the saved key (HTTP 401/403); nothing was translated.
+    case keyRejected(providerID: String)
 }

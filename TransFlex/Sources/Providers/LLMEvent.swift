@@ -18,6 +18,8 @@ public enum StopReason: Sendable, Equatable {
 public enum LLMError: Error, Sendable, Equatable {
     case auth
     case rateLimit(retryAfterSeconds: Double?)
+    /// No connection at all, as opposed to a provider that cannot be reached.
+    case offline
     case network(String)
     case decode(String)
     case cancelled
@@ -33,6 +35,7 @@ extension LLMError: LocalizedError {
         case .rateLimit(let retry):
             if let retry { return "Rate limited. Retry after \(Int(retry))s." }
             return "Rate limited."
+        case .offline: return "You're offline."
         case .network(let detail): return "Network error: \(detail)"
         case .decode(let detail): return "Response decoding failed: \(detail)"
         case .cancelled: return "Request cancelled."

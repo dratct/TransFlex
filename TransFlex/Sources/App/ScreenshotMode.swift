@@ -71,9 +71,11 @@ enum ScreenshotMode {
             popup("popup-streaming", .streaming(accumulated: String(result.prefix(40)))),
             popup("popup-done", cost: "96 tokens · $0.0004", .done(result: result)),
             popup("popup-done-narrow", size: narrow, cost: "96 tokens · $0.0004", .done(result: result)),
+            popup("popup-stopped", .done(result: String(result.prefix(40)), stopped: true)),
             popup("popup-partial", .error(message: "The connection closed before the translation finished.", partial: String(result.prefix(40)))),
             popup("popup-error", .error(message: "No internet connection.", partial: nil)),
             popup("popup-missing-key", .missingKey(providerID: "openai")),
+            popup("popup-key-rejected", .keyRejected(providerID: "openai")),
             popup("popup-accessibility", input: "", .accessibilityRequired(granted: false)),
         ]
         for tab in [SettingsTab.general, .providers, .presets, .about] {

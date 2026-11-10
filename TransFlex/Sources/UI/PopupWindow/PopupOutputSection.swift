@@ -11,7 +11,7 @@ struct PopupOutputSection: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Spacing.s) {
-            ColumnLabel(title: "Translation", color: .accentText, note: isPartial ? "incomplete" : nil)
+            ColumnLabel(title: "Translation", color: .accentText, note: note)
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -43,18 +43,21 @@ struct PopupOutputSection: View {
             } else {
                 StreamingTextView(text: accumulated, isStreaming: true)
             }
-        case .done(let result):
+        case .done(let result, _):
             StreamingTextView(text: result, isStreaming: false)
         case .error(_, let partial?):
             StreamingTextView(text: partial, isStreaming: false)
-        case .idle, .error, .missingKey, .accessibilityRequired:
+        case .idle, .error, .missingKey, .keyRejected, .accessibilityRequired:
             EmptyView()
         }
     }
 
-    private var isPartial: Bool {
-        if case .error(_, .some) = viewModel.state { return true }
-        return false
+    private var note: String? {
+        switch viewModel.state {
+        case .error(_, .some): return "incomplete"
+        case .done(_, stopped: true): return "stopped"
+        default: return nil
+        }
     }
 
     /// Length alone drives auto-scroll: it grows with every token, while the
@@ -67,7 +70,8 @@ struct PopupOutputSection: View {
 
 /// Reports its own height on appear and on every change. Preference keys do
 /// not reliably leave the AppKit-backed `ScrollView`, so this writes directly.
-private struct HeightReporter: View {
+/// Reports its parent's height; the Output-only popup grows from it.
+struct HeightReporter: View {
     let report: (CGFloat) -> Void
 
     var body: some View {

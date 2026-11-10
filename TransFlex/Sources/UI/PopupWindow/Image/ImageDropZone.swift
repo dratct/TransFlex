@@ -1,9 +1,21 @@
 import SwiftUI
 
+/// Checks a dropped file before it is read, so the drop can say why it was refused.
+enum ImageDropRules {
+    static func rejection(forFileSize bytes: Int) -> String? {
+        bytes > ImageTranslationCoordinator.maxFileSizeBytes ? "Image is too large (max 20 MB)." : nil
+    }
+
+    static let tooManyPixels = "Image is too large (max 50 megapixels)."
+    static let unreadable = "Unsupported image format."
+}
+
 /// Drop target and paste handler for image attachment. Wraps content
 /// and intercepts image drops + Cmd-V when pasteboard has image data.
 struct ImageDropZone<Content: View>: View {
     let onImage: (NSImage, ImageSource, Int?) -> Void
+    /// A dropped file refused before reading, with the reason to show.
+    var onRejected: (String) -> Void = { _ in }
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -32,18 +44,16 @@ struct ImageDropZone<Content: View>: View {
                 guard let data = data as? Data,
                       let url = URL(dataRepresentation: data, relativeTo: nil)
                 else { return }
-                let size: Int
-                do {
-                    size = try ImageMetadata.fileSizeBytes(of: url)
-                } catch {
-                    return
+                let reject: (String) -> Void = { reason in DispatchQueue.main.async { onRejected(reason) } }
+                guard let size = try? ImageMetadata.fileSizeBytes(of: url) else {
+                    return reject(ImageDropRules.unreadable)
                 }
-                guard size <= ImageTranslationCoordinator.maxFileSizeBytes else { return }
+                if let reason = ImageDropRules.rejection(forFileSize: size) { return reject(reason) }
                 if let pixels = ImageMetadata.pixelSize(of: url),
                    pixels.width * pixels.height > ImageTranslationCoordinator.maxPixelCount {
-                    return
+                    return reject(ImageDropRules.tooManyPixels)
                 }
-                guard let nsImage = NSImage(contentsOf: url) else { return }
+                guard let nsImage = NSImage(contentsOf: url) else { return reject(ImageDropRules.unreadable) }
                 DispatchQueue.main.async { onImage(nsImage, .drag, size) }
             }
             return true

@@ -98,7 +98,7 @@ struct PopupView: View {
     private var showsColumns: Bool {
         switch viewModel.state {
         case .idle, .streaming, .done, .error(_, .some): return true
-        case .error(_, nil), .missingKey, .accessibilityRequired: return false
+        case .error(_, nil), .missingKey, .keyRejected, .accessibilityRequired: return false
         }
     }
 
@@ -173,6 +173,13 @@ struct PopupView: View {
         case .missingKey(let providerID):
             MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
                 .padding(.horizontal, Spacing.l)
+        case .keyRejected(let providerID):
+            KeyRejectedNotice(providerID: providerID) {
+                if hasInput {
+                    footerButton(PopupFooter.Item(action: .retry, prominence: .secondary))
+                }
+            }
+            .padding(.horizontal, Spacing.l)
         case .error(let message, nil):
             Notice(.card, tone: .error, symbol: "exclamationmark.triangle",
                    title: "Couldn’t translate", message: message) {
@@ -184,7 +191,9 @@ struct PopupView: View {
         case .accessibilityRequired(let granted):
             ScrollView {
                 AccessibilityPermissionCard(granted: granted)
+                    .background(HeightReporter { viewModel.outputContentHeight = $0 })
             }
+            .background(HeightReporter { viewModel.outputVisibleHeight = $0 })
             .padding(.horizontal, Spacing.l)
         case .idle, .streaming, .done, .error:
             columns
@@ -236,6 +245,8 @@ struct PopupView: View {
             ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor))
             ImageDropZone { image, source, fileSizeBytes in
                 viewModel.attachImage(image, source: source, fileSizeBytes: fileSizeBytes)
+            } onRejected: { reason in
+                viewModel.reportAttachRejected(reason)
             } content: {
                 if let imageInput = viewModel.attachedImage {
                     ImagePreviewCard(
@@ -248,7 +259,12 @@ struct PopupView: View {
                     sourceEditor
                 }
             }
-            if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
+            if let attachError = viewModel.attachError {
+                Text(attachError)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
                 imageTip
             }
         }
@@ -336,7 +352,8 @@ struct PopupView: View {
             switch viewModel.state {
             case .streaming:
                 Text("Translating…")
-            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly:
+            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly,
+                 .keyRejected where !viewModel.isOutputOnly:
                 Text("Your text is kept")
             default:
                 if let cost = viewModel.costEstimate {
@@ -363,7 +380,6 @@ struct PopupView: View {
         case .translate, .retry, .openSystemSettings, .done:
             return KeyboardShortcut(.return, modifiers: .command)
         case .new: return KeyboardShortcut("n", modifiers: .command)
-        case .continueFromPartial: return KeyboardShortcut("p", modifiers: .command)
         case .stop, .backToText, .copyAndClose, .translateAgain: return nil
         }
     }
@@ -372,17 +388,12 @@ struct PopupView: View {
         switch action {
         case .showText: viewModel.showInput()
         case .translate, .translateAgain, .retry: viewModel.translate()
-        case .stop: viewModel.cancelStream()
+        case .stop: viewModel.stop()
         case .new: viewModel.startNewTranslation()
         case .copyAndClose: viewModel.copyResultIfShown()
         case .backToText: viewModel.dismissError()
         case .openSystemSettings: viewModel.openAccessibilitySettings()
         case .done: viewModel.onDismissRequest?()
-        case .continueFromPartial:
-            if case .error(_, let partial?) = viewModel.state {
-                viewModel.inputText = partial
-                viewModel.translate()
-            }
         }
     }
 
@@ -391,7 +402,7 @@ struct PopupView: View {
     private var hiddenShortcuts: some View {
         ZStack {
             if !viewModel.isOutputOnly {
-                hiddenButton { viewModel.pasteImageFromClipboard() }
+                hiddenButton { viewModel.pasteImageAndTranslate() }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
                 hiddenButton { viewModel.chooseImageFile() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])
