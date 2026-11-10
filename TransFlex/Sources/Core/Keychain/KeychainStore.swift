@@ -143,10 +143,12 @@ public final class KeychainStore {
         status = SecKeychainGetStatus(keychain, &keychainStatus)
         guard status == errSecSuccess else { throw KeychainError(status: status) }
         // Unlocking is per login session, so the app unlocks the keychain itself rather than
-        // relying on a shell that may run in another session (ssh).
-        if keychainStatus & SecKeychainStatus(kSecUnlockStateStatus) == 0, let passwordFile {
+        // relying on a shell that may run in another session (ssh). With no way to unlock it,
+        // it throws rather than letting macOS ask.
+        if keychainStatus & SecKeychainStatus(kSecUnlockStateStatus) == 0 {
+            guard let passwordFile else { throw KeychainError.lockedWithoutPasswordFile }
             guard let password = try? String(contentsOfFile: passwordFile, encoding: .utf8)
-                .trimmingCharacters(in: .newlines) else { throw KeychainError(status: errSecAuthFailed) }
+                .trimmingCharacters(in: .newlines) else { throw KeychainError.passwordFileUnreadable(passwordFile) }
             status = SecKeychainUnlock(keychain, UInt32(password.utf8.count), password, true)
             guard status == errSecSuccess else { throw KeychainError(status: status) }
         }

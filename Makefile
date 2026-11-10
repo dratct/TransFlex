@@ -59,8 +59,11 @@ test:
 # Once per machine: creates the Debug build's own keychain and its password file. Running it
 # again keeps both. Point the Debug build at it with the line it prints.
 dev-keychain:
-	@umask 077; if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ]; then echo "==> $(DEV_KEYCHAIN_PASSWORD) already exists, kept"; \
-	else openssl rand -base64 24 > "$(DEV_KEYCHAIN_PASSWORD)" && echo "==> wrote $(DEV_KEYCHAIN_PASSWORD)"; fi
+	@if [ -f "$(DEV_KEYCHAIN)" ] && [ ! -s "$(DEV_KEYCHAIN_PASSWORD)" ]; then \
+	echo "error: $(DEV_KEYCHAIN) exists without its password in $(DEV_KEYCHAIN_PASSWORD); delete the keychain (security delete-keychain) to start over" >&2; exit 1; fi
+	@umask 077; if [ -s "$(DEV_KEYCHAIN_PASSWORD)" ]; then echo "==> $(DEV_KEYCHAIN_PASSWORD) already exists, kept"; \
+	else openssl rand -base64 24 > "$(DEV_KEYCHAIN_PASSWORD)" && echo "==> wrote $(DEV_KEYCHAIN_PASSWORD)" \
+	|| { rm -f "$(DEV_KEYCHAIN_PASSWORD)"; exit 1; }; fi
 	@if [ -f "$(DEV_KEYCHAIN)" ]; then echo "==> $(DEV_KEYCHAIN) already exists, kept"; \
 	else security create-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" && \
 	security set-keychain-settings "$(DEV_KEYCHAIN)" && echo "==> created $(DEV_KEYCHAIN)"; fi
@@ -73,9 +76,12 @@ dev-keychain:
 _dev-keychain-stamp:
 	@if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ] && [ -f "$(DEV_KEYCHAIN)" ] && [ -d "$(DEBUG_APP)" ]; then \
 	cdhash=$$(codesign -dvvv "$(DEBUG_APP)" 2>&1 | sed -n 's/^CDHash=//p'); \
-	security set-generic-password-partition-list -s $(DEBUG_BUNDLE_ID) -S "cdhash:$$cdhash" \
-	-k "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" >/dev/null 2>&1 \
-	&& echo "==> Debug keys handed to build $$cdhash" || true; fi
+	if [ -z "$$cdhash" ]; then echo "warning: $(DEBUG_APP) has no code hash; its keys were not handed over" >&2; \
+	elif err=$$(security set-generic-password-partition-list -s $(DEBUG_BUNDLE_ID) -S "cdhash:$$cdhash" \
+	-k "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" 2>&1 >/dev/null); then \
+	echo "==> Debug keys handed to build $$cdhash"; \
+	elif ! echo "$$err" | grep -q "could not be found"; then \
+	echo "warning: Debug keys not handed to build $$cdhash: $$err" >&2; fi; fi
 
 # Once per machine after creating Config/Local.xcconfig: creates the development certificate,
 # registers this Mac and fetches the team profile. Later builds reuse the cached profile.

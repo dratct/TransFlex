@@ -188,16 +188,31 @@ final class KeychainStoreFileAtTests: XCTestCase {
         XCTAssertTrue(isUnlocked())
     }
 
+    // With user interaction off, a query on a locked keychain fails with -25308 anyway, so these
+    // tests name the error the unlock step itself raises.
     func testWrongPasswordFileThrows() throws {
         let locked = try lockedStore(passwordFile: "not-the-password")
-        XCTAssertThrowsError(try locked.get("provider.openai.apiKey"))
+        XCTAssertThrowsError(try locked.get("provider.openai.apiKey")) {
+            XCTAssertEqual($0 as? KeychainError, .unhandled(errSecAuthFailed))
+        }
         XCTAssertFalse(isUnlocked())
     }
 
     func testMissingPasswordFileThrows() throws {
         let locked = try lockedStore(passwordFile: nil)
-        XCTAssertThrowsError(try locked.get("provider.openai.apiKey"))
+        let passwordFile = directory.appendingPathComponent("keychain-password").path
+        XCTAssertThrowsError(try locked.get("provider.openai.apiKey")) {
+            XCTAssertEqual($0 as? KeychainError, .passwordFileUnreadable(passwordFile))
+        }
         XCTAssertFalse(isUnlocked())
+    }
+
+    func testLockedKeychainWithoutPasswordFileThrows() throws {
+        _ = try lockedStore(passwordFile: nil)
+        let noFile = KeychainStore(service: service, backend: .fileAt(path: path))
+        XCTAssertThrowsError(try noFile.get("provider.openai.apiKey")) {
+            XCTAssertEqual($0 as? KeychainError, .lockedWithoutPasswordFile)
+        }
     }
 
     func testMissingKeychainFileThrowsInsteadOfUsingLogin() {
