@@ -701,6 +701,35 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertNil(reported)
         XCTAssertTrue(vm.state.isKeyRejected)
     }
+
+    // MARK: Switching preset after a failure
+
+    func testSwitchPresetClearsTheAttachNote() throws {
+        let vm = makeViewModel()
+        vm.reportAttachRejected("This preset can't read images.")
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+        XCTAssertNil(vm.attachError, "the note was about the old preset")
+    }
+
+    func testSwitchPresetKeepsAPartialResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.scriptedError = LLMError.server(status: 503, body: "")
+        let vm = makeViewModel()
+        vm.inputText = "Hello"
+        vm.translate()
+        for _ in 0..<100 where !(vm.state.isError) { try await Task.sleep(nanoseconds: 5_000_000) }
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+        guard case .error(_, let partial) = vm.state else { return XCTFail("\(vm.state)") }
+        XCTAssertEqual(partial, "Bon", "text already received stays until ⌘↩ translates again")
+    }
+
+    func testQuickFailureNamesTheProvider() throws {
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(presetStore.presets.first)
+        vm.presentQuickFailure(LLMError.server(status: 503, body: ""), presetID: preset.id)
+        let name = ProviderRegistry.shared.displayName(for: preset.providerID)
+        XCTAssertEqual(vm.state, .error(message: "\(name) is having trouble. Try again in a moment.", partial: nil))
+    }
 }
 
 @MainActor

@@ -129,10 +129,6 @@ final class PopupViewModel: ObservableObject {
         }
     }
 
-    /// Reads `NSPasteboard.general` directly so the menu item works without
-    /// needing the TextEditor to have focus (which `.onPasteCommand` requires).
-    /// Falls back to file-URL on the pasteboard for cases like "Copy" from
-    /// Finder which only exposes the URL, not raw image data.
     /// ⌘⇧V: attach the clipboard image and translate it at once.
     func pasteImageAndTranslate() {
         guard pasteImageFromClipboard() else { return }
@@ -412,11 +408,12 @@ final class PopupViewModel: ObservableObject {
         translate()
     }
 
-    /// Surfaces a selection-translate failure in the output-only popup.
     /// Replace's Open Popup and selection failures with no banner: a rejected
     /// key gets its own card, anything else the error card.
     func presentQuickFailure(_ error: Error, presetID: UUID) {
-        presentQuickError(ErrorMessageHelper.friendly(error), presetID: presetID)
+        let providerName = presetStore.presets.first { $0.id == presetID }
+            .map { ProviderRegistry.shared.displayName(for: $0.providerID) }
+        presentQuickError(ErrorMessageHelper.friendly(error, providerName: providerName), presetID: presetID)
         if case LLMError.auth = error, let preset = selectedPreset {
             state = .keyRejected(providerID: preset.providerID)
         }
@@ -439,6 +436,7 @@ final class PopupViewModel: ObservableObject {
         state = .idle
     }
 
+    /// Surfaces a selection-translate failure in the output-only popup.
     func presentQuickError(_ message: String, presetID: UUID) {
         resetForSelection()
         selectedPresetID = presetID
@@ -510,7 +508,12 @@ final class PopupViewModel: ObservableObject {
     func switchPreset(_ id: UUID) {
         stop()
         selectedPresetID = id
-        if case .done = state { return }
+        attachError = nil
+        // Text already on screen stays until ⌘↩ translates again.
+        switch state {
+        case .done, .error(_, partial: .some): return
+        default: break
+        }
         state = .idle
         costEstimate = nil
     }

@@ -190,8 +190,11 @@ public final class PopupWindowController {
             showQuickError(error, presetID: presetID)
             return
         }
+        let providerID = presetStore.presets.first { $0.id == presetID }?.providerID ?? ""
         replaceHUD.showFailed(
-            message: ReplaceHUD.failureMessage(for: error),
+            message: ReplaceHUD.failureMessage(
+                for: error, providerName: ProviderRegistry.shared.displayName(for: providerID)
+            ),
             onOpenPopup: { [weak self] in self?.showQuickError(error, presetID: presetID) },
             onRetry: { [weak self] in self?.quickReplace(presetID: presetID) }
         )

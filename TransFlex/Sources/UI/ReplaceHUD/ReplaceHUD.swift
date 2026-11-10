@@ -110,14 +110,14 @@ final class ReplaceHUD {
 
     /// The banner's text: what happened, then that the other app's text is
     /// untouched.
-    static func failureMessage(for error: Error) -> String {
+    static func failureMessage(for error: Error, providerName: String? = nil) -> String {
         if error is QuickReplaceCoordinator.EmptyResult {
             return "The provider returned nothing. Your text was left as it was."
         }
         if let failure = error as? SelectionCapture.Failure, [.pasteNotApplied, .targetLost].contains(failure) {
             return ErrorMessageHelper.friendly(error)
         }
-        return ErrorMessageHelper.friendly(error) + " Nothing was changed."
+        return ErrorMessageHelper.friendly(error, providerName: providerName) + " Nothing was changed."
     }
 
     // MARK: - Private

@@ -190,4 +190,11 @@ final class ReplaceHUDTests: XCTestCase {
         XCTAssertEqual(hud.model.phase, .translating(presetName: "EN"))
         XCTAssertTrue(hud.isShowing)
     }
+
+    func testFailureMessageNamesTheProvider() {
+        XCTAssertEqual(
+            ReplaceHUD.failureMessage(for: LLMError.server(status: 503, body: ""), providerName: "Gemini"),
+            "Gemini is having trouble. Try again in a moment. Nothing was changed."
+        )
+    }
 }
