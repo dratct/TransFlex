@@ -576,7 +576,11 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         let board = NSPasteboard(name: .init("PopupVMAutoCopy-\(UUID().uuidString)"))
         board.clearContents()
         board.setString("user clipboard", forType: .string)
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: "PopupVMAutoCopy-\(UUID().uuidString)"))
+        // A fixed name: a fresh one per run leaves an empty plist behind each time.
+        let suite = "io.aiaz.transflex.tests.PopupVMAutoCopy"
+        UserDefaults().removePersistentDomain(forName: suite)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { UserDefaults().removePersistentDomain(forName: suite) }
         if let autoCopy { defaults.set(autoCopy, forKey: PopupViewModel.copyResultAutomaticallyKey) }
         let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
         let vm = PopupViewModel(
@@ -729,6 +733,15 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.presentQuickFailure(LLMError.server(status: 503, body: ""), presetID: preset.id)
         let name = ProviderRegistry.shared.displayName(for: preset.providerID)
         XCTAssertEqual(vm.state, .error(message: "\(name) is having trouble. Try again in a moment.", partial: nil))
+    }
+
+    func testTranslateClearsTheAttachNote() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.inputText = "Hello"
+        vm.reportAttachRejected("Clipboard does not contain an image.")
+        vm.translate()
+        XCTAssertNil(vm.attachError, "a new translation is not about the failed attach")
     }
 }
 

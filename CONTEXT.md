@@ -44,7 +44,7 @@ _Avoid_: Clear previous translation, reset policy.
 - Replace Selection shows its progress without taking focus from the app
   being edited: a capsule beside the pointer while it translates and after it
   pastes; a failure opens a notice that says nothing was changed. If the
-  Popup is open when it fails, the failure shows in the Popup instead and Esc
+  Popup or Output-only popup is open when it fails, the failure shows in the Popup instead and Esc
   is not held.
 - Replace Selection counts as done only when the focused field's text changed
   after the paste. If the field reads the same before and after (a read-only

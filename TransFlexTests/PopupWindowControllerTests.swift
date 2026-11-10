@@ -25,7 +25,11 @@ final class PopupWindowControllerTests: XCTestCase {
         preset = Preset(name: "Mock", providerID: "mock", modelID: "m1", systemPrompt: "Translate.")
         try store.add(preset)
         pasteboard = NSPasteboard(name: .init("PopupWindowControllerTests-\(UUID().uuidString)"))
-        defaults = UserDefaults(suiteName: "PopupWindowControllerTests-\(UUID().uuidString)")
+        // A fixed name: a fresh one per run leaves an empty plist behind each time.
+        let suite = "io.aiaz.transflex.tests.PopupWindowController"
+        UserDefaults().removePersistentDomain(forName: suite)
+        defaults = UserDefaults(suiteName: suite)
+        addTeardownBlock { UserDefaults().removePersistentDomain(forName: suite) }
         defaults.set(true, forKey: PopupViewModel.copyResultAutomaticallyKey)
         controller = PopupWindowController(
             presetStore: store,

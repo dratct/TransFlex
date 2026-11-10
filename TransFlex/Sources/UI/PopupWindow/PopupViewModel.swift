@@ -190,6 +190,7 @@ final class PopupViewModel: ObservableObject {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let hasImage = attachedImage != nil
         guard !text.isEmpty || hasImage, let preset = selectedPreset else { return }
+        attachError = nil
         guard hasAPIKey(preset) else {
             cancelStream()
             state = .missingKey(providerID: preset.providerID)
