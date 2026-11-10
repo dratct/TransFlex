@@ -31,7 +31,7 @@ enum HistoryText {
     static func detailMeta(_ entry: HistoryEntry) -> String {
         var parts = [entry.modelID]
         if let ms = entry.durationMs {
-            parts.append((Double(ms) / 1000).formatted(.number.precision(.fractionLength(1))) + " s")
+            parts.append(String(format: "%.1f s", Double(ms) / 1000))
         }
         if let tokens = entry.tokenCount { parts.append(CostFormat.tokens(tokens)) }
         if entry.hadImage { parts.append("image") }
