@@ -41,3 +41,21 @@ final class SettingsWindowTests: XCTestCase {
         XCTAssertTrue(controller.isVisible, "switching to another app leaves Settings open")
     }
 }
+
+/// Why the model list fell back to the built-in one, in the picker's footer.
+final class ModelListFailureTests: XCTestCase {
+    func testRejectedKey() {
+        XCTAssertEqual(ModelListFailure.reason(for: LLMError.auth, providerName: "Anthropic"), "The key was rejected.")
+    }
+
+    func testUnreachable() {
+        XCTAssertEqual(ModelListFailure.reason(for: LLMError.network("timed out"), providerName: "Anthropic"),
+                       "Couldn’t reach Anthropic.")
+        XCTAssertEqual(ModelListFailure.reason(for: LLMError.offline, providerName: "Gemini"), "You’re offline.")
+    }
+
+    func testOtherFailure() {
+        XCTAssertEqual(ModelListFailure.reason(for: LLMError.server(status: 500, body: ""), providerName: "OpenAI"),
+                       "OpenAI couldn’t list its models.")
+    }
+}

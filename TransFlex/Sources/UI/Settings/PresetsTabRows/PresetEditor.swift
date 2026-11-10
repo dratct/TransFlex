@@ -14,6 +14,7 @@ struct PresetEditor: View {
     @State private var isPromptExpanded = false
     @State private var promptSheetSize = CGSize(width: 640, height: 480)
     @State private var isFallbackList = false
+    @State private var modelListFailure: String?
 
     private static let modelCache = ModelCatalogCache()
 
@@ -233,7 +234,8 @@ struct PresetEditor: View {
                 modelID: $draft.modelID,
                 models: availableModels,
                 providerName: providerLabel(for: draft.providerID),
-                isBuiltInList: isFallbackList
+                isBuiltInList: isFallbackList,
+                failureReason: modelListFailure
             )
             refreshButton
         }
@@ -288,6 +290,7 @@ struct PresetEditor: View {
         }
         isFetchingModels = true
         errorMessage = nil
+        modelListFailure = nil
 
         Task {
             let apiKey = resolveAPIKey(for: providerID)
@@ -304,7 +307,19 @@ struct PresetEditor: View {
 
             do {
                 let provider = try ProviderRegistry.shared.provider(for: providerID)
-                let models = try await provider.availableModels(apiKey: apiKey)
+                let models: [Model]
+                do {
+                    models = try await provider.availableModels(apiKey: apiKey)
+                } catch let error where provider.localModels != nil {
+                    // A key that cannot list models still leaves the built-in
+                    // list to pick from, with the reason in the picker.
+                    guard providerID == draft.providerID else { return }
+                    availableModels = provider.localModels ?? []
+                    isFallbackList = true
+                    modelListFailure = ModelListFailure.reason(for: error, providerName: providerLabel(for: providerID))
+                    isFetchingModels = false
+                    return
+                }
                 guard providerID == draft.providerID else { return }
                 availableModels = models
                 let fetched = models.contains { $0.source == .fetched }

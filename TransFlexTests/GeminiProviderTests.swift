@@ -111,13 +111,26 @@ final class GeminiProviderTests: XCTestCase {
         XCTAssertEqual(models, provider.localModels)
     }
 
-    func testAvailableModelsErrorReturnsFallback() async throws {
+    func testAvailableModelsThrowsOnUnauthorized() async throws {
         MockURLProtocol.handler = { req in
             let resp = HTTPURLResponse(url: req.url!, statusCode: 403, httpVersion: "HTTP/1.1", headerFields: nil)!
             return (resp, Data())
         }
-        let provider = GeminiProvider(session: session)
-        let models = try await provider.availableModels(apiKey: "bad")
-        XCTAssertEqual(models, provider.localModels)
+        do {
+            _ = try await GeminiProvider(session: session).availableModels(apiKey: "bad")
+            XCTFail("a rejected key is reported, not hidden behind the built-in list")
+        } catch {
+            XCTAssertEqual(error as? LLMError, .auth)
+        }
+    }
+
+    func testAvailableModelsThrowsWhenUnreachable() async throws {
+        MockURLProtocol.handler = nil
+        do {
+            _ = try await GeminiProvider(session: session).availableModels(apiKey: "sk-live")
+            XCTFail("an unreachable provider is reported, not hidden behind the built-in list")
+        } catch {
+            guard case .network = error as? LLMError else { return XCTFail("got \(error)") }
+        }
     }
 }
