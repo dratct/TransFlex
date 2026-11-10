@@ -8,4 +8,8 @@ public enum KeychainBackend: Equatable {
     /// The data protection keychain. Needs a team-signed build whose provisioning profile
     /// authorises the `keychain-access-groups` entitlement; ad-hoc builds get `-34018`.
     case dataProtection
+    /// A file keychain of its own at `path`, opened with its own password, never added to the
+    /// user's search list. Items in it carry no code-hash partition, so a rebuilt app signed by
+    /// the same certificate reads them without a prompt. Used by local Debug builds only.
+    case fileAt(path: String)
 }

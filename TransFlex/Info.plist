@@ -43,6 +43,8 @@
 	<string>$(TRANSFLEX_APP_SUPPORT_DIR)</string>
 	<key>TransFlexKeychainBackend</key>
 	<string>$(TRANSFLEX_KEYCHAIN_BACKEND)</string>
+	<key>TransFlexKeychainPath</key>
+	<string>$(TRANSFLEX_KEYCHAIN_PATH)</string>
 	<key>TransFlexKeychainService</key>
 	<string>$(TRANSFLEX_KEYCHAIN_SERVICE)</string>
 </dict>
