@@ -12,10 +12,15 @@ TEST_SIGNING := $(if $(wildcard Config/Local.xcconfig),,CODE_SIGN_IDENTITY=- COD
 # Team-signed builds keep their designated requirement, so macOS keeps honouring the
 # privacy grants across rebuilds; only ad-hoc builds need them reset.
 BUILD_PERMISSIONS_RESET := $(if $(wildcard Config/Local.xcconfig),,permissions-reset)
+# A Debug keychain of its own (see Config/Local.xcconfig.example) with a password kept next to
+# Local.xcconfig: the app unlocks it with that file, and open-debug hands its items to each new
+# build, so a rebuilt app reads its keys without a prompt.
+DEV_KEYCHAIN := $(HOME)/Library/Keychains/transflex-dev.keychain-db
+DEV_KEYCHAIN_PASSWORD := Config/Local.keychain-password
 # An App Store Connect team API key for provisioning without an Xcode account.
 ASC_AUTH := $(if $(ASC_KEY_PATH),-authenticationKeyPath "$(ASC_KEY_PATH)" -authenticationKeyID "$(ASC_KEY_ID)" -authenticationKeyIssuerID "$(ASC_ISSUER_ID)")
 
-.PHONY: permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
+.PHONY: dev-keychain _dev-keychain-stamp permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
 
 build: kill-debug _build $(BUILD_PERMISSIONS_RESET) open-debug
 	@echo "==> launched $(DEBUG_APP)"
@@ -51,6 +56,33 @@ release:
 test:
 	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test
 
+# Once per machine: creates the Debug build's own keychain and its password file. Running it
+# again keeps both. Point the Debug build at it with the line it prints.
+dev-keychain:
+	@if [ -f "$(DEV_KEYCHAIN)" ] && [ ! -s "$(DEV_KEYCHAIN_PASSWORD)" ]; then \
+	echo "error: $(DEV_KEYCHAIN) exists without its password in $(DEV_KEYCHAIN_PASSWORD); delete the keychain (security delete-keychain) to start over" >&2; exit 1; fi
+	@umask 077; if [ -s "$(DEV_KEYCHAIN_PASSWORD)" ]; then echo "==> $(DEV_KEYCHAIN_PASSWORD) already exists, kept"; \
+	else openssl rand -base64 24 > "$(DEV_KEYCHAIN_PASSWORD)" && echo "==> wrote $(DEV_KEYCHAIN_PASSWORD)" \
+	|| { rm -f "$(DEV_KEYCHAIN_PASSWORD)"; exit 1; }; fi
+	@if [ -f "$(DEV_KEYCHAIN)" ]; then echo "==> $(DEV_KEYCHAIN) already exists, kept"; \
+	else security create-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" && \
+	security set-keychain-settings "$(DEV_KEYCHAIN)" && echo "==> created $(DEV_KEYCHAIN)"; fi
+	@echo "==> Config/Local.xcconfig needs:"
+	@echo "    TRANSFLEX_KEYCHAIN_PATH[config=Debug] = \$$(HOME)/Library/Keychains/transflex-dev.keychain-db"
+	@echo "    TRANSFLEX_KEYCHAIN_PASSWORD_FILE[config=Debug] = \$$(SRCROOT)/Config/Local.keychain-password"
+
+# macOS ties each item the app saves to the code hash of the build that saved it, so a rebuild
+# would ask for the keychain password. Hand every Debug item to the build about to open.
+_dev-keychain-stamp:
+	@if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ] && [ -f "$(DEV_KEYCHAIN)" ] && [ -d "$(DEBUG_APP)" ]; then \
+	cdhash=$$(codesign -dvvv "$(DEBUG_APP)" 2>&1 | sed -n 's/^CDHash=//p'); \
+	if [ -z "$$cdhash" ]; then echo "warning: $(DEBUG_APP) has no code hash; its keys were not handed over" >&2; \
+	elif err=$$(security set-generic-password-partition-list -s $(DEBUG_BUNDLE_ID) -S "cdhash:$$cdhash" \
+	-k "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" 2>&1 >/dev/null); then \
+	echo "==> Debug keys handed to build $$cdhash"; \
+	elif ! echo "$$err" | grep -q "could not be found"; then \
+	echo "warning: Debug keys not handed to build $$cdhash: $$err" >&2; fi; fi
+
 # Once per machine after creating Config/Local.xcconfig: creates the development certificate,
 # registers this Mac and fetches the team profile. Later builds reuse the cached profile.
 provision:
@@ -71,6 +103,7 @@ open: open-debug
 
 open-debug:
 	@if [ ! -d "$(DEBUG_APP)" ]; then echo "==> Debug app not found, building..."; scripts/build.sh --no-gen; fi
+	@$(MAKE) --no-print-directory _dev-keychain-stamp
 	@open $(DEBUG_APP)
 	@echo "==> opened $(DEBUG_APP)"
 
@@ -119,6 +152,7 @@ help:
 	@echo "make fresh-reset — clear Debug grants, defaults, presets, history, caches (keeps API keys)"
 	@echo "make release    — Release build only (no kill/open)"
 	@echo "make test       — run unit tests"
+	@echo "make dev-keychain — once per machine: the Debug build's own keychain (no login prompt after rebuilds)"
 	@echo "make provision  — once per machine with Config/Local.xcconfig: certificate, device, profile"
 	@echo "                  (Xcode account, or ASC_KEY_PATH/ASC_KEY_ID/ASC_ISSUER_ID team API key)"
 	@echo "make kill       — alias for kill-debug"

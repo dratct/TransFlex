@@ -51,14 +51,14 @@ public final class KeychainStore {
         // see "not found", both fall back to add, and the second hits
         // errSecDuplicateItem. Accessibility is set on add only — passing it to
         // SecItemUpdate is not portable across macOS versions.
-        let addStatus = SecItemAdd(addQuery(account: key, data: data) as CFDictionary, nil)
+        let addStatus = SecItemAdd(try scoped(addQuery(account: key, data: data), adding: true) as CFDictionary, nil)
         switch addStatus {
         case errSecSuccess:
             return
         case errSecDuplicateItem:
             let updateAttrs: [String: Any] = [kSecValueData as String: data]
             let updateStatus = SecItemUpdate(
-                baseQuery(account: key) as CFDictionary,
+                try scoped(baseQuery(account: key)) as CFDictionary,
                 updateAttrs as CFDictionary
             )
             guard updateStatus == errSecSuccess else {
@@ -74,7 +74,7 @@ public final class KeychainStore {
     /// caller asks for `kSecValueData`; restricting the query to attributes
     /// lets first-run gating probe the keychain silently.
     public func exists(_ key: String) -> Bool {
-        var query = baseQuery(account: key)
+        guard var query = try? scoped(baseQuery(account: key)) else { return false }
         query[kSecReturnAttributes as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
         var item: CFTypeRef?
@@ -82,7 +82,7 @@ public final class KeychainStore {
     }
 
     public func getData(_ key: String) throws -> Data? {
-        var query = baseQuery(account: key)
+        var query = try scoped(baseQuery(account: key))
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
 
@@ -100,7 +100,7 @@ public final class KeychainStore {
 
     /// Deletes the entry. Missing key is not an error.
     public func delete(_ key: String) throws {
-        let status = SecItemDelete(baseQuery(account: key) as CFDictionary)
+        let status = SecItemDelete(try scoped(baseQuery(account: key)) as CFDictionary)
         guard status == errSecSuccess || status == errSecItemNotFound else {
             throw KeychainError(status: status)
         }
@@ -108,7 +108,7 @@ public final class KeychainStore {
 
     /// Test helper: removes every item under `service`.
     public func deleteAll() throws {
-        let query = serviceQuery()
+        let query = try scoped(serviceQuery())
         // The file-based keychain deletes one match per call, so repeat until none is left.
         var status = SecItemDelete(query as CFDictionary)
         while status == errSecSuccess {
@@ -128,6 +128,37 @@ public final class KeychainStore {
             query[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlock
         }
         return query
+    }
+
+    /// Points a query at this store's own keychain file when it has one: `kSecUseKeychain`
+    /// for an add, a one-entry search list otherwise, so nothing reads or lands in the
+    /// login keychain. A keychain file that cannot be opened throws instead.
+    private func scoped(_ query: [String: Any], adding: Bool = false) throws -> [String: Any] {
+        guard case .fileAt(let path, let passwordFile) = backend else { return query }
+        var keychain: SecKeychain?
+        var status = SecKeychainOpen(path, &keychain)
+        guard status == errSecSuccess, let keychain else { throw KeychainError(status: status) }
+        // SecKeychainOpen succeeds for a missing file; reading its status does not.
+        var keychainStatus: SecKeychainStatus = 0
+        status = SecKeychainGetStatus(keychain, &keychainStatus)
+        guard status == errSecSuccess else { throw KeychainError(status: status) }
+        // Unlocking is per login session, so the app unlocks the keychain itself rather than
+        // relying on a shell that may run in another session (ssh). With no way to unlock it,
+        // it throws rather than letting macOS ask.
+        if keychainStatus & SecKeychainStatus(kSecUnlockStateStatus) == 0 {
+            guard let passwordFile else { throw KeychainError.lockedWithoutPasswordFile }
+            guard let password = try? String(contentsOfFile: passwordFile, encoding: .utf8)
+                .trimmingCharacters(in: .newlines) else { throw KeychainError.passwordFileUnreadable(passwordFile) }
+            status = SecKeychainUnlock(keychain, UInt32(password.utf8.count), password, true)
+            guard status == errSecSuccess else { throw KeychainError(status: status) }
+        }
+        var scoped = query
+        if adding {
+            scoped[kSecUseKeychain as String] = keychain
+        } else {
+            scoped[kSecMatchSearchList as String] = [keychain]
+        }
+        return scoped
     }
 
     private func baseQuery(account: String) -> [String: Any] {

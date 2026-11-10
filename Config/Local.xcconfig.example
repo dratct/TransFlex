@@ -8,3 +8,14 @@ CODE_SIGN_IDENTITY = Apple Development
 CODE_SIGNING_REQUIRED = YES
 CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.signed.entitlements
 TRANSFLEX_KEYCHAIN_BACKEND = dataProtection
+
+// Without a team: sign with a self-signed code-signing certificate made in Keychain Access
+// (Certificate Assistant › Create a Certificate…, type Code Signing), and keep the Debug build's
+// keys in a keychain of its own, so a rebuild reads them without a prompt. Run
+// `make dev-keychain` once, then use these lines instead of the team lines above, and open the
+// app with make.
+// CODE_SIGN_STYLE = Manual
+// CODE_SIGN_IDENTITY = TransFlex Local Signing
+// CODE_SIGNING_REQUIRED = YES
+// TRANSFLEX_KEYCHAIN_PATH[config=Debug] = $(HOME)/Library/Keychains/transflex-dev.keychain-db
+// TRANSFLEX_KEYCHAIN_PASSWORD_FILE[config=Debug] = $(SRCROOT)/Config/Local.keychain-password

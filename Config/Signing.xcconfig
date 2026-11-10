@@ -13,5 +13,15 @@ CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.entitlements
 // `file` or `dataProtection`; written into Info.plist as TransFlexKeychainBackend.
 TRANSFLEX_KEYCHAIN_BACKEND = file
 
+// A keychain file of the Debug build's own, set only by a machine's Local.xcconfig; written into
+// Info.plist as TransFlexKeychainPath and, when set, used instead of TRANSFLEX_KEYCHAIN_BACKEND.
+TRANSFLEX_KEYCHAIN_PATH =
+// The file holding that keychain's password; the app unlocks the keychain with it.
+TRANSFLEX_KEYCHAIN_PASSWORD_FILE =
+
 #include? "Local.xcconfig"
 #include? "DeveloperID.generated.xcconfig"
+
+// Release never uses a Debug keychain, whatever Local.xcconfig sets.
+TRANSFLEX_KEYCHAIN_PATH[config=Release] =
+TRANSFLEX_KEYCHAIN_PASSWORD_FILE[config=Release] =

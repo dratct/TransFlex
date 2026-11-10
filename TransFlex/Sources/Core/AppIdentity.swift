@@ -38,10 +38,17 @@ struct AppIdentity {
             for: "TransFlexKeychainService",
             in: infoDictionary
         ) ?? bundleIdentifier
-        self.keychainBackend = Self.value(
-            for: "TransFlexKeychainBackend",
-            in: infoDictionary
-        ) == "dataProtection" ? .dataProtection : .file
+        if let keychainPath = Self.value(for: "TransFlexKeychainPath", in: infoDictionary) {
+            self.keychainBackend = .fileAt(
+                path: keychainPath,
+                passwordFile: Self.value(for: "TransFlexKeychainPasswordFile", in: infoDictionary)
+            )
+        } else {
+            self.keychainBackend = Self.value(
+                for: "TransFlexKeychainBackend",
+                in: infoDictionary
+            ) == "dataProtection" ? .dataProtection : .file
+        }
     }
 
     func applicationSupportDirectory(baseURL: URL) -> URL {
