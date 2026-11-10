@@ -107,6 +107,16 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertFalse(controller.isVisible)
     }
 
+    func testPermissionCardGrowsThePopupToFit() async throws {
+        copied = .failure(SelectionCapture.Failure.accessibilityNotGranted)
+        controller.quickTranslate(presetID: preset.id)
+        try await waitUntil({ self.controller.isVisible }, "the card uses the popup")
+        try await waitUntil(
+            { self.controller.panelFrame.height > PopupFrame.outputOnlyMinHeight + 1 },
+            "the popup grows to show the whole card, not a scroll view"
+        )
+    }
+
     func testStreamErrorBeforeTextHidesPopupAndShowsBanner() async throws {
         provider.scriptedError = LLMError.server(status: 503, body: "")
         controller.quickTranslate(presetID: preset.id)

@@ -70,7 +70,8 @@ struct PopupOutputSection: View {
 
 /// Reports its own height on appear and on every change. Preference keys do
 /// not reliably leave the AppKit-backed `ScrollView`, so this writes directly.
-private struct HeightReporter: View {
+/// Reports its parent's height; the Output-only popup grows from it.
+struct HeightReporter: View {
     let report: (CGFloat) -> Void
 
     var body: some View {

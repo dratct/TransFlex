@@ -191,7 +191,9 @@ struct PopupView: View {
         case .accessibilityRequired(let granted):
             ScrollView {
                 AccessibilityPermissionCard(granted: granted)
+                    .background(HeightReporter { viewModel.outputContentHeight = $0 })
             }
+            .background(HeightReporter { viewModel.outputVisibleHeight = $0 })
             .padding(.horizontal, Spacing.l)
         case .idle, .streaming, .done, .error:
             columns

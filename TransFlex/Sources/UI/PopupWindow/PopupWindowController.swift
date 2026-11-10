@@ -101,6 +101,7 @@ public final class PopupWindowController {
     }
 
     public var isVisible: Bool { panel.isVisible }
+    var panelFrame: NSRect { panel.frame }
 
     /// Activates a preset by ID; a stream in flight stops and keeps its text.
     public func activatePreset(id: UUID) {
