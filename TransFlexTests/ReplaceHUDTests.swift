@@ -36,7 +36,7 @@ final class ReplaceHUDTests: XCTestCase {
         XCTAssertTrue(screen.contains(frame), "\(frame) outside \(screen)")
     }
 
-    // MARK: - Esc while the failure banner shows (C-9)
+    // MARK: - Esc while the failure banner shows
 
     private func failedHUD(_ hold: RecordingEscapeHold, openPopup: @escaping () -> Void = {}, retry: @escaping () -> Void = {}) -> ReplaceHUD {
         let hud = ReplaceHUD(escapeHold: hold)
@@ -117,7 +117,7 @@ final class ReplaceHUDTests: XCTestCase {
         XCTAssertTrue(hud.isShowing)
     }
 
-    // MARK: - Translate Selection banner (C-8)
+    // MARK: - Translate Selection banner
 
     private final class ManualScheduler {
         var pending: [(seconds: TimeInterval, work: () -> Void, cancelled: Bool)] = []

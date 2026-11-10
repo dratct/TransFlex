@@ -1,8 +1,8 @@
 import XCTest
 @testable import TransFlex
 
-/// C-9: opening a TransFlex window hides the Replace failure banner and gives
-/// Esc back first. C-8: a Translate Selection failure shows a banner, not the popup.
+/// Opening a TransFlex window hides the Replace failure banner and gives Esc
+/// back first; a Translate Selection failure shows a banner, not the popup.
 @MainActor
 final class PopupWindowControllerTests: XCTestCase {
     private var tempDir: URL!
@@ -12,6 +12,8 @@ final class PopupWindowControllerTests: XCTestCase {
     private var copied: Result<String, Error> = .success("hello")
     private var copyCount = 0
     private var controller: PopupWindowController!
+    private var pasteboard: NSPasteboard!
+    private var defaults: UserDefaults!
 
     override func setUp() async throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -22,6 +24,9 @@ final class PopupWindowControllerTests: XCTestCase {
         let store = PresetStore(fileURL: tempDir.appendingPathComponent("presets.json"))
         preset = Preset(name: "Mock", providerID: "mock", modelID: "m1", systemPrompt: "Translate.")
         try store.add(preset)
+        pasteboard = NSPasteboard(name: .init("PopupWindowControllerTests-\(UUID().uuidString)"))
+        defaults = UserDefaults(suiteName: "PopupWindowControllerTests-\(UUID().uuidString)")
+        defaults.set(true, forKey: PopupViewModel.copyResultAutomaticallyKey)
         controller = PopupWindowController(
             presetStore: store,
             escapeHold: hold,
@@ -29,7 +34,9 @@ final class PopupWindowControllerTests: XCTestCase {
                 copyCount += 1
                 return try copied.get()
             },
-            translationService: TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
+            translationService: TranslationService(provider: { _ in provider }, apiKey: { _ in "" }),
+            pasteboard: PasteboardHelper(pasteboard: pasteboard),
+            defaults: defaults
         )
     }
 
@@ -55,7 +62,7 @@ final class PopupWindowControllerTests: XCTestCase {
         return nil
     }
 
-    // MARK: Replace banner and Esc (C-9)
+    // MARK: Replace banner and Esc
 
     func testShowingPopupHidesBannerAndReleases() {
         showFailureBanner()
@@ -86,7 +93,7 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertFalse(hold.isHeld)
     }
 
-    // MARK: Translate Selection banner (C-8)
+    // MARK: Translate Selection banner
 
     func testNothingSelectedShowsBannerWithoutPopup() async throws {
         copied = .failure(SelectionCapture.Failure.noSelection)
@@ -118,6 +125,7 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertEqual(copyCount, 1, "retry must not copy again: the user is elsewhere by now")
         XCTAssertTrue(provider.capturedMessages.contains { "\($0)".contains("hello") }, "\(provider.capturedMessages)")
         XCTAssertTrue(controller.isVisible)
+        try await waitUntil({ self.pasteboard.string(forType: .string) == "xin chào" }, "auto-copy reaches the test's own pasteboard")
     }
 
     func testTranslateSelectionReleasesReplaceBannerHold() {

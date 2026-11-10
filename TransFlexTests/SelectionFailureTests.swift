@@ -1,7 +1,7 @@
 import XCTest
 @testable import TransFlex
 
-/// C-8: a Translate Selection failure shows a banner instead of the popup,
+/// A Translate Selection failure shows a banner instead of the popup,
 /// except for cards that need the popup (permission, rejected key, setup).
 final class SelectionFailureTests: XCTestCase {
     private func banner(_ error: Error) -> SelectionBanner? {

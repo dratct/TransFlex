@@ -33,7 +33,9 @@ public final class PopupWindowController {
         escapeHold: EscapeHold? = nil,
         hud: ReplaceHUD? = nil,
         copySelection: (@MainActor () async throws -> String)? = nil,
-        translationService: TranslationService? = nil
+        translationService: TranslationService? = nil,
+        pasteboard: PasteboardHelper = PasteboardHelper(),
+        defaults: UserDefaults = .standard
     ) {
         let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
@@ -56,7 +58,9 @@ public final class PopupWindowController {
         let vm = PopupViewModel(
             translationService: service,
             presetStore: presetStore,
+            pasteboard: pasteboard,
             keychain: keychain,
+            defaults: defaults,
             hasAPIKey: { preset in
                 guard PopupViewModel.keyedProviderIDs.contains(preset.providerID) else { return true }
                 return keychain.exists("provider.\(preset.providerID).apiKey")

@@ -667,7 +667,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertFalse(notified)
     }
 
-    // MARK: Translate Selection banner (C-8)
+    // MARK: Translate Selection banner
 
     func testStreamErrorBeforeTextCallsOutputOnlyFailure() async throws {
         provider.scriptedError = LLMError.offline
