@@ -303,13 +303,13 @@ struct PopupView: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Spacing.xs) {
                 Text("Images work too — drop one here, press")
-                KeyHint(keys: ["⌘⇧V"])
+                KeyHint(keys: ["⌘", "⇧", "V"])
                 Text(", or")
                 chooseFileLink
             }
             HStack(spacing: Spacing.xs) {
                 Text("Images: drop, press")
-                KeyHint(keys: ["⌘⇧V"])
+                KeyHint(keys: ["⌘", "⇧", "V"])
                 Text(", or")
                 chooseFileLink
             }

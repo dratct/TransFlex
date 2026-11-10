@@ -6,7 +6,9 @@ import OSLog
 final class PopupViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "PopupViewModel")
 
-    @Published var state: PopupState = .idle
+    @Published var state: PopupState = .idle {
+        didSet { announceOutcome(from: oldValue) }
+    }
     @Published var inputText: String = "" {
         didSet { if inputText != oldValue, !inputText.isEmpty { attachError = nil } }
     }
@@ -59,6 +61,7 @@ final class PopupViewModel: ObservableObject {
     private let historyRecorder = HistoryRecorder()
 
     private let isAccessibilityGranted: () -> Bool
+    private let announcer: Announcing
     private let hasAPIKey: (Preset) -> Bool
     private let openAccessibilitySettingsAction: () -> Void
     private var accessibilityPoll: Task<Void, Never>?
@@ -75,8 +78,10 @@ final class PopupViewModel: ObservableObject {
         defaults: UserDefaults = .standard,
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
         openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
-        hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
+        hasAPIKey: @escaping (Preset) -> Bool = { _ in true },
+        announcer: Announcing = VoiceOverAnnouncer()
     ) {
+        self.announcer = announcer
         self.isAccessibilityGranted = isAccessibilityGranted
         self.hasAPIKey = hasAPIKey
         self.openAccessibilitySettingsAction = openAccessibilitySettings
@@ -550,6 +555,20 @@ final class PopupViewModel: ObservableObject {
     func copyToClipboard(_ text: String) {
         pasteboard.writeText(text)
         triggerToast(autoDismiss: true)
+        announcer.announce("Copied")
+    }
+
+    /// A finished or failed translation changes only what is drawn, so VoiceOver is told.
+    private func announceOutcome(from old: PopupState) {
+        guard state != old else { return }
+        switch state {
+        case .done(_, let stopped):
+            announcer.announce(stopped ? "Translation stopped" : "Translation ready")
+        case .error(let message, _):
+            announcer.announce("Couldn’t translate. \(message)")
+        default:
+            break
+        }
     }
 
     /// Used only by the first-run wizard gate. Probes existence via

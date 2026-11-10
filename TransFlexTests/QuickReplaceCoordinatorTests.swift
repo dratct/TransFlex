@@ -88,6 +88,21 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertTrue(provider.capturedMessages.last?.content.contains("Hello") ?? false)
     }
 
+    func testReplaceAnnouncesResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let announcer = RecordingAnnouncer()
+        let coordinator = makeCoordinator(selection: "Hello")
+        coordinator.announcer = announcer
+
+        try await coordinator.run(preset: preset)
+        XCTAssertEqual(announcer.messages, ["Replaced with the translation"])
+
+        provider.scriptedEvents = []
+        provider.scriptedError = LLMError.offline
+        _ = try? await coordinator.run(preset: preset)
+        XCTAssertEqual(announcer.messages.last, "Couldn’t replace the selection")
+    }
+
     func testFieldThatIgnoresThePasteFailsAndLeavesTranslationOnClipboard() async {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         field = "Hello"
