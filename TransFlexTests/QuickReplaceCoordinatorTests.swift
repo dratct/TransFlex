@@ -260,7 +260,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
 
         let run = Task { try await coordinator.run(preset: preset) }
-        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ hold.log == ["hold"] })
         hold.press()
 
         do {
@@ -280,7 +280,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
 
         let run = Task { try await coordinator.run(preset: preset) }
-        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ hold.log == ["hold"] })
         let second = try await coordinator.run(preset: preset)
         XCTAssertFalse(second)
         XCTAssertEqual(hold.log, ["hold"])

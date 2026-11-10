@@ -131,9 +131,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertTrue(vm.isOutputOnly)
         XCTAssertEqual(vm.selectedPresetID, target)
         XCTAssertEqual(vm.inputText, "Hello")
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
     }
 
@@ -153,9 +151,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertFalse(vm.isOutputOnly, "the full popup, with the source text, not the output-only one")
         XCTAssertEqual(vm.selectedPresetID, saved.id)
         XCTAssertEqual(vm.inputText, "Hello")
-        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Xin chao") })
         XCTAssertEqual(vm.state, .done(result: "Xin chao"))
         XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
     }
@@ -168,9 +164,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.switchPreset(preset.id)
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Xin chao") })
         XCTAssertEqual(vm.state, .done(result: "Xin chao"))
         return vm.costEstimate
     }
@@ -363,9 +357,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.pasteImageAndTranslate()
 
         XCTAssertNotNil(vm.attachedImage)
-        for _ in 0..<200 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
         XCTAssertNotNil(provider.capturedImage, "the pasted image was sent")
     }
@@ -430,9 +422,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.historyStore = history
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .streaming(accumulated: received) {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .streaming(accumulated: received) })
         XCTAssertEqual(vm.state, .streaming(accumulated: received))
         return vm
     }
@@ -503,9 +493,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.inputText = "Hello"
 
         vm.translate()
-        for _ in 0..<100 where vm.state == .idle || vm.state == .streaming(accumulated: "") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ !(vm.state == .idle || vm.state == .streaming(accumulated: "")) })
 
         XCTAssertEqual(vm.state, .keyRejected(providerID: preset.providerID))
         XCTAssertEqual(vm.inputText, "Hello")
@@ -589,9 +577,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         )
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
         return board
     }
@@ -616,9 +602,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         board.clearContents()
 
         XCTAssertTrue(vm.copyResultIfShown())
@@ -633,16 +617,12 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         vm.inputText = "Hello there"
         provider.scriptedEvents = [.textDelta("Salut"), .stop(reason: .complete)]
 
         XCTAssertTrue(vm.translateAgainIfShown())
-        for _ in 0..<100 where vm.state != .done(result: "Salut") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Salut") })
         XCTAssertEqual(vm.state, .done(result: "Salut"), "⌘↩ after a result translates the edited source")
     }
 
@@ -650,9 +630,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         let vm = makeViewModel()
         vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
 
         XCTAssertFalse(vm.translateAgainIfShown(), "the Output-only popup has no source to translate again")
@@ -679,7 +657,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         var reported: Error?
         vm.onOutputOnlyFailure = { reported = $0 }
         vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
-        for _ in 0..<100 where reported == nil { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ reported != nil })
         XCTAssertEqual(reported as? LLMError, .offline)
     }
 
@@ -690,7 +668,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         var reported: Error?
         vm.onOutputOnlyFailure = { reported = $0 }
         vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
-        for _ in 0..<100 where !(vm.state.isError) { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ vm.state.isError })
         XCTAssertNil(reported, "text already shown stays in the popup with Retry")
         if case .error(_, let partial) = vm.state { XCTAssertEqual(partial, "Bon") } else { XCTFail("\(vm.state)") }
     }
@@ -701,7 +679,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         var reported: Error?
         vm.onOutputOnlyFailure = { reported = $0 }
         vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
-        for _ in 0..<100 where !(vm.state.isKeyRejected) { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ vm.state.isKeyRejected })
         XCTAssertNil(reported)
         XCTAssertTrue(vm.state.isKeyRejected)
     }
@@ -721,7 +699,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         let vm = makeViewModel()
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where !(vm.state.isError) { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ vm.state.isError })
         vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
         guard case .error(_, let partial) = vm.state else { return XCTFail("\(vm.state)") }
         XCTAssertEqual(partial, "Bon", "text already received stays until ⌘↩ translates again")
@@ -774,9 +752,7 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
     }
 
     private func waitForState(_ vm: PopupViewModel, _ expected: PopupState) async throws {
-        for _ in 0..<200 where vm.state != expected {
-            try await Task.sleep(nanoseconds: 2_000_000)
-        }
+        try await waitUntil({ vm.state == expected })
     }
 
     func testCardFlipsToGrantedWhenPermissionTurnsOn() async throws {
