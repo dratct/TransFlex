@@ -74,6 +74,8 @@ _Avoid_: Clear previous translation, reset policy.
   model unchanged) to that provider: a preset on a fast model gets the provider's
   fast model, one on a strong model its strong model. A new preset starts on
   a provider that has a key.
+- There is always at least one preset: deleting one asks first, and the last
+  one cannot be deleted.
 - Pasting an image with ⌘⇧V attaches it and translates at once; an image
   dropped or chosen from a file waits for ⌘↩.
 - After a partial result the popup offers Retry, which translates the whole
