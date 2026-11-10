@@ -6,6 +6,7 @@ struct PresetsTab: View {
     let providersStore: ProvidersStore
     @State private var selectedPresetID: UUID?
     @State private var errorMessage: String?
+    @State private var confirmingDelete = false
 
     var body: some View {
         HSplitView {
@@ -39,16 +40,24 @@ struct PresetsTab: View {
                 }
                 .help("Add Preset")
                 .accessibilityLabel("Add Preset")
-                Button(action: deleteSelected) {
+                Button { confirmingDelete = true } label: {
                     Image(systemName: "minus").frame(width: 20, height: 20)
                 }
-                .disabled(selectedPreset == nil)
-                .help("Delete Preset")
+                .disabled(selectedPreset == nil || !presetStore.canDelete)
+                .help(presetStore.canDelete ? "Delete Preset" : "Keep at least one preset")
                 .accessibilityLabel("Delete Preset")
                 Spacer()
             }
             .buttonStyle(.borderless)
             .padding(Spacing.s)
+            .confirmationDialog(
+                "Delete ‘\(selectedPreset?.name ?? "")’?",
+                isPresented: $confirmingDelete
+            ) {
+                Button("Delete", role: .destructive) { deleteSelected() }
+            } message: {
+                Text("Its shortcuts are removed too.")
+            }
 
             if let error = errorMessage {
                 Text(error)
@@ -75,10 +84,14 @@ struct PresetsTab: View {
     }
 
     private func addPreset() {
+        let keychain = KeychainStore()
+        let start = PresetStore.newPresetProvider(
+            keyed: Set(DefaultPresets.keyedProviders.filter { keychain.exists("provider.\($0).apiKey") })
+        )
         let newPreset = Preset(
             name: "New Preset",
-            providerID: "openai",
-            modelID: "gpt-4o-mini",
+            providerID: start.providerID,
+            modelID: start.model,
             systemPrompt: "Translate the following text."
         )
 

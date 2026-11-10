@@ -20,11 +20,7 @@ public final class OpenAIProvider: LLMProvider {
 
     public func availableModels(apiKey: String) async throws -> [Model] {
         guard !apiKey.isEmpty else { return localModels! }
-        do {
-            return try await fetchModels(apiKey: apiKey)
-        } catch {
-            return localModels!
-        }
+        return try await fetchModels(apiKey: apiKey)
     }
 
     private func fetchModels(apiKey: String) async throws -> [Model] {

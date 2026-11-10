@@ -94,6 +94,17 @@ public final class ProviderRegistry: @unchecked Sendable {
         }
     }
 
+    /// The sentence the Add Endpoint sheet shows under a base URL it cannot
+    /// use; nil when the URL is usable or nothing is typed yet.
+    static func urlRuleViolation(_ text: String) -> String? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+        guard let url = URL(string: trimmed), url.host != nil, (try? validateBaseURL(url)) != nil else {
+            return "Start with https://; http works only for localhost."
+        }
+        return nil
+    }
+
     private static func isLocalHTTPURL(_ url: URL) -> Bool {
         guard let host = url.host(percentEncoded: false)?.lowercased() else { return false }
         return localHTTPHosts.contains(host)

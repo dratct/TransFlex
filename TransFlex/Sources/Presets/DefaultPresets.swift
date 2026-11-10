@@ -101,6 +101,20 @@ public enum DefaultPresets {
         ),
     ]
 
+    /// The providers a key can be added for, in the order a new preset prefers them.
+    static let keyedProviders = ["openai", "anthropic", "gemini"]
+
+    /// The quick and the stronger model each keyed provider starts with; the
+    /// built-ins use `gpt-4o-mini` and `gpt-4o`.
+    static func models(for providerID: String) -> (fast: String, strong: String)? {
+        switch providerID {
+        case "openai": return ("gpt-4o-mini", "gpt-4o")
+        case "anthropic": return ("claude-haiku-4-5", "claude-sonnet-5-5")
+        case "gemini": return ("gemini-2.0-flash", "gemini-1.5-pro")
+        default: return nil
+        }
+    }
+
     @MainActor
     public static func seedIfNeeded(into store: PresetStore) throws {
         guard store.presets.isEmpty else { return }

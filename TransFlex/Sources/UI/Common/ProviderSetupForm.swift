@@ -45,7 +45,11 @@ final class ProviderSetupModel: ObservableObject {
 
     /// Saves into the Keychain and marks the first run done.
     static func live() -> ProviderSetupModel {
-        let saver = ProviderKeySaver()
+        live(keychain: KeychainStore(), presetStore: AppDelegate.shared?.presetStore)
+    }
+
+    static func live(keychain: KeychainStore, presetStore: PresetStore?) -> ProviderSetupModel {
+        let saver = ProviderKeySaver(keychain: keychain, presetStore: presetStore)
         return ProviderSetupModel(
             save: { key, providerID in try saver.save(key, for: providerID) },
             onSaved: { UserDefaults.standard.set(true, forKey: "hasCompletedFirstRun") }

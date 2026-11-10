@@ -15,10 +15,14 @@ final class ProvidersStore: ObservableObject {
 
     private let fileURL: URL
     private let secrets: OpenAICompatSecretStore
+    private let keychain: KeychainStore
+    /// The app's preset store, so a first cloud key can move the built-ins.
+    var presetStore: PresetStore?
 
     init(fileURL: URL? = nil, keychain: KeychainStore = KeychainStore()) {
         let resolved = fileURL ?? Self.defaultFileURL()
         self.fileURL = resolved
+        self.keychain = keychain
         self.secrets = OpenAICompatSecretStore(keychain: keychain)
         self.config = Self.loadFromDisk(at: resolved)
         migrateLegacyHeaderValues()
@@ -159,8 +163,13 @@ final class ProvidersStore: ObservableObject {
         }
     }
 
+    /// An empty key removes it; any other goes through `ProviderKeySaver`.
     func setCloudAPIKey(_ key: String, for providerID: String) throws {
-        try secrets.setCloudAPIKey(key, for: providerID)
+        if key.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            try secrets.setCloudAPIKey("", for: providerID)
+        } else {
+            try ProviderKeySaver(keychain: keychain, presetStore: presetStore).save(key, for: providerID)
+        }
     }
 
     // MARK: - Private

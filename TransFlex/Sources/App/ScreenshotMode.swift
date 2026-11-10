@@ -113,6 +113,7 @@ enum ScreenshotMode {
                 models: sampleModels,
                 providerName: "OpenAI",
                 isBuiltInList: false,
+                failureReason: nil,
                 close: {}
             ))
         })

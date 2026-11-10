@@ -12,9 +12,10 @@ public protocol LLMProvider: Sendable {
     /// without server-side downscaling penalties. Caller must pre-resize.
     var maxImageDim: Int { get }
 
-    /// Returns the model catalog. Cloud providers fetch from their list-models
-    /// API when `apiKey` is non-empty, falling back to `localModels` on empty
-    /// key or fetch error. OpenAI-compat providers always fetch `/models`.
+    /// Returns the model catalog. Cloud providers return `localModels` for an
+    /// empty key, else fetch their list-models API and throw an `LLMError`
+    /// when that fails, so the caller can say why. OpenAI-compat providers
+    /// always fetch `/models`.
     func availableModels(apiKey: String) async throws -> [Model]
 
     /// Models known synchronously without network I/O. Cloud providers return

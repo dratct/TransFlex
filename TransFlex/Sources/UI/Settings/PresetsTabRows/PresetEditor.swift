@@ -14,6 +14,7 @@ struct PresetEditor: View {
     @State private var isPromptExpanded = false
     @State private var promptSheetSize = CGSize(width: 640, height: 480)
     @State private var isFallbackList = false
+    @State private var modelListFailure: String?
 
     private static let modelCache = ModelCatalogCache()
 
@@ -79,12 +80,15 @@ struct PresetEditor: View {
             Section("Shortcuts") {
                 SettingsRow("Choose this preset", caption: "Makes it the popup’s preset.") {
                     KeyboardShortcuts.Recorder(for: .preset(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .preset(draft.id)) { presetStore.presets })
                 }
                 SettingsRow("Translate selection", caption: "Shows the translation in a small popup.") {
                     KeyboardShortcuts.Recorder(for: .presetQuickPopup(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .presetQuickPopup(draft.id)) { presetStore.presets })
                 }
                 SettingsRow("Replace selection", caption: "Pastes the translation over the selected text.") {
                     KeyboardShortcuts.Recorder(for: .presetQuickReplace(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .presetQuickReplace(draft.id)) { presetStore.presets })
                 }
             }
 
@@ -186,6 +190,16 @@ struct PresetEditor: View {
         .onChange(of: draft) { updated in
             saveDraft(updated)
         }
+        // Every edit is saved at once, so a provider or model that differs in
+        // the store was changed elsewhere (a first key moves the built-ins).
+        // Take it, or the next edit would write the old one back.
+        .onReceive(presetStore.$presets) { presets in
+            guard let stored = presets.first(where: { $0.id == draft.id }),
+                  stored.providerID != draft.providerID || stored.modelID != draft.modelID
+            else { return }
+            draft.providerID = stored.providerID
+            draft.modelID = stored.modelID
+        }
         .sheet(isPresented: $isPromptExpanded) {
             PromptFullScreenEditor(
                 title: draft.name.isEmpty ? "Instructions" : draft.name,
@@ -220,7 +234,8 @@ struct PresetEditor: View {
                 modelID: $draft.modelID,
                 models: availableModels,
                 providerName: providerLabel(for: draft.providerID),
-                isBuiltInList: isFallbackList
+                isBuiltInList: isFallbackList,
+                failureReason: modelListFailure
             )
             refreshButton
         }
@@ -275,6 +290,7 @@ struct PresetEditor: View {
         }
         isFetchingModels = true
         errorMessage = nil
+        modelListFailure = nil
 
         Task {
             let apiKey = resolveAPIKey(for: providerID)
@@ -291,7 +307,19 @@ struct PresetEditor: View {
 
             do {
                 let provider = try ProviderRegistry.shared.provider(for: providerID)
-                let models = try await provider.availableModels(apiKey: apiKey)
+                let models: [Model]
+                do {
+                    models = try await provider.availableModels(apiKey: apiKey)
+                } catch let error where provider.localModels != nil {
+                    // A key that cannot list models still leaves the built-in
+                    // list to pick from, with the reason in the picker.
+                    guard providerID == draft.providerID else { return }
+                    availableModels = provider.localModels ?? []
+                    isFallbackList = true
+                    modelListFailure = ModelListFailure.reason(for: error, providerName: providerLabel(for: providerID))
+                    isFetchingModels = false
+                    return
+                }
                 guard providerID == draft.providerID else { return }
                 availableModels = models
                 let fetched = models.contains { $0.source == .fetched }
@@ -309,6 +337,11 @@ struct PresetEditor: View {
     }
 
     private func saveDraft(_ updated: Preset) {
+        if var stored = presetStore.presets.first(where: { $0.id == updated.id }) {
+            stored.updatedAt = updated.updatedAt
+            // Nothing the user changed: no write, and `updatedAt` stays.
+            guard stored != updated else { return }
+        }
         do {
             try presetStore.update(updated)
             errorMessage = nil

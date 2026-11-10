@@ -24,8 +24,7 @@ import OSLog
 ///
 /// Sticky exception: when the frontmost bundle ID is on
 /// `PopupDismissPolicy.defaultSystemDialogAllowlist` (Touch ID, keychain ACL,
-/// NSOpenPanel host, etc.), the window stays. This is identical to popup
-/// behaviour and keeps Settings usable while a system sheet is up.
+/// NSOpenPanel host, etc.), the window stays, so it survives a system sheet.
 @MainActor
 final class WindowAutoDismisser {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "AutoDismiss")
@@ -36,8 +35,7 @@ final class WindowAutoDismisser {
     private var workspaceObserver: NSObjectProtocol?
     private var mouseMonitor: Any?
 
-    /// `label` is used as a tag in OSLog output so popup vs Settings dismiss
-    /// events are distinguishable in `make log`.
+    /// `label` tags this window's dismiss events in OSLog (`make log`).
     init(window: NSWindow, label: String, onDismiss: (() -> Void)? = nil) {
         self.window = window
         self.label = label

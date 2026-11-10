@@ -55,6 +55,7 @@ struct SettingsRoot: View {
         }
         .frame(minWidth: 620, minHeight: 480)
         .onAppear {
+            providersStore.presetStore = presetStore
             providersStore.registerAllWithRegistry()
         }
         .onReceive(tabState.$selected) { selected = $0 }

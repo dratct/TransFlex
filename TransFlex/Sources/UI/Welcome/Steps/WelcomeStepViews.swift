@@ -25,6 +25,7 @@ struct WelcomeShortcutView: View {
                 Text("Change it:")
                     .foregroundStyle(.secondary)
                 KeyboardShortcuts.Recorder(for: .openPopup) { keys = $0.map(ShortcutKeys.symbols(for:)) ?? [] }
+                    .shortcutValidation(ShortcutConflicts.validator(for: .openPopup) { AppDelegate.shared?.presetStore.presets ?? [] })
             }
             .padding(.top, Spacing.xl)
         }

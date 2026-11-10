@@ -67,6 +67,9 @@ public final class PresetStore: ObservableObject {
         try replaceAll(with: next)
     }
 
+    /// The popup needs one preset to translate with, so the last one stays.
+    var canDelete: Bool { presets.count > 1 }
+
     public func delete(id: UUID) throws {
         let next = presets.filter { $0.id != id }
         guard next.count != presets.count else { return }
@@ -80,6 +83,34 @@ public final class PresetStore: ObservableObject {
     }
 
 
+
+    /// Moves the built-ins still on OpenAI with their name, prompt and model
+    /// untouched to `providerID`'s matching model. Not a user edit:
+    /// `updatedAt` stays.
+    func moveUneditedBuiltins(to providerID: String) throws {
+        guard providerID != "openai", let target = DefaultPresets.models(for: providerID) else { return }
+        let strongOpenAI = DefaultPresets.models(for: "openai")?.strong
+        var changed = false
+        let next = presets.map { preset -> Preset in
+            let unedited = DefaultPresets.builtins.contains {
+                $0.name == preset.name && $0.systemPrompt == preset.systemPrompt && $0.modelID == preset.modelID
+            }
+            guard preset.providerID == "openai", unedited else { return preset }
+            var moved = preset
+            moved.providerID = providerID
+            moved.modelID = preset.modelID == strongOpenAI ? target.strong : target.fast
+            changed = true
+            return moved
+        }
+        if changed { try replaceAll(with: next) }
+    }
+
+    /// Where a preset made with + starts: the first keyed provider that has a
+    /// key, OpenAI when none has.
+    static func newPresetProvider(keyed: Set<String>) -> (providerID: String, model: String) {
+        let providerID = DefaultPresets.keyedProviders.first { keyed.contains($0) } ?? "openai"
+        return (providerID, DefaultPresets.models(for: providerID)?.fast ?? "gpt-4o-mini")
+    }
 
     /// Returns true when the preset references a provider id no longer
     /// resolvable by `registry`. Used by Settings UI for an `⚠ provider
