@@ -75,6 +75,7 @@ enum ScreenshotMode {
             popup("popup-partial", .error(message: "The connection closed before the translation finished.", partial: String(result.prefix(40)))),
             popup("popup-error", .error(message: "No internet connection.", partial: nil)),
             popup("popup-missing-key", .missingKey(providerID: "openai")),
+            popup("popup-key-rejected", .keyRejected(providerID: "openai")),
             popup("popup-accessibility", input: "", .accessibilityRequired(granted: false)),
         ]
         for tab in [SettingsTab.general, .providers, .presets, .about] {

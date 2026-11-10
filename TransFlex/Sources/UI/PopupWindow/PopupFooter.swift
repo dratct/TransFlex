@@ -58,7 +58,7 @@ enum PopupFooter {
                 + [Item(action: .copyAndClose, prominence: .primary)]
         case .error(_, .some):
             return isOutputOnly ? showText : [Item(action: .new, prominence: .plain)]
-        case .error(_, nil), .missingKey:
+        case .error(_, nil), .missingKey, .keyRejected:
             // Esc closes the Output-only popup, so it offers ⌘I instead.
             return isOutputOnly ? showText : [Item(action: .backToText, prominence: .plain)]
         case .accessibilityRequired(granted: false):

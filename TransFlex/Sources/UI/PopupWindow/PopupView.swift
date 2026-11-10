@@ -98,7 +98,7 @@ struct PopupView: View {
     private var showsColumns: Bool {
         switch viewModel.state {
         case .idle, .streaming, .done, .error(_, .some): return true
-        case .error(_, nil), .missingKey, .accessibilityRequired: return false
+        case .error(_, nil), .missingKey, .keyRejected, .accessibilityRequired: return false
         }
     }
 
@@ -173,6 +173,13 @@ struct PopupView: View {
         case .missingKey(let providerID):
             MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
                 .padding(.horizontal, Spacing.l)
+        case .keyRejected(let providerID):
+            KeyRejectedNotice(providerID: providerID) {
+                if hasInput {
+                    footerButton(PopupFooter.Item(action: .retry, prominence: .secondary))
+                }
+            }
+            .padding(.horizontal, Spacing.l)
         case .error(let message, nil):
             Notice(.card, tone: .error, symbol: "exclamationmark.triangle",
                    title: "Couldn’t translate", message: message) {
@@ -343,7 +350,8 @@ struct PopupView: View {
             switch viewModel.state {
             case .streaming:
                 Text("Translating…")
-            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly:
+            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly,
+                 .keyRejected where !viewModel.isOutputOnly:
                 Text("Your text is kept")
             default:
                 if let cost = viewModel.costEstimate {

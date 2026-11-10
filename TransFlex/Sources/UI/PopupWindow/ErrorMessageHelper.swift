@@ -2,7 +2,7 @@ import Foundation
 
 /// Maps LLM/Translation errors to user-facing strings.
 enum ErrorMessageHelper {
-    static func friendly(_ error: Error) -> String {
+    static func friendly(_ error: Error, providerName: String? = nil) -> String {
         if let llm = error as? LLMError {
             switch llm {
             case .auth: return "API key invalid. Update in Settings."
@@ -12,7 +12,7 @@ enum ErrorMessageHelper {
             case .network: return "No internet connection."
             case .server(let status, let body) where (400..<500).contains(status):
                 return "The provider rejected the request: \(providerReason(body) ?? "HTTP \(status)")"
-            case .server: return "Provider issue. Try again."
+            case .server: return "\(providerName ?? "The provider") is having trouble. Try again in a moment."
             case .invalidResponse, .decode: return "Provider returned unexpected response."
             case .cancelled: return "Request cancelled."
             case .providerMessage(let msg): return msg

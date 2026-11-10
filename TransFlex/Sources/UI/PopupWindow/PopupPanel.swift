@@ -14,6 +14,8 @@ final class PopupPanel: NSPanel {
     var onHide: (() -> Void)?
     /// ⌘C handler; returns true when it consumed the key.
     var onCopyCommand: (() -> Bool)?
+    /// ⌘, — the controller picks the tab from the popup's state.
+    var onOpenSettings: (() -> Void)?
     /// ⌘↩ handler; returns true when it consumed the key.
     var onTranslateAgainCommand: (() -> Bool)?
 
@@ -84,7 +86,7 @@ final class PopupPanel: NSPanel {
     override func performKeyEquivalent(with event: NSEvent) -> Bool {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if mods == .command, event.charactersIgnoringModifiers == "," {
-            AppCommands.openSettings()
+            if let onOpenSettings { onOpenSettings() } else { AppCommands.openSettings() }
             return true
         }
         // Checked before the responder chain, so a text selection in the

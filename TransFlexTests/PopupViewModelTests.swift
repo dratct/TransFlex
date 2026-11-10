@@ -191,7 +191,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         let footer = try await footerAfterTranslating(with: unpriced)
 
-        XCTAssertEqual(footer, "96 tokens")
+        XCTAssertEqual(footer, "96 tokens · price unknown")
     }
 
     func testShowInputLeavesOutputOnlyAndNotifiesOnce() throws {
@@ -494,6 +494,81 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.state, .idle, "a card about the old preset no longer applies")
     }
 
+    // MARK: Key cards
+
+    func testAuthErrorBecomesKeyRejected() async throws {
+        provider.scriptedError = LLMError.auth
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(vm.selectedPreset)
+        vm.inputText = "Hello"
+
+        vm.translate()
+        for _ in 0..<100 where vm.state == .idle || vm.state == .streaming(accumulated: "") {
+            try await Task.sleep(nanoseconds: 5_000_000)
+        }
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: preset.providerID))
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testReplaceOpenPopupWithRejectedKeyShowsKeyCard() throws {
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(presetStore.presets.last)
+
+        vm.presentQuickFailure(LLMError.auth, presetID: preset.id)
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: preset.providerID))
+    }
+
+    func testSettingsTabIsProvidersForKeyCards() {
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .missingKey(providerID: "openai")), .providers)
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .keyRejected(providerID: "openai")), .providers)
+    }
+
+    func testSettingsTabIsGeneralOtherwise() {
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .idle), .general)
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .error(message: "x", partial: nil)), .general)
+    }
+
+    func testMissingKeyClearsWhenKeyAppears() throws {
+        var hasKey = false
+        let vm = makeViewModel(hasAPIKey: { _ in hasKey })
+        vm.inputText = "Hello"
+        vm.translate()
+        XCTAssertEqual(vm.state, .missingKey(providerID: try XCTUnwrap(vm.selectedPreset).providerID))
+
+        vm.recheckProviderKey()
+        XCTAssertNotEqual(vm.state, .idle, "no key yet: the card stays")
+        hasKey = true
+        vm.recheckProviderKey()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testMissingKeyFromSelectionClearsIntoTheEditor() throws {
+        var hasKey = false
+        let vm = makeViewModel(hasAPIKey: { _ in hasKey })
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        XCTAssertTrue(vm.isOutputOnly)
+
+        hasKey = true
+        vm.recheckProviderKey()
+
+        XCTAssertFalse(vm.isOutputOnly, "the editor is back, so ⌘↩ translates")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testRejectedKeyStaysOnRecheck() {
+        let vm = makeViewModel()
+        vm.state = .keyRejected(providerID: "openai")
+
+        vm.recheckProviderKey()
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: "openai"))
+    }
+
     // MARK: Copy result automatically
 
     private func translateToDone(autoCopy: Bool?) async throws -> NSPasteboard {
@@ -698,6 +773,11 @@ final class PopupHideClockTests: XCTestCase {
 }
 
 final class PopupEscapeTests: XCTestCase {
+    func testRejectedKeyCardBehavesLikeMissingKey() {
+        XCTAssertEqual(PopupEscape.action(for: .keyRejected(providerID: "openai"), isOutputOnly: false), .backToText)
+        XCTAssertEqual(PopupEscape.action(for: .keyRejected(providerID: "openai"), isOutputOnly: true), .close)
+    }
+
     func testStoppedResultClosesLikeDone() {
         XCTAssertEqual(PopupEscape.action(for: .done(result: "x", stopped: true), isOutputOnly: false), .close)
     }

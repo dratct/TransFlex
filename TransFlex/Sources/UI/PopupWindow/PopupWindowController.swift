@@ -59,6 +59,13 @@ public final class PopupWindowController {
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
+        self.panel.onOpenSettings = { [weak vm] in
+            AppCommands.openSettings(tab: vm.map { PopupViewModel.settingsTab(for: $0.state) } ?? .general)
+        }
+        // Back from Settings with a key saved: the missing-key card clears.
+        NotificationCenter.default.publisher(for: NSWindow.didBecomeKeyNotification, object: self.panel)
+            .sink { [weak vm] _ in vm?.recheckProviderKey() }
+            .store(in: &cancellables)
         self.panel.onTranslateAgainCommand = { [weak vm] in vm?.translateAgainIfShown() ?? false }
         self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
@@ -202,7 +209,7 @@ public final class PopupWindowController {
         if error as? SelectionCapture.Failure == .accessibilityNotGranted {
             viewModel?.presentAccessibilityRequired(presetID: presetID)
         } else {
-            viewModel?.presentQuickError(ErrorMessageHelper.friendly(error), presetID: presetID)
+            viewModel?.presentQuickFailure(error, presetID: presetID)
         }
         showOutputOnly()
     }

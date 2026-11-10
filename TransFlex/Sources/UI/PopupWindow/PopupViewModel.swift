@@ -289,10 +289,13 @@ final class PopupViewModel: ObservableObject {
             } catch {
                 guard self.translationSequence == sequence else { return }
                 Self.logger.error("Stream error: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
-                if accumulated.isEmpty {
-                    self.state = .error(message: ErrorMessageHelper.friendly(error), partial: nil)
+                let message = ErrorMessageHelper.friendly(
+                    error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
+                )
+                if accumulated.isEmpty, case LLMError.auth = error {
+                    self.state = .keyRejected(providerID: preset.providerID)
                 } else {
-                    self.state = .error(message: ErrorMessageHelper.friendly(error), partial: accumulated)
+                    self.state = .error(message: message, partial: accumulated.isEmpty ? nil : accumulated)
                 }
             }
         }
@@ -401,6 +404,32 @@ final class PopupViewModel: ObservableObject {
     }
 
     /// Surfaces a selection-translate failure in the output-only popup.
+    /// Replace's Open Popup and selection failures with no banner: a rejected
+    /// key gets its own card, anything else the error card.
+    func presentQuickFailure(_ error: Error, presetID: UUID) {
+        presentQuickError(ErrorMessageHelper.friendly(error), presetID: presetID)
+        if case LLMError.auth = error, let preset = selectedPreset {
+            state = .keyRejected(providerID: preset.providerID)
+        }
+    }
+
+    /// Which Settings tab ⌘, opens from this state.
+    static func settingsTab(for state: PopupState) -> SettingsTab {
+        switch state {
+        case .missingKey, .keyRejected: return .providers
+        default: return .general
+        }
+    }
+
+    /// Called when the popup becomes key: a key saved meanwhile clears the
+    /// missing-key card.
+    func recheckProviderKey() {
+        guard case .missingKey = state, let preset = selectedPreset, hasAPIKey(preset) else { return }
+        // Idle needs the input editor, which output-only mode hides.
+        showInput()
+        state = .idle
+    }
+
     func presentQuickError(_ message: String, presetID: UUID) {
         resetForSelection()
         selectedPresetID = presetID
@@ -554,12 +583,8 @@ final class PopupViewModel: ObservableObject {
             costEstimate = nil
             return
         }
-        let tokens = CostFormat.tokens(input + output)
-        if let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage) {
-            costEstimate = tokens + " · " + CostFormat.usd(cost)
-        } else {
-            costEstimate = tokens
-        }
+        let cost = CostTable.estimate(model: model, input: input, output: output, hadImage: hadImage)
+        costEstimate = CostFormat.tokens(input + output) + " · " + CostFormat.usd(cost)
     }
 
 }
@@ -575,4 +600,6 @@ enum PopupState: Equatable {
     case accessibilityRequired(granted: Bool)
     /// The preset's provider needs a key and none is saved; nothing was sent.
     case missingKey(providerID: String)
+    /// The provider refused the saved key (HTTP 401/403); nothing was translated.
+    case keyRejected(providerID: String)
 }

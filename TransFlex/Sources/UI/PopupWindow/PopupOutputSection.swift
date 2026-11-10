@@ -47,7 +47,7 @@ struct PopupOutputSection: View {
             StreamingTextView(text: result, isStreaming: false)
         case .error(_, let partial?):
             StreamingTextView(text: partial, isStreaming: false)
-        case .idle, .error, .missingKey, .accessibilityRequired:
+        case .idle, .error, .missingKey, .keyRejected, .accessibilityRequired:
             EmptyView()
         }
     }
