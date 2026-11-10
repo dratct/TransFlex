@@ -41,6 +41,24 @@ final class HistoryLayoutTests: XCTestCase {
         XCTAssertEqual(origin.y + 500, 696)
     }
 
+    /// Settings and History float above the popup while TransFlex is in use,
+    /// and drop to the normal level once another app comes forward so they
+    /// never cover it.
+    @MainActor
+    func testUtilityWindowsFloatOnlyWhileAppIsActive() {
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 400, height: 300), styleMask: [.titled], backing: .buffered, defer: true)
+        UtilityWindowPlacement.place(window)
+
+        NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: NSApp)
+        XCTAssertEqual(window.level, .floating)
+
+        NotificationCenter.default.post(name: NSApplication.didResignActiveNotification, object: NSApp)
+        XCTAssertEqual(window.level, .normal)
+
+        NotificationCenter.default.post(name: NSApplication.didBecomeActiveNotification, object: NSApp)
+        XCTAssertEqual(window.level, .floating)
+    }
+
     /// The detail shows Original and Translation side by side only from
     /// 720pt; the sidebar's ideal width is 260pt.
     @MainActor
