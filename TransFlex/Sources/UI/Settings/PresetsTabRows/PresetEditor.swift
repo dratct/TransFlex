@@ -79,12 +79,15 @@ struct PresetEditor: View {
             Section("Shortcuts") {
                 SettingsRow("Choose this preset", caption: "Makes it the popup’s preset.") {
                     KeyboardShortcuts.Recorder(for: .preset(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .preset(draft.id)) { presetStore.presets })
                 }
                 SettingsRow("Translate selection", caption: "Shows the translation in a small popup.") {
                     KeyboardShortcuts.Recorder(for: .presetQuickPopup(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .presetQuickPopup(draft.id)) { presetStore.presets })
                 }
                 SettingsRow("Replace selection", caption: "Pastes the translation over the selected text.") {
                     KeyboardShortcuts.Recorder(for: .presetQuickReplace(draft.id))
+                        .shortcutValidation(ShortcutConflicts.validator(for: .presetQuickReplace(draft.id)) { presetStore.presets })
                 }
             }
 

@@ -11,6 +11,18 @@ public enum HotkeyAction: Hashable {
     case presetQuickReplace(UUID)
 }
 
+extension HotkeyAction {
+    /// Where `KeyboardShortcuts` stores this action's key combination.
+    var shortcutName: KeyboardShortcuts.Name {
+        switch self {
+        case .openPopup: return .openPopup
+        case .preset(let id): return .preset(id)
+        case .presetQuickPopup(let id): return .presetQuickPopup(id)
+        case .presetQuickReplace(let id): return .presetQuickReplace(id)
+        }
+    }
+}
+
 extension KeyboardShortcuts.Name {
     /// Default global popup hotkey: ⌥T in Release, ⌥Q in Debug. User-rebindable in Settings → Hotkeys.
     static let openPopup: Self = {

@@ -41,16 +41,5 @@ public final class GlobalHotkeyManager {
         KeyboardShortcuts.removeHandler(for: name)
     }
 
-    private func name(for action: HotkeyAction) -> KeyboardShortcuts.Name {
-        switch action {
-        case .openPopup:
-            return .openPopup
-        case .preset(let id):
-            return .preset(id)
-        case .presetQuickPopup(let id):
-            return .presetQuickPopup(id)
-        case .presetQuickReplace(let id):
-            return .presetQuickReplace(id)
-        }
-    }
+    private func name(for action: HotkeyAction) -> KeyboardShortcuts.Name { action.shortcutName }
 }

@@ -44,6 +44,7 @@ struct GeneralTab: View {
 
                 SettingsRow("Open shortcut", caption: "Shows the popup from any app.") {
                     KeyboardShortcuts.Recorder(for: .openPopup)
+                        .shortcutValidation(ShortcutConflicts.validator(for: .openPopup) { AppDelegate.shared?.presetStore.presets ?? [] })
                 }
             }
 
