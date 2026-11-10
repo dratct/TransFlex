@@ -70,8 +70,8 @@ _Avoid_: Clear previous translation, reset policy.
 - A key combination belongs to one action at most. Recording a combination
   another action already uses is refused, and the recorder names that action.
 - Saving the first provider key, when it is for Anthropic or Gemini, moves
-  the built-in presets the user has not edited (name and instructions
-  unchanged) to that provider: a preset on a fast model gets the provider's
+  the built-in presets the user has not edited (name, instructions and
+  model unchanged) to that provider: a preset on a fast model gets the provider's
   fast model, one on a strong model its strong model. A new preset starts on
   a provider that has a key.
 - Pasting an image with ⌘⇧V attaches it and translates at once; an image

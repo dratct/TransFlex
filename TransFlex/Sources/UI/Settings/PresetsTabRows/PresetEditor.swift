@@ -189,6 +189,16 @@ struct PresetEditor: View {
         .onChange(of: draft) { updated in
             saveDraft(updated)
         }
+        // Every edit is saved at once, so a provider or model that differs in
+        // the store was changed elsewhere (a first key moves the built-ins).
+        // Take it, or the next edit would write the old one back.
+        .onReceive(presetStore.$presets) { presets in
+            guard let stored = presets.first(where: { $0.id == draft.id }),
+                  stored.providerID != draft.providerID || stored.modelID != draft.modelID
+            else { return }
+            draft.providerID = stored.providerID
+            draft.modelID = stored.modelID
+        }
         .sheet(isPresented: $isPromptExpanded) {
             PromptFullScreenEditor(
                 title: draft.name.isEmpty ? "Instructions" : draft.name,
@@ -312,6 +322,11 @@ struct PresetEditor: View {
     }
 
     private func saveDraft(_ updated: Preset) {
+        if var stored = presetStore.presets.first(where: { $0.id == updated.id }) {
+            stored.updatedAt = updated.updatedAt
+            // Nothing the user changed: no write, and `updatedAt` stays.
+            guard stored != updated else { return }
+        }
         do {
             try presetStore.update(updated)
             errorMessage = nil

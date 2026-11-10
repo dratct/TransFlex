@@ -75,10 +75,14 @@ struct PresetsTab: View {
     }
 
     private func addPreset() {
+        let keychain = KeychainStore()
+        let start = PresetStore.newPresetProvider(
+            keyed: Set(DefaultPresets.keyedProviders.filter { keychain.exists("provider.\($0).apiKey") })
+        )
         let newPreset = Preset(
             name: "New Preset",
-            providerID: "openai",
-            modelID: "gpt-4o-mini",
+            providerID: start.providerID,
+            modelID: start.model,
             systemPrompt: "Translate the following text."
         )
 
