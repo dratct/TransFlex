@@ -14,6 +14,7 @@ struct OpenAICompatEditor: View {
     @State private var defaultModel = ""
     @State private var extraHeaders: [HeaderEntry] = []
     @State private var errorMessage: String?
+    @State private var statusMessage: String?
     @State private var fetchedModels: [Model] = []
     @State private var isFetching = false
 
@@ -25,11 +26,9 @@ struct OpenAICompatEditor: View {
     }
 
     static func validURL(_ text: String) -> URL? {
-        guard let url = URL(string: text.trimmingCharacters(in: .whitespacesAndNewlines)),
-              url.host != nil,
-              (try? ProviderRegistry.validateBaseURL(url)) != nil
-        else { return nil }
-        return url
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, ProviderRegistry.urlRuleViolation(trimmed) == nil else { return nil }
+        return URL(string: trimmed)
     }
 
     var body: some View {
@@ -49,7 +48,14 @@ struct OpenAICompatEditor: View {
             Form {
                 Section {
                     TextField("Name", text: $displayName, prompt: Text("Local Ollama"))
-                    TextField("Base URL", text: $baseURLString, prompt: Text(verbatim: "http://localhost:11434"))
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("Base URL", text: $baseURLString, prompt: Text(verbatim: "http://localhost:11434"))
+                        if let rule = ProviderRegistry.urlRuleViolation(baseURLString) {
+                            Text(rule)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                     SecureField(text: $apiKey, prompt: Text(apiKeyPlaceholder)) {
                         SettingsLabel("API key", caption: "Optional")
                     }
@@ -64,6 +70,11 @@ struct OpenAICompatEditor: View {
                 Text(error)
                     .font(.caption)
                     .foregroundStyle(.red)
+                    .padding(.horizontal, Spacing.xl)
+            } else if let status = statusMessage {
+                Text(status)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                     .padding(.horizontal, Spacing.xl)
             }
 
@@ -211,6 +222,8 @@ struct OpenAICompatEditor: View {
     }
 
     private func fetchModels() {
+        errorMessage = nil
+        statusMessage = nil
         guard let url = URL(string: baseURLString.trimmingCharacters(in: .whitespacesAndNewlines)) else { return }
         do {
             try ProviderRegistry.validateBaseURL(url)
@@ -247,6 +260,7 @@ struct OpenAICompatEditor: View {
         Task {
             do {
                 fetchedModels = try await provider.availableModels(apiKey: resolvedAPIKey)
+                statusMessage = fetchedModels.count == 1 ? "Loaded 1 model" : "Loaded \(fetchedModels.count) models"
             } catch {
                 errorMessage = "Failed to fetch models: \(error.localizedDescription)"
             }

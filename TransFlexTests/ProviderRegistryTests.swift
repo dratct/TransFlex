@@ -68,4 +68,22 @@ final class ProviderRegistryTests: XCTestCase {
             }
         }
     }
+
+    // The Add Endpoint sheet explains the URL rule under the field.
+    private let urlRule = "Start with https://; http works only for localhost."
+
+    func testURLRuleForPlainHTTPRemoteHost() {
+        XCTAssertEqual(ProviderRegistry.urlRuleViolation("http://api.example.com/v1"), urlRule)
+    }
+
+    func testURLRuleForMissingScheme() {
+        XCTAssertEqual(ProviderRegistry.urlRuleViolation("localhost:11434"), urlRule)
+        XCTAssertEqual(ProviderRegistry.urlRuleViolation("api.example.com"), urlRule)
+    }
+
+    func testURLRulePassesLocalhostHTTP() {
+        XCTAssertNil(ProviderRegistry.urlRuleViolation("http://localhost:11434"))
+        XCTAssertNil(ProviderRegistry.urlRuleViolation(" https://openrouter.ai/api/v1 "))
+        XCTAssertNil(ProviderRegistry.urlRuleViolation(""), "nothing typed yet, nothing to explain")
+    }
 }
