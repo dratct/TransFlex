@@ -56,9 +56,11 @@ final class HistoryStore: ObservableObject {
         }
     }
 
-    func search(query: String, limit: Int = 100) throws -> [HistoryEntry] {
-        let escaped = Self.escapeFTS(query)
-        guard !escaped.isEmpty else { return [] }
+    /// Entries whose text or translation has every word of `query` as a word prefix,
+    /// newest first, one page at a time.
+    func search(query: String, offset: Int = 0, limit: Int = 100) throws -> [HistoryEntry] {
+        let pattern = Self.ftsPattern(query)
+        guard !pattern.isEmpty else { return [] }
 
         return try dbQueue.read { db in
             let sql = """
@@ -66,10 +68,9 @@ final class HistoryStore: ObservableObject {
                 JOIN history_fts fts ON h.rowid = fts.rowid
                 WHERE history_fts MATCH ?
                 ORDER BY h.created_at DESC
-                LIMIT ?
+                LIMIT ? OFFSET ?
                 """
-            let pattern = "input_text:\(escaped) OR output_text:\(escaped)"
-            return try HistoryEntry.fetchAll(db, sql: sql, arguments: [pattern, limit])
+            return try HistoryEntry.fetchAll(db, sql: sql, arguments: [pattern, limit, offset])
         }
     }
 
@@ -102,14 +103,12 @@ final class HistoryStore: ObservableObject {
         }
     }
 
-    private static func escapeFTS(_ query: String) -> String {
-        let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty else { return "" }
-        // FTS5 special characters that need escaping
-        let special = CharacterSet(charactersIn: "\"'()*+-.:/\\|!{}[]^~:")
-        let escaped = trimmed.unicodeScalars.map { scalar in
-            special.contains(scalar) ? "" : String(scalar)
-        }.joined()
-        return "\"\(escaped)\""
+    /// Splits `query` where the FTS tokenizer would (anything but letters and digits) and
+    /// quotes each word as a prefix, so "example.com" means `"example"* "com"*`.
+    private static func ftsPattern(_ query: String) -> String {
+        query.components(separatedBy: CharacterSet.alphanumerics.inverted)
+            .filter { !$0.isEmpty }
+            .map { "\"\($0)\"*" }
+            .joined(separator: " ")
     }
 }

@@ -17,6 +17,7 @@ struct HistorySplitView: View {
     @FocusState private var listFocused: Bool
 
     private let pageSize = 50
+    private let searchPageSize = 100
 
     var body: some View {
         content
@@ -67,7 +68,7 @@ struct HistorySplitView: View {
                         entries: searchResults ?? entries,
                         selectedEntryID: $selectedEntryID,
                         presetName: presetName,
-                        onReachEnd: { if searchResults == nil { loadMore() } }
+                        onReachEnd: { searchResults == nil ? loadMore() : loadMoreResults() }
                     )
                     .focused($listFocused)
                 }
@@ -144,8 +145,15 @@ struct HistorySplitView: View {
             selectedEntryID = entries.first?.id
             return
         }
-        searchResults = (try? store.search(query: query)) ?? []
+        searchResults = (try? store.search(query: query, limit: searchPageSize)) ?? []
         selectedEntryID = searchResults?.first?.id
+    }
+
+    private func loadMoreResults() {
+        guard let shown = searchResults,
+              let next = try? store.search(query: searchQuery, offset: shown.count, limit: searchPageSize),
+              !next.isEmpty else { return }
+        searchResults?.append(contentsOf: next)
     }
 
     private func deleteEntry(_ id: UUID) {
