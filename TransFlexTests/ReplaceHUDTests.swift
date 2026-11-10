@@ -35,4 +35,85 @@ final class ReplaceHUDTests: XCTestCase {
         let frame = ReplaceHUD.frame(size: NSSize(width: 200, height: 30), besidePointer: corner)
         XCTAssertTrue(screen.contains(frame), "\(frame) outside \(screen)")
     }
+
+    // MARK: - Esc while the failure banner shows (C-9)
+
+    private func failedHUD(_ hold: RecordingEscapeHold, openPopup: @escaping () -> Void = {}, retry: @escaping () -> Void = {}) -> ReplaceHUD {
+        let hud = ReplaceHUD(escapeHold: hold)
+        hud.showFailed(message: "Boom.", onOpenPopup: openPopup, onRetry: retry)
+        addTeardownBlock { hud.hide() }
+        XCTAssertTrue(hold.isHeld, "precondition: the failure banner holds Esc")
+        return hud
+    }
+
+    func testFailureBannerHoldsEscape() {
+        let hold = RecordingEscapeHold()
+        let hud = failedHUD(hold)
+        XCTAssertTrue(hud.isShowing)
+        XCTAssertTrue(hold.isHeld)
+    }
+
+    func testEscapeClosesBannerAndReleases() {
+        let hold = RecordingEscapeHold()
+        let hud = failedHUD(hold)
+        hold.press()
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+    }
+
+    func testCloseButtonReleases() {
+        let hold = RecordingEscapeHold()
+        let hud = failedHUD(hold)
+        hud.model.onClose()
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+    }
+
+    func testRetryReleases() {
+        let hold = RecordingEscapeHold()
+        var retried = false
+        let hud = failedHUD(hold, retry: { retried = true })
+        hud.model.onRetry()
+        XCTAssertTrue(retried)
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+    }
+
+    func testOpenPopupReleases() {
+        let hold = RecordingEscapeHold()
+        var opened = false
+        let hud = failedHUD(hold, openPopup: { opened = true })
+        hud.model.onOpenPopup()
+        XCTAssertTrue(opened)
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+    }
+
+    func testHideWhileRunHoldsDoesNotReleaseRunHold() {
+        let hold = RecordingEscapeHold()
+        let hud = ReplaceHUD(escapeHold: hold)
+        addTeardownBlock { hud.hide() }
+        hud.showTranslating(presetName: "EN") {}
+        hold.hold {}  // the run's own hold
+        hud.hide()
+        XCTAssertTrue(hold.isHeld)
+        XCTAssertEqual(hold.log, ["hold"])
+    }
+
+    func testNewRunReleasesBannerHoldFirst() {
+        let hold = RecordingEscapeHold()
+        let hud = failedHUD(hold)
+        hud.showTranslating(presetName: "EN") {}
+        XCTAssertFalse(hold.isHeld)
+        XCTAssertEqual(hold.log, ["hold", "release"])
+    }
+
+    func testHideBannerLeavesARunningCapsule() {
+        let hold = RecordingEscapeHold()
+        let hud = ReplaceHUD(escapeHold: hold)
+        addTeardownBlock { hud.hide() }
+        hud.showTranslating(presetName: "EN") {}
+        hud.hideBanner()
+        XCTAssertTrue(hud.isShowing)
+    }
 }

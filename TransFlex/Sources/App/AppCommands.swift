@@ -11,6 +11,7 @@ enum AppCommands {
             logger.error("openSettings: AppDelegate.shared is nil — delegate not yet wired")
             return
         }
+        AppDelegate.shared?.popupWindowController?.hideReplaceBanner()
         controller.show(tab: tab)
     }
 
@@ -19,6 +20,7 @@ enum AppCommands {
             logger.error("openHistory: AppDelegate.shared is nil — delegate not yet wired")
             return
         }
+        AppDelegate.shared?.popupWindowController?.hideReplaceBanner()
         controller.show()
     }
 

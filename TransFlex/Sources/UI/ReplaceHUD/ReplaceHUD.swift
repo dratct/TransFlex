@@ -25,9 +25,18 @@ final class ReplaceHUD {
     /// The capsule fades this long after "Replaced".
     static let replacedDuration: TimeInterval = 1.5
 
-    private let model = Model()
+    let model = Model()
+    private(set) var isShowing = false
+    private let escapeHold: EscapeHold
+    /// Set only while the failure banner holds Esc, so hiding the capsule
+    /// during a run never releases the run's own hold.
+    private var holdsEscape = false
     private var fadeWork: DispatchWorkItem?
     private lazy var panel: NSPanel = makePanel()
+
+    init(escapeHold: EscapeHold) {
+        self.escapeHold = escapeHold
+    }
 
     func showTranslating(presetName: String, onCancel: @escaping () -> Void) {
         model.onCancel = onCancel
@@ -43,10 +52,21 @@ final class ReplaceHUD {
         model.onOpenPopup = { [weak self] in self?.hide(); onOpenPopup() }
         model.onRetry = { [weak self] in self?.hide(); onRetry() }
         present(.failed(message: message), besidePointer: false)
+        // The banner never fades, so Esc closes it from any app.
+        escapeHold.hold { [weak self] in self?.hide() }
+        holdsEscape = true
+    }
+
+    /// Hides only the failure banner; a running capsule stays with its run.
+    func hideBanner() {
+        guard case .failed = model.phase, isShowing else { return }
+        hide()
     }
 
     func hide() {
         fadeWork?.cancel()
+        releaseEscape()
+        isShowing = false
         panel.orderOut(nil)
     }
 
@@ -64,8 +84,17 @@ final class ReplaceHUD {
 
     // MARK: - Private
 
+    private func releaseEscape() {
+        guard holdsEscape else { return }
+        holdsEscape = false
+        escapeHold.release()
+    }
+
     private func present(_ phase: Phase, besidePointer: Bool) {
         fadeWork?.cancel()
+        // A new run starts with `showTranslating`; the old banner's hold goes first.
+        releaseEscape()
+        isShowing = true
         model.phase = phase
         let host = panel.contentView!
         host.layoutSubtreeIfNeeded()
