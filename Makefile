@@ -12,10 +12,14 @@ TEST_SIGNING := $(if $(wildcard Config/Local.xcconfig),,CODE_SIGN_IDENTITY=- COD
 # Team-signed builds keep their designated requirement, so macOS keeps honouring the
 # privacy grants across rebuilds; only ad-hoc builds need them reset.
 BUILD_PERMISSIONS_RESET := $(if $(wildcard Config/Local.xcconfig),,permissions-reset)
+# A Debug keychain of its own (see Config/Local.xcconfig.example), unlocked with a password kept
+# next to Local.xcconfig, so a rebuilt app reads its keys without a login-keychain prompt.
+DEV_KEYCHAIN := $(HOME)/Library/Keychains/transflex-dev.keychain-db
+DEV_KEYCHAIN_PASSWORD := Config/Local.keychain-password
 # An App Store Connect team API key for provisioning without an Xcode account.
 ASC_AUTH := $(if $(ASC_KEY_PATH),-authenticationKeyPath "$(ASC_KEY_PATH)" -authenticationKeyID "$(ASC_KEY_ID)" -authenticationKeyIssuerID "$(ASC_ISSUER_ID)")
 
-.PHONY: permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
+.PHONY: dev-keychain _dev-keychain-unlock permissions-reset fresh-reset build build-fresh build-fast _build _build-fast release test provision run kill kill-debug kill-release kill-all open open-debug open-release xcode log clean help welcome-reset welcome-reset-release welcome-reset-all welcome-test
 
 build: kill-debug _build $(BUILD_PERMISSIONS_RESET) open-debug
 	@echo "==> launched $(DEBUG_APP)"
@@ -48,8 +52,23 @@ _build-fast:
 release:
 	@scripts/build.sh --release
 
-test:
+test: _dev-keychain-unlock
 	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test
+
+# Once per machine: creates the Debug build's own keychain and its password file. Running it
+# again keeps both. Point the Debug build at it with the line it prints.
+dev-keychain:
+	@umask 077; if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ]; then echo "==> $(DEV_KEYCHAIN_PASSWORD) already exists, kept"; \
+	else openssl rand -base64 24 > "$(DEV_KEYCHAIN_PASSWORD)" && echo "==> wrote $(DEV_KEYCHAIN_PASSWORD)"; fi
+	@if [ -f "$(DEV_KEYCHAIN)" ]; then echo "==> $(DEV_KEYCHAIN) already exists, kept"; \
+	else security create-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)" && \
+	security set-keychain-settings "$(DEV_KEYCHAIN)" && echo "==> created $(DEV_KEYCHAIN)"; fi
+	@echo "==> Config/Local.xcconfig needs: TRANSFLEX_KEYCHAIN_PATH[config=Debug] = \$$(HOME)/Library/Keychains/transflex-dev.keychain-db"
+
+# A restart locks the keychain; unlock it before the app or the tests read keys.
+_dev-keychain-unlock:
+	@if [ -f "$(DEV_KEYCHAIN_PASSWORD)" ] && [ -f "$(DEV_KEYCHAIN)" ]; then \
+	security unlock-keychain -p "$$(cat "$(DEV_KEYCHAIN_PASSWORD)")" "$(DEV_KEYCHAIN)"; fi
 
 # Once per machine after creating Config/Local.xcconfig: creates the development certificate,
 # registers this Mac and fetches the team profile. Later builds reuse the cached profile.
@@ -69,7 +88,7 @@ kill-all: kill-debug kill-release
 
 open: open-debug
 
-open-debug:
+open-debug: _dev-keychain-unlock
 	@if [ ! -d "$(DEBUG_APP)" ]; then echo "==> Debug app not found, building..."; scripts/build.sh --no-gen; fi
 	@open $(DEBUG_APP)
 	@echo "==> opened $(DEBUG_APP)"
@@ -119,6 +138,7 @@ help:
 	@echo "make fresh-reset — clear Debug grants, defaults, presets, history, caches (keeps API keys)"
 	@echo "make release    — Release build only (no kill/open)"
 	@echo "make test       — run unit tests"
+	@echo "make dev-keychain — once per machine: the Debug build's own keychain (no login prompt after rebuilds)"
 	@echo "make provision  — once per machine with Config/Local.xcconfig: certificate, device, profile"
 	@echo "                  (Xcode account, or ASC_KEY_PATH/ASC_KEY_ID/ASC_ISSUER_ID team API key)"
 	@echo "make kill       — alias for kill-debug"

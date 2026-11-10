@@ -19,3 +19,6 @@ TRANSFLEX_KEYCHAIN_PATH =
 
 #include? "Local.xcconfig"
 #include? "DeveloperID.generated.xcconfig"
+
+// Release never uses a Debug keychain, whatever Local.xcconfig sets.
+TRANSFLEX_KEYCHAIN_PATH[config=Release] =

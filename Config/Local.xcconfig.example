@@ -8,3 +8,8 @@ CODE_SIGN_IDENTITY = Apple Development
 CODE_SIGNING_REQUIRED = YES
 CODE_SIGN_ENTITLEMENTS = TransFlex/TransFlex.signed.entitlements
 TRANSFLEX_KEYCHAIN_BACKEND = dataProtection
+
+// Without a team: keep the Debug build's keys in a keychain of its own, so a rebuilt self-signed
+// app reads them without a login-keychain prompt. Run `make dev-keychain` once, then use only this
+// line in Local.xcconfig (not together with the team signing lines above).
+// TRANSFLEX_KEYCHAIN_PATH[config=Debug] = $(HOME)/Library/Keychains/transflex-dev.keychain-db
