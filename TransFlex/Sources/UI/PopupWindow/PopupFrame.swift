@@ -2,7 +2,8 @@ import CoreGraphics
 
 /// The popup's frame, from the mode, the screen and, for Translate Selection,
 /// the size its source predicts (DESIGN.md › Layout). Nothing carries over
-/// from the last open.
+/// from the last open. Within one open, a pinned popup keeps its top-left
+/// corner where it was dragged to.
 enum PopupFrame {
     enum Mode { case popup, outputOnly }
 
@@ -79,5 +80,15 @@ enum PopupFrame {
         guard height > current.height + 0.5 else { return nil }
         let originY = max(current.maxY - height, visible.minY)
         return CGRect(x: current.minX, y: originY, width: current.width, height: height)
+    }
+
+    /// A pinned popup's frame at a new size: its top-left corner stays at
+    /// `topLeft` (AppKit coordinates: `minX`, `maxY`), then the frame is moved
+    /// just far enough to sit inside `visible`. Too big to fit, it keeps its
+    /// top and left edges on screen.
+    static func pinned(size: CGSize, topLeft: CGPoint, in visible: CGRect) -> CGRect {
+        let x = max(min(topLeft.x, visible.maxX - size.width), visible.minX)
+        let top = min(max(topLeft.y, visible.minY + size.height), visible.maxY)
+        return CGRect(x: x, y: top - size.height, width: size.width, height: size.height)
     }
 }

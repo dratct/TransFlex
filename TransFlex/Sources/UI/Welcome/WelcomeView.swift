@@ -5,12 +5,13 @@ import SwiftUI
 /// changes (docs/design/mockups.html › Welcome and menu bar).
 @MainActor
 struct WelcomeView: View {
-    static let size = NSSize(width: 720, height: 460)
+    static let size = NSSize(width: 800, height: 500)
 
     let onClose: (Bool) -> Void
 
     @State private var step: WelcomeStep
     @State private var shortcutKeys: [String]
+    @State private var keySaved = false
     @StateObject private var provider: ProviderSetupModel
 
     init(
@@ -55,7 +56,7 @@ struct WelcomeView: View {
         case .shortcut:
             WelcomeShortcutView(keys: $shortcutKeys)
         case .done:
-            WelcomeDoneView(keys: shortcutKeys)
+            WelcomeDoneView(keys: shortcutKeys, keySkipped: !keySaved)
         }
     }
 
@@ -82,7 +83,10 @@ struct WelcomeView: View {
     private func primaryAction() {
         // The provider step goes on only once the key is in the Keychain;
         // a failure stays on the step with its reason under the field.
-        if step == .provider, !provider.save() { return }
+        if step == .provider {
+            guard provider.save() else { return }
+            keySaved = true
+        }
         advance()
     }
 
@@ -133,6 +137,8 @@ private struct WelcomeProgress: View {
 private struct WelcomeTextButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(.secondary)
             .padding(.horizontal, Spacing.s)
             .padding(.vertical, 5)

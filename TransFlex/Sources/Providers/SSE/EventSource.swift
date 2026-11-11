@@ -9,6 +9,11 @@ import Foundation
 public enum EventSource {
     private static let chunkSize = 4096
     private static let retryDelayNanos: UInt64 = 250_000_000  // 250ms
+    /// The Mac has no connection, as opposed to a host that cannot be reached.
+    private static let offlineCodes: Set<URLError.Code> = [
+        .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed,
+    ]
+
     private static let transientCodes: Set<URLError.Code> = [
         .timedOut,
         .networkConnectionLost,
@@ -58,6 +63,8 @@ public enum EventSource {
                     continuation.finish(throwing: LLMError.cancelled)
                 } catch let urlError as URLError where urlError.code == .cancelled {
                     continuation.finish(throwing: LLMError.cancelled)
+                } catch let urlError as URLError where offlineCodes.contains(urlError.code) {
+                    continuation.finish(throwing: LLMError.offline)
                 } catch let urlError as URLError {
                     let detail = urlError.localizedDescription.redactingSecrets()
                     continuation.finish(throwing: LLMError.network(detail))

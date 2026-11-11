@@ -51,4 +51,37 @@ final class PopupDismissPolicyTests: XCTestCase {
             allowlist: custom
         ))
     }
+
+    func testPinnedPopupIsNotHiddenByAnotherApp() {
+        XCTAssertFalse(PopupDismissPolicy.shouldHide(
+            activatedBundleID: "com.apple.TextEdit", ownBundleID: own, isPinned: true
+        ))
+        XCTAssertFalse(
+            PopupDismissPolicy.shouldHide(activatedBundleID: nil, ownBundleID: own, isPinned: true),
+            "a click on the desktop reports no bundle ID"
+        )
+        XCTAssertTrue(PopupDismissPolicy.shouldHide(
+            activatedBundleID: "com.apple.TextEdit", ownBundleID: own, isPinned: false
+        ))
+    }
+
+    @MainActor
+    func testDismisserLeavesAPinnedWindowUp() {
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 100, height: 100),
+            styleMask: [.borderless], backing: .buffered, defer: false
+        )
+        window.isReleasedWhenClosed = false
+        var pinned = true
+        let dismisser = WindowAutoDismisser(window: window, label: "test", isPinned: { pinned })
+        window.orderFrontRegardless()
+        defer { window.orderOut(nil) }
+
+        dismisser.evaluate(frontmostBundleID: "com.apple.TextEdit", source: "test")
+        XCTAssertTrue(window.isVisible, "pinned: another app coming forward leaves it up")
+
+        pinned = false
+        dismisser.evaluate(frontmostBundleID: "com.apple.TextEdit", source: "test")
+        XCTAssertFalse(window.isVisible, "unpinned: it hides as before")
+    }
 }

@@ -56,7 +56,7 @@ enum ScreenshotMode {
         let wide = NSSize(width: 832, height: 520)
         let narrow = NSSize(width: 640, height: 520)
 
-        func popup(_ name: String, size: NSSize = wide, input: String = source, cost: String? = nil, _ state: PopupState) -> Shot {
+        func popup(_ name: String, size: NSSize = wide, input: String = source, cost: String? = nil, pinned: Bool = false, _ state: PopupState) -> Shot {
             Shot(name: name, size: size) {
                 let vm = PopupViewModel(
                     translationService: TranslationService(provider: { _ in throw ProviderError.unknownProvider(id: "screenshots") }, apiKey: { _ in "" }),
@@ -67,6 +67,7 @@ enum ScreenshotMode {
                 vm.inputText = input
                 vm.state = state
                 vm.costEstimate = cost
+                if pinned { vm.togglePin() }
                 return AnyView(PopupView(viewModel: vm))
             }
         }
@@ -79,9 +80,12 @@ enum ScreenshotMode {
             popup("popup-streaming", .streaming(accumulated: String(result.prefix(40)))),
             popup("popup-done", cost: "96 tokens · $0.0004", .done(result: result)),
             popup("popup-done-narrow", size: narrow, cost: "96 tokens · $0.0004", .done(result: result)),
+            popup("popup-pinned", cost: "96 tokens · $0.0004", pinned: true, .done(result: result)),
+            popup("popup-stopped", .done(result: String(result.prefix(40)), stopped: true)),
             popup("popup-partial", .error(message: "The connection closed before the translation finished.", partial: String(result.prefix(40)))),
             popup("popup-error", .error(message: "No internet connection.", partial: nil)),
             popup("popup-missing-key", .missingKey(providerID: "openai")),
+            popup("popup-key-rejected", .keyRejected(providerID: "openai")),
             popup("popup-accessibility", input: "", .accessibilityRequired(granted: false)),
         ]
         for tab in [SettingsTab.general, .providers, .presets, .about] {
@@ -119,6 +123,7 @@ enum ScreenshotMode {
                 models: sampleModels,
                 providerName: "OpenAI",
                 isBuiltInList: false,
+                failureReason: nil,
                 close: {}
             ))
         })

@@ -36,6 +36,7 @@ struct ImagePreviewCard: View {
                 .padding(8)
                 .opacity(isHovered ? 1 : 0.55)
                 .help("Remove image")
+                .accessibilityLabel("Remove image")
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)

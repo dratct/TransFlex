@@ -14,7 +14,7 @@ final class ClipScriptTests: XCTestCase {
     private func translation(_ state: PopupState) -> String? {
         switch state {
         case .streaming(let text): return text
-        case .done(let text): return text
+        case .done(let text, _): return text
         default: return nil
         }
     }

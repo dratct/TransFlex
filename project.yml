@@ -46,6 +46,8 @@ targets:
         TransFlexApplicationSupportDirectoryName: "$(TRANSFLEX_APP_SUPPORT_DIR)"
         TransFlexKeychainService: "$(TRANSFLEX_KEYCHAIN_SERVICE)"
         TransFlexKeychainBackend: "$(TRANSFLEX_KEYCHAIN_BACKEND)"
+        TransFlexKeychainPath: "$(TRANSFLEX_KEYCHAIN_PATH)"
+        TransFlexKeychainPasswordFile: "$(TRANSFLEX_KEYCHAIN_PASSWORD_FILE)"
         SUFeedURL: "$(TRANSFLEX_UPDATE_FEED_URL)"
         SUPublicEDKey: "UK6IF10CcII24JnzKlCj/eriUpus+ObnM8EKO6WEPVA="
         SUEnableAutomaticChecks: true

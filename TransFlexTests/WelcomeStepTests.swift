@@ -18,4 +18,12 @@ final class WelcomeStepTests: XCTestCase {
         XCTAssertEqual(WelcomeStep.allCases.map(\.showsBack), [false, true, true, true])
         XCTAssertEqual(WelcomeStep.allCases.map(\.showsSkip), [false, true, false, false])
     }
+
+    func testDoneStepAfterSkipPointsToProviders() {
+        let skipped = WelcomeStep.doneHeading(keySkipped: true)
+        XCTAssertNotEqual(skipped.title, "You're all set")
+        XCTAssertEqual(skipped.lead, "Add a key any time in Settings › Providers.")
+
+        XCTAssertEqual(WelcomeStep.doneHeading(keySkipped: false).title, "You're all set")
+    }
 }

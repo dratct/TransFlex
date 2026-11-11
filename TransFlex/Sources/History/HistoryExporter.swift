@@ -11,21 +11,30 @@ public enum ExportFormat: String, CaseIterable {
 final class HistoryExporter {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "HistoryExporter")
 
-    static func export(entries: [HistoryEntry], as format: ExportFormat) {
-        guard let window = NSApp.keyWindow else { return }
-
+    /// Asks where to save in a sheet on `window`, then writes `entries` there. A failed
+    /// write goes to `onError`; cancelling the panel is not an error.
+    static func export(
+        entries: [HistoryEntry],
+        as format: ExportFormat,
+        from window: NSWindow,
+        onError: @escaping (Error) -> Void
+    ) {
         let panel = NSSavePanel()
         panel.allowedContentTypes = format.contentType
         panel.nameFieldStringValue = "transflex-history.\(format.fileExtension)"
         panel.beginSheetModal(for: window) { response in
             guard response == .OK, let url = panel.url else { return }
             do {
-                let data = try format.encode(entries)
-                try data.write(to: url, options: .atomic)
+                try write(entries, as: format, to: url)
             } catch {
                 Self.logger.error("Export failed: \(error.localizedDescription, privacy: .private)")
+                onError(error)
             }
         }
+    }
+
+    static func write(_ entries: [HistoryEntry], as format: ExportFormat, to url: URL) throws {
+        try format.encode(entries).write(to: url, options: .atomic)
     }
 }
 

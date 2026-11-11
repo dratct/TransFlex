@@ -27,3 +27,25 @@ struct MissingKeyNotice: View {
         return "aeio".contains(first) ? "an" : "a"
     }
 }
+
+/// The provider refused the saved key. Nothing was translated; the text stays.
+struct KeyRejectedNotice<Extra: View>: View {
+    let providerID: String
+    @ViewBuilder let extra: Extra
+
+    var body: some View {
+        let provider = ProviderRegistry.shared.displayName(for: providerID)
+        Notice(
+            .card,
+            tone: .error,
+            symbol: "key",
+            title: "\(provider) rejected the key",
+            message: "Check or replace the key in Settings → Providers, then try again. Your text stays here."
+        ) {
+            extra
+            FooterAction("Open Settings", keys: ["⌘", ","], prominence: .primary) {
+                AppCommands.openSettings(tab: .providers)
+            }
+        }
+    }
+}

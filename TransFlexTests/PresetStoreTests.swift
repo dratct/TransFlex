@@ -136,4 +136,15 @@ final class PresetStoreTests: XCTestCase {
         try store.replaceAll(with: [p1, p2])
         XCTAssertEqual(store.presets.count, 2)
     }
+
+    @MainActor
+    func testCannotDeleteLastPreset() throws {
+        let store = PresetStore(fileURL: fileURL)
+        let first = Preset(name: "A", providerID: "openai", modelID: "m", systemPrompt: "")
+        let second = Preset(name: "B", providerID: "openai", modelID: "m", systemPrompt: "")
+        try store.replaceAll(with: [first, second])
+        XCTAssertTrue(store.canDelete)
+        try store.delete(id: second.id)
+        XCTAssertFalse(store.canDelete, "the popup needs one preset to translate with")
+    }
 }

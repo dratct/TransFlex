@@ -52,6 +52,26 @@ final class PopupViewModelTests: XCTestCase {
             XCTAssertEqual(vm.selectedPresetID, secondPresetID)
         }
     }
+
+    func testTogglePinFlips() {
+        let vm = PopupViewModel(translationService: service, presetStore: presetStore)
+        XCTAssertFalse(vm.isPinned)
+
+        vm.togglePin()
+        XCTAssertTrue(vm.isPinned)
+
+        vm.togglePin()
+        XCTAssertFalse(vm.isPinned)
+    }
+
+    func testUnpinClearsThePin() {
+        let vm = PopupViewModel(translationService: service, presetStore: presetStore)
+        vm.togglePin()
+
+        vm.unpin()
+
+        XCTAssertFalse(vm.isPinned)
+    }
 }
 
 @MainActor
@@ -84,6 +104,25 @@ final class PopupViewModelQuickModeTests: XCTestCase {
             pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)"))),
             hasAPIKey: hasAPIKey
         )
+    }
+
+    // MARK: Pin
+
+    /// The window controller decides when a pin ends; a new session in the
+    /// view model must not end it on the way.
+    func testNewSelectionKeepsPin() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let presetID = try XCTUnwrap(vm.selectedPresetID)
+        vm.togglePin()
+
+        vm.startQuickTranslation(text: "hello", presetID: presetID)
+        XCTAssertTrue(vm.isPinned, "a selection shortcut keeps the pin")
+
+        vm.openPopup(keepingDraft: false)
+        XCTAssertTrue(vm.isPinned, "reopening keeps the pin")
+
+        vm.reset()
+        XCTAssertTrue(vm.isPinned, "a reset keeps the pin")
     }
 
     // MARK: Missing key (audit D2)
@@ -131,9 +170,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertTrue(vm.isOutputOnly)
         XCTAssertEqual(vm.selectedPresetID, target)
         XCTAssertEqual(vm.inputText, "Hello")
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
     }
 
@@ -153,9 +190,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertFalse(vm.isOutputOnly, "the full popup, with the source text, not the output-only one")
         XCTAssertEqual(vm.selectedPresetID, saved.id)
         XCTAssertEqual(vm.inputText, "Hello")
-        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Xin chao") })
         XCTAssertEqual(vm.state, .done(result: "Xin chao"))
         XCTAssertEqual(provider.capturedMessages.last?.content, "Hello")
     }
@@ -168,9 +203,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         vm.switchPreset(preset.id)
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Xin chao") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Xin chao") })
         XCTAssertEqual(vm.state, .done(result: "Xin chao"))
         return vm.costEstimate
     }
@@ -191,7 +224,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         let footer = try await footerAfterTranslating(with: unpriced)
 
-        XCTAssertEqual(footer, "96 tokens")
+        XCTAssertEqual(footer, "96 tokens · price unknown")
     }
 
     func testShowInputLeavesOutputOnlyAndNotifiesOnce() throws {
@@ -321,23 +354,281 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(vm.inputText, "selected text")
     }
 
-    func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
-        let vm = makeViewModel()
-        let preset = try XCTUnwrap(vm.selectedPreset)
-        XCTAssertFalse(preset.supportsVision)
-        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+    // MARK: Attaching images
+
+    private static func makeImage() -> NSImage {
+        NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
             NSColor.red.setFill()
             rect.fill()
             return true
         }
+    }
 
-        vm.attachImage(image, source: .paste)
+    private func imageViewModel(vision: Bool, clipboardImage: Bool) throws -> PopupViewModel {
+        if vision {
+            var preset = try XCTUnwrap(presetStore.presets.first)
+            preset.supportsVision = true
+            try presetStore.update(preset)
+        }
+        let board = NSPasteboard(name: .init("PopupVMImage-\(UUID().uuidString)"))
+        board.clearContents()
+        if clipboardImage { board.writeObjects([Self.makeImage()]) }
+        let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
+        return PopupViewModel(translationService: service, presetStore: presetStore, pasteboard: PasteboardHelper(pasteboard: board))
+    }
+
+    func testAttachOnPresetWithoutVisionExplainsInsteadOfAttaching() throws {
+        let vm = try imageViewModel(vision: false, clipboardImage: false)
+        XCTAssertFalse(try XCTUnwrap(vm.selectedPreset).supportsVision)
+
+        vm.attachImage(Self.makeImage(), source: .paste)
 
         XCTAssertNil(vm.attachedImage)
-        guard case .error(let message, nil) = vm.state else {
-            return XCTFail("expected an error, got \(vm.state)")
-        }
-        XCTAssertTrue(message.contains("Supports Vision"), message)
+        XCTAssertEqual(vm.state, .idle, "a failed attach is a note, not an error state")
+        let message = try XCTUnwrap(vm.attachError)
+        XCTAssertTrue(message.contains("Reads images"), message)
+    }
+
+    func testPasteImageTranslatesAtOnce() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = try imageViewModel(vision: true, clipboardImage: true)
+
+        vm.pasteImageAndTranslate()
+
+        XCTAssertNotNil(vm.attachedImage)
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertNotNil(provider.capturedImage, "the pasted image was sent")
+    }
+
+    func testPasteImageWhenPresetCannotReadImagesDoesNotSend() async throws {
+        let vm = try imageViewModel(vision: false, clipboardImage: true)
+
+        vm.pasteImageAndTranslate()
+        try await Task.sleep(nanoseconds: 20_000_000)
+
+        XCTAssertNil(provider.capturedConfig, "nothing is sent")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertNotNil(vm.attachError)
+    }
+
+    func testAttachFailureKeepsStateAndText() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.inputText = "typed"
+        vm.state = .done(result: "Bonjour")
+
+        vm.pasteImageFromClipboard()
+
+        XCTAssertEqual(vm.attachError, "Clipboard does not contain an image.")
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertEqual(vm.inputText, "typed")
+    }
+
+    func testTypingClearsAttachError() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.pasteImageFromClipboard()
+        XCTAssertNotNil(vm.attachError)
+
+        vm.inputText = "a"
+
+        XCTAssertNil(vm.attachError)
+    }
+
+    func testRemovingImageRestoresTypedText() throws {
+        let vm = try imageViewModel(vision: true, clipboardImage: false)
+        vm.inputText = "typed"
+
+        vm.attachImage(Self.makeImage(), source: .paste)
+        XCTAssertNotNil(vm.attachedImage)
+        XCTAssertEqual(vm.inputText, "")
+        vm.removeAttachedImage()
+
+        XCTAssertEqual(vm.inputText, "typed")
+    }
+
+    func testDropZoneRejectsOversizedFileWithReason() {
+        XCTAssertEqual(ImageDropRules.rejection(forFileSize: ImageTranslationCoordinator.maxFileSizeBytes + 1),
+                       "Image is too large (max 20 MB).")
+        XCTAssertNil(ImageDropRules.rejection(forFileSize: 1_024))
+    }
+
+    // MARK: Stop
+
+    private func streamingViewModel(received: String, history: HistoryStore? = nil) async throws -> PopupViewModel {
+        provider.scriptedEvents = received.isEmpty ? [] : [.textDelta(received)]
+        provider.holdsOpen = true
+        let vm = makeViewModel()
+        vm.historyStore = history
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .streaming(accumulated: received) })
+        XCTAssertEqual(vm.state, .streaming(accumulated: received))
+        return vm
+    }
+
+    func testStopKeepsReceivedTextAsStoppedResult() async throws {
+        let vm = try await streamingViewModel(received: "Bonj")
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .done(result: "Bonj", stopped: true))
+        XCTAssertTrue(vm.copyResultIfShown(), "Copy works on a stopped result")
+    }
+
+    func testStopBeforeAnyTextReturnsToIdle() async throws {
+        let vm = try await streamingViewModel(received: "")
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .idle)
+    }
+
+    func testStoppedResultIsNotRecorded() async throws {
+        let history = try HistoryStore(inMemory: true)
+        let vm = try await streamingViewModel(received: "Bonj", history: history)
+
+        vm.stop()
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertEqual(try history.allEntries().count, 0, "History keeps only finished translations")
+    }
+
+    // MARK: Switching preset (CONTEXT.md: the last result stays until ⌘↩)
+
+    func testSwitchPresetKeepsResultAndCost() throws {
+        let vm = makeViewModel()
+        vm.state = .done(result: "Bonjour")
+        vm.costEstimate = "96 tokens · $0.0004"
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        XCTAssertEqual(vm.costEstimate, "96 tokens · $0.0004")
+    }
+
+    func testSwitchPresetMidStreamKeepsReceivedText() async throws {
+        let vm = try await streamingViewModel(received: "Bonj")
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .done(result: "Bonj", stopped: true))
+    }
+
+    func testSwitchPresetClearsMissingKeyCard() throws {
+        let vm = makeViewModel()
+        vm.state = .missingKey(providerID: "openai")
+
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+
+        XCTAssertEqual(vm.state, .idle, "a card about the old preset no longer applies")
+    }
+
+    // MARK: Key cards
+
+    func testAuthErrorBecomesKeyRejected() async throws {
+        provider.scriptedError = LLMError.auth
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(vm.selectedPreset)
+        vm.inputText = "Hello"
+
+        vm.translate()
+        try await waitUntil({ !(vm.state == .idle || vm.state == .streaming(accumulated: "")) })
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: preset.providerID))
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testReplaceOpenPopupWithRejectedKeyShowsKeyCard() throws {
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(presetStore.presets.last)
+
+        vm.presentQuickFailure(LLMError.auth, presetID: preset.id)
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: preset.providerID))
+    }
+
+    func testSettingsTabIsProvidersForKeyCards() {
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .missingKey(providerID: "openai")), .providers)
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .keyRejected(providerID: "openai")), .providers)
+    }
+
+    func testSettingsTabIsGeneralOtherwise() {
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .idle), .general)
+        XCTAssertEqual(PopupViewModel.settingsTab(for: .error(message: "x", partial: nil)), .general)
+    }
+
+    func testMissingKeyClearsWhenKeyAppears() throws {
+        var hasKey = false
+        let vm = makeViewModel(hasAPIKey: { _ in hasKey })
+        vm.inputText = "Hello"
+        vm.translate()
+        XCTAssertEqual(vm.state, .missingKey(providerID: try XCTUnwrap(vm.selectedPreset).providerID))
+
+        vm.recheckProviderKey()
+        XCTAssertNotEqual(vm.state, .idle, "no key yet: the card stays")
+        hasKey = true
+        vm.recheckProviderKey()
+
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testMissingKeyFromSelectionClearsIntoTheEditor() throws {
+        var hasKey = false
+        let vm = makeViewModel(hasAPIKey: { _ in hasKey })
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.last?.id))
+        XCTAssertTrue(vm.isOutputOnly)
+
+        hasKey = true
+        vm.recheckProviderKey()
+
+        XCTAssertFalse(vm.isOutputOnly, "the editor is back, so ⌘↩ translates")
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, "Hello")
+    }
+
+    func testRejectedKeyStaysOnRecheck() {
+        let vm = makeViewModel()
+        vm.state = .keyRejected(providerID: "openai")
+
+        vm.recheckProviderKey()
+
+        XCTAssertEqual(vm.state, .keyRejected(providerID: "openai"))
+    }
+
+    // MARK: Copy result automatically
+
+    private func translateToDone(autoCopy: Bool?) async throws -> NSPasteboard {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let board = NSPasteboard(name: .init("PopupVMAutoCopy-\(UUID().uuidString)"))
+        board.clearContents()
+        board.setString("user clipboard", forType: .string)
+        // A fixed name: a fresh one per run leaves an empty plist behind each time.
+        let suite = "io.aiaz.transflex.tests.PopupVMAutoCopy"
+        UserDefaults().removePersistentDomain(forName: suite)
+        let defaults = try XCTUnwrap(UserDefaults(suiteName: suite))
+        addTeardownBlock { UserDefaults().removePersistentDomain(forName: suite) }
+        if let autoCopy { defaults.set(autoCopy, forKey: PopupViewModel.copyResultAutomaticallyKey) }
+        let service = TranslationService(provider: { [provider] _ in provider! }, apiKey: { _ in "" })
+        let vm = PopupViewModel(
+            translationService: service, presetStore: presetStore,
+            pasteboard: PasteboardHelper(pasteboard: board), defaults: defaults
+        )
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
+        XCTAssertEqual(vm.state, .done(result: "Bonjour"))
+        return board
+    }
+
+    func testFinishedTranslationLeavesClipboardWhenAutoCopyOff() async throws {
+        let board = try await translateToDone(autoCopy: nil)
+        XCTAssertEqual(board.string(forType: .string), "user clipboard", "off by default: the clipboard is the user's")
+    }
+
+    func testFinishedTranslationCopiesWhenAutoCopyOn() async throws {
+        let board = try await translateToDone(autoCopy: true)
+        XCTAssertEqual(board.string(forType: .string), "Bonjour")
     }
 
     func testCopyResultCopiesOnlyWhenATranslationIsShown() async throws {
@@ -350,13 +641,93 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         board.clearContents()
 
         XCTAssertTrue(vm.copyResultIfShown())
         XCTAssertEqual(board.string(forType: .string), "Bonjour")
+    }
+
+    // MARK: VoiceOver
+
+    private func announcingViewModel(_ announcer: RecordingAnnouncer) -> PopupViewModel {
+        let provider = provider!
+        let service = TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
+        return PopupViewModel(
+            translationService: service,
+            presetStore: presetStore,
+            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMAnnounce-\(UUID().uuidString)"))),
+            announcer: announcer
+        )
+    }
+
+    func testAnnouncesDone() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
+
+        XCTAssertEqual(announcer.messages, ["Translation ready"])
+    }
+
+    func testAnnouncesError() async throws {
+        provider.scriptedError = LLMError.offline
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state.isError })
+
+        let spoken = try XCTUnwrap(announcer.messages.last)
+        XCTAssertTrue(spoken.hasPrefix("Couldn’t translate."), spoken)
+    }
+
+    func testDismissingAPartialErrorSaysNothing() {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+        vm.state = .error(message: "Offline", partial: "Bon")
+
+        vm.dismissError()
+
+        XCTAssertEqual(vm.state, .done(result: "Bon"))
+        XCTAssertEqual(announcer.messages, [], "closing an error is not a new translation")
+    }
+
+    func testReplaceFailureShownInPopupIsLeftToReplace() throws {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.presentQuickFailure(LLMError.offline, presetID: try XCTUnwrap(presetStore.presets.first?.id))
+
+        XCTAssertEqual(announcer.messages, [], "Replace already said it could not replace")
+    }
+
+    func testStopSaysNothing() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.holdsOpen = true
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .streaming(accumulated: "Bon") })
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .done(result: "Bon", stopped: true))
+        XCTAssertEqual(announcer.messages, [])
+    }
+
+    func testAnnouncesCopied() {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.copyToClipboard("Bonjour")
+
+        XCTAssertEqual(announcer.messages, ["Copied"])
     }
 
     func testTranslateAgainCommandActsOnlyOnAShownResult() async throws {
@@ -367,16 +738,12 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         vm.inputText = "Hello"
         vm.translate()
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         vm.inputText = "Hello there"
         provider.scriptedEvents = [.textDelta("Salut"), .stop(reason: .complete)]
 
         XCTAssertTrue(vm.translateAgainIfShown())
-        for _ in 0..<100 where vm.state != .done(result: "Salut") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Salut") })
         XCTAssertEqual(vm.state, .done(result: "Salut"), "⌘↩ after a result translates the edited source")
     }
 
@@ -384,9 +751,7 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         let vm = makeViewModel()
         vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
-        for _ in 0..<100 where vm.state != .done(result: "Bonjour") {
-            try await Task.sleep(nanoseconds: 5_000_000)
-        }
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
         XCTAssertEqual(vm.state, .done(result: "Bonjour"))
 
         XCTAssertFalse(vm.translateAgainIfShown(), "the Output-only popup has no source to translate again")
@@ -403,6 +768,79 @@ final class PopupViewModelQuickModeTests: XCTestCase {
 
         XCTAssertFalse(vm.isOutputOnly)
         XCTAssertFalse(notified)
+    }
+
+    // MARK: Translate Selection banner
+
+    func testStreamErrorBeforeTextCallsOutputOnlyFailure() async throws {
+        provider.scriptedError = LLMError.offline
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        try await waitUntil({ reported != nil })
+        XCTAssertEqual(reported as? LLMError, .offline)
+    }
+
+    func testStreamErrorAfterTextKeepsPopup() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.scriptedError = LLMError.offline
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        try await waitUntil({ vm.state.isError })
+        XCTAssertNil(reported, "text already shown stays in the popup with Retry")
+        if case .error(_, let partial) = vm.state { XCTAssertEqual(partial, "Bon") } else { XCTFail("\(vm.state)") }
+    }
+
+    func testRejectedKeyInStreamKeepsPopupCard() async throws {
+        provider.scriptedError = LLMError.auth
+        let vm = makeViewModel()
+        var reported: Error?
+        vm.onOutputOnlyFailure = { reported = $0 }
+        vm.startQuickTranslation(text: "Hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        try await waitUntil({ vm.state.isKeyRejected })
+        XCTAssertNil(reported)
+        XCTAssertTrue(vm.state.isKeyRejected)
+    }
+
+    // MARK: Switching preset after a failure
+
+    func testSwitchPresetClearsTheAttachNote() throws {
+        let vm = makeViewModel()
+        vm.reportAttachRejected("This preset can't read images.")
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+        XCTAssertNil(vm.attachError, "the note was about the old preset")
+    }
+
+    func testSwitchPresetKeepsAPartialResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.scriptedError = LLMError.server(status: 503, body: "")
+        let vm = makeViewModel()
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state.isError })
+        vm.switchPreset(try XCTUnwrap(presetStore.presets.last?.id))
+        guard case .error(_, let partial) = vm.state else { return XCTFail("\(vm.state)") }
+        XCTAssertEqual(partial, "Bon", "text already received stays until ⌘↩ translates again")
+    }
+
+    func testQuickFailureNamesTheProvider() throws {
+        let vm = makeViewModel()
+        let preset = try XCTUnwrap(presetStore.presets.first)
+        vm.presentQuickFailure(LLMError.server(status: 503, body: ""), presetID: preset.id)
+        let name = ProviderRegistry.shared.displayName(for: preset.providerID)
+        XCTAssertEqual(vm.state, .error(message: "\(name) is having trouble. Try again in a moment.", partial: nil))
+    }
+
+    func testTranslateClearsTheAttachNote() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let vm = makeViewModel()
+        vm.inputText = "Hello"
+        vm.reportAttachRejected("Clipboard does not contain an image.")
+        vm.translate()
+        XCTAssertNil(vm.attachError, "a new translation is not about the failed attach")
     }
 }
 
@@ -435,9 +873,7 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
     }
 
     private func waitForState(_ vm: PopupViewModel, _ expected: PopupState) async throws {
-        for _ in 0..<200 where vm.state != expected {
-            try await Task.sleep(nanoseconds: 2_000_000)
-        }
+        try await waitUntil({ vm.state == expected })
     }
 
     func testCardFlipsToGrantedWhenPermissionTurnsOn() async throws {
@@ -451,6 +887,28 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         granted = true
         try await waitForState(vm, .accessibilityRequired(granted: true))
         XCTAssertEqual(vm.state, .accessibilityRequired(granted: true))
+    }
+
+    func testCardHeightsSurviveALateColumnMeasurement() throws {
+        let vm = makeViewModel(granted: { false })
+        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.first?.id), pollInterval: 1_000_000)
+        vm.reportOutputHeight(content: 165, visible: 54, from: .permissionCard)
+
+        vm.reportOutputHeight(content: 1, visible: 83.7, from: .translationColumn)
+
+        XCTAssertEqual(vm.outputContentHeight, 165)
+        XCTAssertEqual(vm.outputVisibleHeight, 54)
+    }
+
+    func testColumnHeightsSurviveALateCardMeasurement() throws {
+        let vm = makeViewModel(granted: { false })
+        vm.startQuickTranslation(text: "hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        vm.reportOutputHeight(content: 300, visible: 100, from: .translationColumn)
+
+        vm.reportOutputHeight(content: 165, visible: 54, from: .permissionCard)
+
+        XCTAssertEqual(vm.outputContentHeight, 300)
+        XCTAssertEqual(vm.outputVisibleHeight, 100)
     }
 
     func testResetStopsWatchingForPermission() async throws {
@@ -511,6 +969,15 @@ final class PopupHideClockTests: XCTestCase {
 }
 
 final class PopupEscapeTests: XCTestCase {
+    func testRejectedKeyCardBehavesLikeMissingKey() {
+        XCTAssertEqual(PopupEscape.action(for: .keyRejected(providerID: "openai"), isOutputOnly: false), .backToText)
+        XCTAssertEqual(PopupEscape.action(for: .keyRejected(providerID: "openai"), isOutputOnly: true), .close)
+    }
+
+    func testStoppedResultClosesLikeDone() {
+        XCTAssertEqual(PopupEscape.action(for: .done(result: "x", stopped: true), isOutputOnly: false), .close)
+    }
+
     func testStreamingStops() {
         XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: "x"), isOutputOnly: false), .stop)
         XCTAssertEqual(PopupEscape.action(for: .streaming(accumulated: ""), isOutputOnly: true), .stop)
@@ -530,4 +997,16 @@ final class PopupEscapeTests: XCTestCase {
         XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: true), .close)
         XCTAssertEqual(PopupEscape.action(for: .accessibilityRequired(granted: false), isOutputOnly: true), .close)
     }
+}
+
+private extension PopupState {
+    var isError: Bool { if case .error = self { return true }; return false }
+    var isKeyRejected: Bool { if case .keyRejected = self { return true }; return false }
+}
+
+/// Keeps what would have been spoken, in order.
+@MainActor
+final class RecordingAnnouncer: Announcing {
+    private(set) var messages: [String] = []
+    func announce(_ message: String) { messages.append(message) }
 }

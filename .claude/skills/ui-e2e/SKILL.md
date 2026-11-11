@@ -2,8 +2,8 @@
 name: ui-e2e
 description: >-
   Drive the real TransFlexDev app end to end and look at it: build, fire its
-  global hotkeys from another app, screenshot the popup or Settings, and read
-  the app log. Use after any change to the popup, Settings, permission or
+  global hotkeys from another app, read and screenshot the popup, Settings or
+  History with cua-driver, and read the app log. Use after any change to the popup, Settings, permission or
   selection-shortcut flows, before calling the change done, and whenever the
   owner says the UI "looks broken". Unit tests and SwiftUI ImageRenderer
   snapshots do not catch these bugs; only the running app does.
@@ -31,35 +31,56 @@ target text field.
 defaults read io.aiaz.transflex.dev | rg KeyboardShortcuts_
 ```
 
-Each value is `{"carbonKeyCode":N,"carbonModifiers":M}`. `N` is the virtual
-key code `osascript … key code N` takes. `M` is a sum of: ⌘ 256, ⇧ 512,
+Each value is `{"carbonKeyCode":N,"carbonModifiers":M}`. `N` is the macOS
+virtual key code (2 is D, 9 is V). `M` is a sum of: ⌘ 256, ⇧ 512,
 ⌥ 2048, ⌃ 4096. Names: `openPopup`, `preset.<uuid>` (select preset),
 `preset-<uuid>-popup` (Translate Selection), `preset-<uuid>-replace`.
 No binding → ask the owner to record one in Settings → Presets.
 
-## 3. Fire a shortcut from another app
+## 3. Drive the app with cua-driver
 
-The popup is a non-activating panel: selection shortcuts copy from whatever
-app is frontmost, so put a real selection there first.
-
-```bash
-osascript -e 'tell application "Safari" to activate' -e 'delay 0.6' \
-  -e 'tell application "System Events" to key code 2 using {command down, shift down}'
-sleep 1.5
-```
-
-Keys sent afterwards (Esc = `key code 53`, ⌘⏎ = `key code 36 using {command down}`)
-reach the popup while it is key.
-
-## 4. Look
+`cua-driver` reads the app's accessibility tree and acts on elements, and it
+still captures the screen when the Mac is reached over Screen Sharing and
+`screencapture` fails ("could not create image from display"). Its own skill
+has the full rules; these are the calls this app needs.
 
 ```bash
 S=<scratchpad>
-screencapture -x "$S/full.png"              # whole screen, downscaled
-screencapture -x -R x,y,w,h "$S/crop.png"   # region in points, native detail
+PID=$(pgrep -x TransFlexDev)
+cua-driver call list_windows "{\"session\":\"tf\",\"pid\":$PID}"
+# One window: its tree (rows `[N]`), a snapshot id and a screenshot.
+cua-driver call get_window_state "{\"session\":\"tf\",\"pid\":$PID,\"window_id\":W,\"query\":\"Export\",\"screenshot_out_file\":\"$S/w.png\",\"max_image_dimension\":1400}"
+# Act on row [N] of that read: the token is <snapshot_id>:N.
+cua-driver call click "{\"session\":\"tf\",\"pid\":$PID,\"window_id\":W,\"element_token\":\"s0000002a:11\"}"
+# Keys and text go to whatever is frontmost.
+D='{"kind":"desktop","display_id":"primary"}'
+cua-driver call hotkey "{\"session\":\"tf\",\"target\":$D,\"keys\":[\"cmd\",\"shift\",\"d\"]}"
+cua-driver call press_key "{\"session\":\"tf\",\"target\":$D,\"key\":\"escape\"}"
+cua-driver call type_text "{\"session\":\"tf\",\"target\":$D,\"text\":\"hello\"}"
+# Whole screen, for the popup's position or the menu-bar item.
+cua-driver call get_desktop_state "{\"session\":\"tf\",\"screenshot_out_file\":\"$S/full.png\",\"max_image_dimension\":1400}"
+cua-driver call end_session '{"session":"tf"}'
 ```
 
-Read the PNG. Check at least: nothing clipped or scrolling that should fit,
+- The popup is a non-activating panel: selection shortcuts copy from
+  whatever app is frontmost, so bring that app forward and select real text
+  there before firing the shortcut.
+- The menu-bar item has no window. Click it by pixel from a
+  `get_desktop_state` capture, then pick an item with ↓ and Return (order:
+  Open Popup, History, Settings…, Quit); a second pixel click often lands on
+  the wrong item.
+- A save panel is a sheet on its window: ⌘⇧G opens Go to Folder. Never save a
+  file during a check; to see the failure alert, aim at `/System/Library`.
+- `make open-debug` does not restart a running app. Rebuild with
+  `make build-fast`, and take the new pid.
+- No `cua-driver`, or a permission it reports missing: stop and tell the
+  owner. Its permission prompts are theirs to approve.
+
+## 4. Look
+
+Read the PNG from `screenshot_out_file`, and prefer the tree for text: an
+exact label or alert message is in `tree_markdown`. Check at least: nothing
+clipped or scrolling that should fit,
 every button legible (not grey-on-glass), no stray focus ring, copy matches
 what macOS actually shows (macOS 27 names Accessibility "Device Control and
 Data Access"; the pane lists the app as `TransFlexDev`).
@@ -112,6 +133,17 @@ a shortcut flow; DESIGN.md › Popup states is what each state must look like.
 7. **Model picker.** Search, ↑↓, a typed custom ID; no speech, image or
    embedding models.
 8. **Light, dark, Reduce Transparency** for the popup and one Settings tab.
+9. **Pinned popup.** Pin with the header button and with ⌘P: the pin fills
+   and ✕ appears. Click into TextEdit and type: the popup stays, the text
+   goes to TextEdit, Esc there does not close the popup. Drag the popup to a
+   corner, then ⌘I: the top-left corner stays. Translate Selection from
+   TextEdit: the banner "The popup is pinned", the pinned text and the
+   clipboard unchanged. Replace Selection from TextEdit: the text is
+   replaced and the popup untouched — repeat right after clicking the popup,
+   when it holds the keyboard. ⌘, then close Settings: still pinned, same
+   place. ✕, ⌘Y and unpin-then-click-away each close it; the next open is
+   unpinned at the usual place. Dragging while a long translation streams
+   does not make it jump.
 
 Compare each screenshot with the matching `docs/design/mockups.html` figure
 and with the previous run's screenshot of the same step.

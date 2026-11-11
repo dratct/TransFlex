@@ -39,6 +39,21 @@ Ad-hoc builds keep API keys in the login keychain, and macOS asks for the login 
 
 Later builds reuse the cached profile and need no account or key. Over SSH the login keychain is locked, so codesign fails with "User interaction is not allowed" until you unlock the keychain that holds the signing identity (`security unlock-keychain <keychain>`) in the same session.
 
+## Sign Local Builds without a Team
+
+Without an Apple Developer account on the machine, sign Debug builds with a self-signed certificate and give them a keychain of their own:
+
+1. In Keychain Access, choose Certificate Assistant › Create a Certificate…, name it `TransFlex Local Signing`, type Code Signing.
+2. Create the keychain and its password file (`Config/Local.keychain-password`, git-ignored):
+
+   ```bash
+   make dev-keychain
+   ```
+
+3. Copy the "Without a team" lines of `Config/Local.xcconfig.example` into `Config/Local.xcconfig`, uncommented, and enter your API keys again in Settings once.
+
+Open the app with `make build`, `make run` or `make open-debug`: they hand the saved keys to each new build, and the app unlocks its keychain itself after a restart. A build run from Xcode directly asks once for the keychain's own password.
+
 ## Run Tests
 
 ```bash

@@ -25,6 +25,7 @@ struct PopupView: View {
                     .padding(.horizontal, Spacing.l)
                     .padding(.top, Spacing.m)
                     .padding(.bottom, Spacing.l)
+                    .background(WindowDragArea())
 
                 sheet
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -98,7 +99,7 @@ struct PopupView: View {
     private var showsColumns: Bool {
         switch viewModel.state {
         case .idle, .streaming, .done, .error(_, .some): return true
-        case .error(_, nil), .missingKey, .accessibilityRequired: return false
+        case .error(_, nil), .missingKey, .keyRejected, .accessibilityRequired: return false
         }
     }
 
@@ -139,32 +140,50 @@ struct PopupView: View {
             PresetPickerView(viewModel: viewModel)
                 .focusable(false)
             Spacer()
-            headerButton(symbol: "clock.arrow.circlepath", title: "History", keys: ["⌘", "Y"]) {
-                // The popup floats above normal windows and would cover History.
-                viewModel.onDismissRequest?()
-                AppCommands.openHistory()
+            ForEach(PopupHeader.items(isPinned: viewModel.isPinned), id: \.action) { item in
+                headerButton(item)
             }
-            .keyboardShortcut("y", modifiers: .command)
-            headerButton(symbol: "gearshape", title: "Settings", keys: ["⌘", ","]) {
-                AppCommands.openSettings()
-            }
-            .keyboardShortcut(",", modifiers: .command)
         }
     }
 
-    private func headerButton(symbol: String, title: String, keys: [String], action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
+    /// ⌘, and ⌘P are also caught by `PopupPanel`, where a focused editor
+    /// cannot swallow them.
+    @ViewBuilder
+    private func headerButton(_ item: PopupHeader.Item) -> some View {
+        let button = Button {
+            perform(item.action)
+        } label: {
+            Image(systemName: item.symbol)
                 .font(.system(size: 13, weight: .medium))
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(item.action == .pin && viewModel.isPinned ? AnyShapeStyle(Color.accentText) : AnyShapeStyle(.secondary))
         .focusable(false)
-        .help("\(title) · \(keys.joined())")
-        .accessibilityLabel(title)
-        .accessibilityHint(KeyHint.spokenLabel(for: keys))
+        .help(item.keys.isEmpty ? item.title : "\(item.title) · \(item.keys.joined())")
+        .accessibilityLabel(item.title)
+        .accessibilityHint(item.keys.isEmpty ? "" : KeyHint.spokenLabel(for: item.keys))
+        switch item.action {
+        case .history: button.keyboardShortcut("y", modifiers: .command)
+        case .settings: button.keyboardShortcut(",", modifiers: .command)
+        case .pin, .close: button
+        }
+    }
+
+    private func perform(_ action: PopupHeader.Action) {
+        switch action {
+        case .history:
+            // The popup floats above normal windows and would cover History.
+            viewModel.onDismissRequest?()
+            AppCommands.openHistory()
+        case .settings:
+            AppCommands.openSettings()
+        case .pin:
+            viewModel.togglePin()
+        case .close:
+            viewModel.onDismissRequest?()
+        }
     }
 
     @ViewBuilder
@@ -173,6 +192,13 @@ struct PopupView: View {
         case .missingKey(let providerID):
             MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
                 .padding(.horizontal, Spacing.l)
+        case .keyRejected(let providerID):
+            KeyRejectedNotice(providerID: providerID) {
+                if hasInput {
+                    footerButton(PopupFooter.Item(action: .retry, prominence: .secondary))
+                }
+            }
+            .padding(.horizontal, Spacing.l)
         case .error(let message, nil):
             Notice(.card, tone: .error, symbol: "exclamationmark.triangle",
                    title: "Couldn’t translate", message: message) {
@@ -184,7 +210,11 @@ struct PopupView: View {
         case .accessibilityRequired(let granted):
             ScrollView {
                 AccessibilityPermissionCard(granted: granted)
+                    .background(HeightReporter { viewModel.reportOutputHeight(content: $0, from: .permissionCard) })
+                    // Centred like the notice cards while it fits; taller, it scrolls from the top.
+                    .frame(minHeight: viewModel.outputVisibleHeight)
             }
+            .background(HeightReporter { viewModel.reportOutputHeight(visible: $0, from: .permissionCard) })
             .padding(.horizontal, Spacing.l)
         case .idle, .streaming, .done, .error:
             columns
@@ -236,6 +266,8 @@ struct PopupView: View {
             ColumnLabel(title: "Original", color: Color(nsColor: .tertiaryLabelColor))
             ImageDropZone { image, source, fileSizeBytes in
                 viewModel.attachImage(image, source: source, fileSizeBytes: fileSizeBytes)
+            } onRejected: { reason in
+                viewModel.reportAttachRejected(reason)
             } content: {
                 if let imageInput = viewModel.attachedImage {
                     ImagePreviewCard(
@@ -248,7 +280,12 @@ struct PopupView: View {
                     sourceEditor
                 }
             }
-            if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
+            if let attachError = viewModel.attachError {
+                Text(attachError)
+                    .font(.system(size: 12))
+                    .foregroundStyle(.red)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if case .idle = viewModel.state, viewModel.attachedImage == nil, viewModel.canAttachImages {
                 imageTip
             }
         }
@@ -285,13 +322,13 @@ struct PopupView: View {
         ViewThatFits(in: .horizontal) {
             HStack(spacing: Spacing.xs) {
                 Text("Images work too — drop one here, press")
-                KeyHint(keys: ["⌘⇧V"])
+                KeyHint(keys: ["⌘", "⇧", "V"])
                 Text(", or")
                 chooseFileLink
             }
             HStack(spacing: Spacing.xs) {
                 Text("Images: drop, press")
-                KeyHint(keys: ["⌘⇧V"])
+                KeyHint(keys: ["⌘", "⇧", "V"])
                 Text(", or")
                 chooseFileLink
             }
@@ -336,7 +373,8 @@ struct PopupView: View {
             switch viewModel.state {
             case .streaming:
                 Text("Translating…")
-            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly:
+            case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly,
+                 .keyRejected where !viewModel.isOutputOnly:
                 Text("Your text is kept")
             default:
                 if let cost = viewModel.costEstimate {
@@ -363,7 +401,6 @@ struct PopupView: View {
         case .translate, .retry, .openSystemSettings, .done:
             return KeyboardShortcut(.return, modifiers: .command)
         case .new: return KeyboardShortcut("n", modifiers: .command)
-        case .continueFromPartial: return KeyboardShortcut("p", modifiers: .command)
         case .stop, .backToText, .copyAndClose, .translateAgain: return nil
         }
     }
@@ -372,17 +409,12 @@ struct PopupView: View {
         switch action {
         case .showText: viewModel.showInput()
         case .translate, .translateAgain, .retry: viewModel.translate()
-        case .stop: viewModel.cancelStream()
+        case .stop: viewModel.stop()
         case .new: viewModel.startNewTranslation()
         case .copyAndClose: viewModel.copyResultIfShown()
         case .backToText: viewModel.dismissError()
         case .openSystemSettings: viewModel.openAccessibilitySettings()
         case .done: viewModel.onDismissRequest?()
-        case .continueFromPartial:
-            if case .error(_, let partial?) = viewModel.state {
-                viewModel.inputText = partial
-                viewModel.translate()
-            }
         }
     }
 
@@ -391,7 +423,7 @@ struct PopupView: View {
     private var hiddenShortcuts: some View {
         ZStack {
             if !viewModel.isOutputOnly {
-                hiddenButton { viewModel.pasteImageFromClipboard() }
+                hiddenButton { viewModel.pasteImageAndTranslate() }
                     .keyboardShortcut("v", modifiers: [.command, .shift])
                 hiddenButton { viewModel.chooseImageFile() }
                     .keyboardShortcut("o", modifiers: [.command, .shift])

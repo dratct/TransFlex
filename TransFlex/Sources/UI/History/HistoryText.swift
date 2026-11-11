@@ -3,7 +3,7 @@ import Foundation
 /// The words History shows for an entry. Pure, so it is tested without a window.
 enum HistoryText {
     static func cost(_ amount: Double?) -> String {
-        amount.map(CostFormat.usd) ?? "price unknown"
+        CostFormat.usd(amount)
     }
 
     /// The sidebar row's second line: preset (or the model, once the preset is

@@ -9,6 +9,8 @@ struct ModelPicker: View {
     let providerName: String
     /// True when `models` is the built-in list because no key is saved.
     var isBuiltInList = false
+    /// Why a provider with a key shows only the built-in list.
+    var failureReason: String?
 
     @State private var isOpen = false
 
@@ -33,6 +35,7 @@ struct ModelPicker: View {
                 models: models,
                 providerName: providerName,
                 isBuiltInList: isBuiltInList,
+                failureReason: failureReason,
                 close: { isOpen = false }
             )
         }
@@ -44,6 +47,7 @@ struct ModelPickerPopover: View {
     let models: [Model]
     let providerName: String
     let isBuiltInList: Bool
+    let failureReason: String?
     let close: () -> Void
 
     @State private var query = ""
@@ -118,13 +122,17 @@ struct ModelPickerPopover: View {
             if isBuiltInList {
                 Divider()
                 HStack(spacing: Spacing.xs) {
-                    Text("Built-in list.")
-                    Button("Add a key in Providers") {
-                        close()
-                        AppCommands.openSettings(tab: .providers)
+                    if let failureReason {
+                        Text("Built-in list. \(failureReason)")
+                    } else {
+                        Text("Built-in list.")
+                        Button("Add a key in Providers") {
+                            close()
+                            AppCommands.openSettings(tab: .providers)
+                        }
+                        .buttonStyle(.link)
+                        Text("to load every model.")
                     }
-                    .buttonStyle(.link)
-                    Text("to load every model.")
                 }
                 .font(.caption)
                 .foregroundStyle(.secondary)

@@ -88,6 +88,21 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertTrue(provider.capturedMessages.last?.content.contains("Hello") ?? false)
     }
 
+    func testReplaceAnnouncesResult() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let announcer = RecordingAnnouncer()
+        let coordinator = makeCoordinator(selection: "Hello")
+        coordinator.announcer = announcer
+
+        try await coordinator.run(preset: preset)
+        XCTAssertEqual(announcer.messages, ["Replaced with the translation"])
+
+        provider.scriptedEvents = []
+        provider.scriptedError = LLMError.offline
+        _ = try? await coordinator.run(preset: preset)
+        XCTAssertEqual(announcer.messages.last, "Couldn’t replace the selection")
+    }
+
     func testFieldThatIgnoresThePasteFailsAndLeavesTranslationOnClipboard() async {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         field = "Hello"
@@ -260,7 +275,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
 
         let run = Task { try await coordinator.run(preset: preset) }
-        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ hold.log == ["hold"] })
         hold.press()
 
         do {
@@ -280,7 +295,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         let (coordinator, hold) = makeHeldCoordinator(selection: "Hello")
 
         let run = Task { try await coordinator.run(preset: preset) }
-        for _ in 0..<200 where hold.log != ["hold"] { try await Task.sleep(nanoseconds: 5_000_000) }
+        try await waitUntil({ hold.log == ["hold"] })
         let second = try await coordinator.run(preset: preset)
         XCTAssertFalse(second)
         XCTAssertEqual(hold.log, ["hold"])
@@ -294,22 +309,4 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertEqual(QuickReplaceCoordinator.keepingEdgeWhitespace(of: "  hi \n", around: "xin"), "  xin \n")
         XCTAssertEqual(QuickReplaceCoordinator.keepingEdgeWhitespace(of: "hi", around: "xin"), "xin")
     }
-}
-
-@MainActor
-private final class RecordingEscapeHold: EscapeHold {
-    private(set) var log: [String] = []
-    private var onPress: (() -> Void)?
-
-    func hold(onPress: @escaping () -> Void) {
-        log.append("hold")
-        self.onPress = onPress
-    }
-
-    func release() {
-        log.append("release")
-        onPress = nil
-    }
-
-    func press() { onPress?() }
 }

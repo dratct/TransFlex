@@ -73,4 +73,41 @@ final class AppIdentityTests: XCTestCase {
             "/tmp/Application Support/TransFlexDev"
         )
     }
+
+    func testKeychainPathSelectsFileAtBackend() {
+        let identity = AppIdentity(infoDictionary: [
+            "TransFlexKeychainPath": "/Users/me/Library/Keychains/transflex-dev.keychain-db",
+        ])
+        XCTAssertEqual(identity.keychainBackend, .fileAt(path: "/Users/me/Library/Keychains/transflex-dev.keychain-db"))
+    }
+
+    func testKeychainPasswordFileGoesWithPath() {
+        let identity = AppIdentity(infoDictionary: [
+            "TransFlexKeychainPath": "/tmp/dev.keychain-db",
+            "TransFlexKeychainPasswordFile": "/repo/Config/Local.keychain-password",
+        ])
+        XCTAssertEqual(identity.keychainBackend, .fileAt(path: "/tmp/dev.keychain-db", passwordFile: "/repo/Config/Local.keychain-password"))
+        XCTAssertEqual(AppIdentity(infoDictionary: [
+            "TransFlexKeychainPath": "/tmp/dev.keychain-db",
+            "TransFlexKeychainPasswordFile": "$(TRANSFLEX_KEYCHAIN_PASSWORD_FILE)",
+        ]).keychainBackend, .fileAt(path: "/tmp/dev.keychain-db"))
+    }
+
+    func testKeychainPathWinsOverDataProtection() {
+        let identity = AppIdentity(infoDictionary: [
+            "TransFlexKeychainBackend": "dataProtection",
+            "TransFlexKeychainPath": "/tmp/dev.keychain-db",
+        ])
+        XCTAssertEqual(identity.keychainBackend, .fileAt(path: "/tmp/dev.keychain-db"))
+    }
+
+    func testMissingOrUnresolvedKeychainPathKeepsBackend() {
+        XCTAssertEqual(AppIdentity(infoDictionary: [:]).keychainBackend, .file)
+        XCTAssertEqual(AppIdentity(infoDictionary: ["TransFlexKeychainPath": ""]).keychainBackend, .file)
+        XCTAssertEqual(AppIdentity(infoDictionary: ["TransFlexKeychainPath": "$(TRANSFLEX_KEYCHAIN_PATH)"]).keychainBackend, .file)
+        XCTAssertEqual(AppIdentity(infoDictionary: [
+            "TransFlexKeychainBackend": "dataProtection",
+            "TransFlexKeychainPath": "",
+        ]).keychainBackend, .dataProtection)
+    }
 }

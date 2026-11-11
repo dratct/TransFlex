@@ -92,6 +92,22 @@ final class EventSourceTests: XCTestCase {
         }
         XCTAssertEqual(RetryURLProtocol.attempts, 1)
     }
+
+    func testNotConnectedMapsToOffline() async {
+        for code: URLError.Code in [.notConnectedToInternet, .networkConnectionLost, .dataNotAllowed] {
+            RetryURLProtocol.reset()
+            let session = RetryURLProtocol.makeSession()
+            // A transient code is retried once; both attempts fail.
+            RetryURLProtocol.script = [.urlError(code), .urlError(code)]
+            let req = URLRequest(url: URL(string: "https://example.com/x")!)
+            do {
+                for try await _ in EventSource.stream(request: req, session: session) {}
+                XCTFail("expected throw for \(code)")
+            } catch {
+                XCTAssertEqual(error as? LLMError, .offline, "\(code)")
+            }
+        }
+    }
 }
 
 // MARK: - Test helper protocol with scripted multi-attempt behavior
@@ -154,4 +170,5 @@ private extension NSLock {
         lock(); defer { unlock() }
         return block()
     }
+
 }

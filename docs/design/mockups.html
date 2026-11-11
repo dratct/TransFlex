@@ -191,7 +191,7 @@ figcaption b { color: var(--label); font-weight: 600; }
 .menu .m.on { background: var(--accent); color: #fff; } .menu .m span:last-child { color: var(--label-3); } .menu .m.on span:last-child { color: rgba(255,255,255,.8); }
 .menu .h { font-size: 11px; font-weight: 600; color: var(--label-3); padding: 4px 10px 2px; }
 .menu hr { border: 0; border-top: .5px solid var(--hair-2); margin: 5px 8px; }
-.welcome { width: 720px; height: 460px; display: flex; flex-direction: row; }
+.welcome { width: 800px; height: 500px; display: flex; flex-direction: row; }
 .welcome .art { width: 290px; flex: none; position: relative; overflow: hidden; color: #fff; padding: 28px;
   background: radial-gradient(400px 300px at 20% 0%, rgba(255,255,255,.22), transparent 60%), linear-gradient(160deg, var(--brand), var(--brand-deep)); }
 .welcome .art h2 { margin: 18px 0 6px; font-size: 22px; line-height: 1.2; letter-spacing: -.01em; }
@@ -274,6 +274,9 @@ figcaption b { color: var(--label); font-weight: 600; }
   <symbol id="key" viewBox="0 0 24 24"><circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3M16 7l3 3M14 9l2 2"/></symbol>
   <symbol id="warn" viewBox="0 0 24 24"><path d="M10.3 3.9L2.4 17.5A2 2 0 004.1 20.5h15.8a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0zM12 9v4M12 17h.01"/></symbol>
   <symbol id="hand" viewBox="0 0 24 24"><path d="M18 11V6a2 2 0 00-4 0v5M14 10V4a2 2 0 00-4 0v6M10 10.5V6a2 2 0 00-4 0v8a8 8 0 0016 0v-3a2 2 0 00-4 0"/></symbol>
+  <symbol id="pin-o" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3-1-6zM12 13v7"/></symbol>
+  <symbol id="pin" viewBox="0 0 24 24"><path d="M9 4h6l-1 6 3 3H7l3-3-1-6zM12 13v7" fill="currentColor"/></symbol>
+  <symbol id="xmark" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
   <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></symbol>
   <symbol id="cursor" viewBox="0 0 24 24"><path d="M9 4h2v16H9M6 4h6M6 20h6M15 8h5M15 12h5M15 16h3"/></symbol>
   <symbol id="wifi" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0120 0M5 12.6a10 10 0 0114 0M8.5 16.3a5 5 0 017 0M12 20h.01M3 3l18 18"/></symbol>
@@ -305,7 +308,7 @@ figcaption b { color: var(--label); font-weight: 600; }
       <div class="popup" style="width:860px;height:470px">
         <div class="p-head">
           <span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span>
-          <span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool" aria-label="Settings"><svg class="i"><use href="#gear"/></svg></span>
+          <span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool" aria-label="Settings"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span>
         </div>
         <div class="sheet">
           <div class="half" style="justify-content:space-between"><div><div class="lang">Original</div>
@@ -320,7 +323,7 @@ figcaption b { color: var(--label); font-weight: 600; }
 
     <figure>
       <div class="popup" style="width:860px;height:470px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet streaming" style="--p:62%;--pf:.62">
           <div class="half"><div class="lang">Original</div><div class="text dim">Please review the release notes before Friday and flag anything that blocks the launch. The QA sign-off is still pending on two items.</div></div>
           <div class="half out"><div class="lang">Translation</div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và báo ngay những gì đang cản trở<span class="caret"></span></div></div>
@@ -332,7 +335,7 @@ figcaption b { color: var(--label); font-weight: 600; }
 
     <figure>
       <div class="popup" style="width:860px;height:470px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet">
           <div class="half"><div class="lang">Original</div><div class="text">Please review the release notes before Friday and flag anything that blocks the launch. The QA sign-off is still pending on two items.<span class="caret"></span></div></div>
           <div class="half out"><div class="lang">Translation</div>
@@ -346,8 +349,22 @@ figcaption b { color: var(--label); font-weight: 600; }
     </figure>
 
     <figure>
+      <div class="popup" style="width:860px;height:470px">
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool" aria-label="Settings"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Unpin" title="Unpin · ⌘P" style="color:var(--accent-text)"><svg class="i"><use href="#pin"/></svg></span><span class="tool" aria-label="Close" title="Close"><svg class="i"><use href="#xmark"/></svg></span></div>
+        <div class="sheet">
+          <div class="half"><div class="lang">Original</div><div class="text">Please review the release notes before Friday and flag anything that blocks the launch. The QA sign-off is still pending on two items.</div></div>
+          <div class="half out"><div class="lang">Translation</div>
+            <div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và báo ngay những gì đang cản trở việc ra mắt. Phần duyệt QA vẫn còn chờ ở hai mục.</div></div>
+        </div>
+        <div class="p-foot"><span class="meta"><b>0.8 s</b>· 96 tokens · $0.0004</span><span class="sp"></span>
+          <span class="btn ghost">New<span class="kc"><i>⌘</i><i>N</i></span></span><span class="btn">Translate again<span class="kc"><i>⌘</i><i>↩</i></span></span><span class="btn primary">Copy &amp; Close<span class="kc"><i>⌘</i><i>C</i></span></span></div>
+      </div>
+      <figcaption><b>Pinned.</b> The Pin button (⌘P) fills with the accent and a Close button joins it. The popup stays while you work in another app and keeps the place you dragged it to. Anything that closes it ends the pin.</figcaption>
+    </figure>
+
+    <figure>
       <div class="popup" style="width:520px;height:520px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet stack">
           <div class="half" style="flex:0 0 38%"><div class="lang">Original</div><div class="text">Please review the release notes before Friday.</div></div>
           <div class="half out"><div class="lang">Translation</div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu.</div></div>
@@ -364,7 +381,7 @@ figcaption b { color: var(--label); font-weight: 600; }
   <div class="stage">
     <figure>
       <div class="popup" style="width:640px;height:400px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="notice"><div class="card"><div class="badge warn"><svg class="i xl"><use href="#key"/></svg></div>
           <h3>Add an OpenAI key</h3><p>“Natural EN ↔ VI” uses OpenAI. Add a key in Settings; your text stays here.</p>
           <div class="row"><span class="btn primary">Open Settings<span class="kc"><i>⌘</i><i>,</i></span></span></div></div></div>
@@ -375,13 +392,13 @@ figcaption b { color: var(--label); font-weight: 600; }
 
     <figure>
       <div class="popup" style="width:860px;height:430px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet">
           <div class="half"><div class="lang">Original</div><div class="text">Please review the release notes before Friday and flag anything that blocks the launch.</div></div>
           <div class="half out"><div class="lang">Translation <span class="muted">· incomplete</span></div><div class="text">Vui lòng xem lại ghi chú phát hành trước thứ Sáu và</div></div>
         </div>
         <div class="strip"><svg class="i ic"><use href="#warn"/></svg><div class="tx"><b>OpenAI stopped the translation</b><span>Unsupported value: ‘temperature’ does not support 0.3 with this model.</span></div>
-          <span class="btn">Continue<span class="kc"><i>⌘</i><i>P</i></span></span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div>
+          <span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div>
         <div class="p-foot"><span class="sp"></span><span class="btn ghost">New<span class="kc"><i>⌘</i><i>N</i></span></span></div>
       </div>
       <figcaption><b>Failed midway.</b> The partial text stays in the sheet, marked incomplete; the error is a strip outside it with the provider’s own reason. Server errors (5xx) read “OpenAI is having trouble. Try again in a moment.”</figcaption>
@@ -389,16 +406,21 @@ figcaption b { color: var(--label); font-weight: 600; }
 
     <figure>
       <div class="banner-win"><div class="badge acc"><svg class="i l"><use href="#cursor"/></svg></div>
-        <div class="body"><h4>Nothing selected</h4><p>Select text in any app, then press <span class="kc"><i>⌘</i><i>⇧</i><i>D</i></span> again.</p>
-          <div class="row"><span class="btn">Open Popup</span><span class="btn primary">OK<span class="kc"><i>esc</i></span></span></div></div></div>
-      <figcaption><b>Translate Selection, nothing selected.</b> A small banner window near the top of the screen — no translation chrome, no empty sheet.</figcaption>
+        <div class="body"><h4>Nothing selected</h4><p>Select some text first.</p></div><span class="muted" aria-label="Close">✕</span></div>
+      <figcaption><b>Translate Selection, nothing selected.</b> A small banner window near the top of the screen — no translation chrome, no empty sheet. It hides itself after 4 s unless the pointer rests on it, and leaves Esc to the app in front.</figcaption>
+    </figure>
+
+    <figure>
+      <div class="banner-win"><div class="badge acc"><svg class="i l"><use href="#pin"/></svg></div>
+        <div class="body"><h4>The popup is pinned</h4><p>Unpin it to translate a new selection.</p></div><span class="muted" aria-label="Close">✕</span></div>
+      <figcaption><b>Translate Selection, popup pinned.</b> The same banner and timing. Nothing is copied and the pinned translation stays as it is.</figcaption>
     </figure>
 
     <figure>
       <div class="banner-win"><div class="badge err"><svg class="i l"><use href="#wifi"/></svg></div>
-        <div class="body"><h4>You’re offline</h4><p>“Release notes before Friday…” will translate when you retry.</p>
-          <div class="row"><span class="btn">Close<span class="kc"><i>esc</i></span></span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div>
-      <figcaption><b>Translate Selection, failed.</b> Same banner, with the first words of the selection so the user knows which one failed.</figcaption>
+        <div class="body"><h4>You’re offline</h4><p>Check your connection and try again.</p>
+          <div class="row"><span class="btn primary">Retry</span></div></div><span class="muted" aria-label="Close">✕</span></div>
+      <figcaption><b>Translate Selection, failed.</b> Same banner and timing, with Retry when trying again can help.</figcaption>
     </figure>
 
     <figure>
@@ -426,7 +448,7 @@ figcaption b { color: var(--label); font-weight: 600; }
   <div class="stage">
     <figure>
       <div class="popup" style="width:576px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Technical Doc EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Technical Doc EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet"><div class="half out"><div class="lang">Translation</div><div class="text">Hẹn gặp lại mọi người vào ngày mai.</div></div></div>
         <div class="p-foot"><span class="meta"><b>0.5 s</b></span><span class="sp"></span><span class="btn ghost">Show text<span class="kc"><i>⌘</i><i>I</i></span></span><span class="btn primary">Copy &amp; Close<span class="kc"><i>⌘</i><i>C</i></span></span></div>
       </div>
@@ -434,7 +456,7 @@ figcaption b { color: var(--label); font-weight: 600; }
     </figure>
     <figure>
       <div class="popup" style="width:576px;height:400px">
-        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Technical Doc EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span></div>
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Technical Doc EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet"><div class="half out"><div class="lang">Translation</div>
           <div class="text">Bản phát hành này sửa lỗi lưu lịch sử dịch, cập nhật cách gửi tham số cho các model OpenAI mới và thống nhất giao diện popup.<br><br>Trước khi cập nhật, hãy sao lưu thư mục dữ liệu của ứng dụng. Sau khi cập nhật, mở Settings → Providers để kiểm tra khóa API còn hợp lệ.<br><br>Nếu bạn dùng endpoint tương thích OpenAI, không cần thay đổi gì.</div></div></div>
         <div class="p-foot"><span class="meta"><b>2.1 s</b>· $0.0011</span><span class="sp"></span><span class="btn ghost">Show text<span class="kc"><i>⌘</i><i>I</i></span></span><span class="btn primary">Copy &amp; Close<span class="kc"><i>⌘</i><i>C</i></span></span></div>
@@ -449,7 +471,7 @@ figcaption b { color: var(--label); font-weight: 600; }
   <div class="stage">
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so <span class="sel">please hold the release until Friday</span> and keep the team posted.</div><span class="hud" style="left:150px;top:96px"><span class="spin"></span>Translating with Natural EN ↔ VI<span class="x">esc to cancel</span></span></div><figcaption><b>Translating.</b> Appears beside the pointer within 100 ms of the shortcut. Clicking it also cancels.</figcaption></figure>
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so vui lòng hoãn phát hành đến thứ Sáu and keep the team posted.</div><span class="hud" style="left:270px;top:96px"><svg class="i s" style="color:var(--ok)"><use href="#check"/></svg>Replaced · ⌘Z to undo</span></div><figcaption><b>Replaced.</b> Fades after 1.5 s. The other app’s text cannot be highlighted, so the capsule is the only confirmation.</figcaption></figure>
-    <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry<span class="kc"><i>⌘</i><i>↩</i></span></span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
+    <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry</span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed and stays until closed; Esc closes it from any app. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
   </div>
 </section>
 
