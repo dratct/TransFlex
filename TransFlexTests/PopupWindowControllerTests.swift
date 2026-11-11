@@ -137,6 +137,19 @@ final class PopupWindowControllerTests: XCTestCase {
 
     // MARK: Pin
 
+    func testPinnedPopupStaysWhenAnotherAppComesForward() {
+        controller.show()
+        controller.togglePin()
+
+        controller.otherAppCameForward(bundleID: "com.apple.TextEdit")
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+
+        controller.togglePin()
+        controller.otherAppCameForward(bundleID: "com.apple.TextEdit")
+        XCTAssertFalse(controller.isVisible, "unpinned, it hides as before")
+    }
+
     func testHidingUnpins() {
         controller.show()
         controller.togglePin()
@@ -189,8 +202,10 @@ final class PopupWindowControllerTests: XCTestCase {
         controller.quickTranslate(presetID: preset.id)
         try await waitUntil({ self.controller.isVisible }, "the Output-only popup is shown")
         controller.togglePin()
+        // Near the screen's top-left corner, where the Popup fits at any screen size.
         let opened = controller.panelFrame
-        controller.movePanel(toTopLeft: NSPoint(x: opened.minX - 40, y: opened.maxY - 40))
+        let visible = try XCTUnwrap(NSScreen.screens.first { $0.frame.intersects(opened) }).visibleFrame
+        controller.movePanel(toTopLeft: NSPoint(x: visible.minX + 20, y: visible.maxY - 20))
         let moved = controller.panelFrame
 
         controller.viewModelForTesting?.showInput()

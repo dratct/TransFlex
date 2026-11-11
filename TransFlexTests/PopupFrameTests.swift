@@ -150,6 +150,19 @@ final class PopupFrameTests: XCTestCase {
         XCTAssertEqual(huge.maxY, screen.maxY)
     }
 
+    func testPinnedFrameIsPushedOntoAScreenThatDoesNotStartAtZero() {
+        let second = CGRect(x: 1000, y: -300, width: 800, height: 600)
+        let size = CGSize(width: 300, height: 200)
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: 900, y: 400), in: second),
+            CGRect(x: 1000, y: 100, width: 300, height: 200)
+        )
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: 1700, y: -250), in: second),
+            CGRect(x: 1500, y: -300, width: 300, height: 200)
+        )
+    }
+
     func testGrownKeepsAMovedTopLeft() throws {
         let moved = CGRect(x: 37, y: 500, width: 420, height: 160)
         let grown = try XCTUnwrap(PopupFrame.grown(

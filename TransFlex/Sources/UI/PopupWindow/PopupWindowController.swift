@@ -129,6 +129,12 @@ public final class PopupWindowController {
 
     var viewModelForTesting: PopupViewModel? { viewModel }
 
+    /// What the auto-dismisser does when another app comes forward; tests
+    /// cannot activate one.
+    func otherAppCameForward(bundleID: String?) {
+        autoDismisser?.evaluate(frontmostBundleID: bundleID, source: "test")
+    }
+
     /// Activates a preset by ID; a stream in flight stops and keeps its text.
     public func activatePreset(id: UUID) {
         guard let vm = viewModel else { return }
