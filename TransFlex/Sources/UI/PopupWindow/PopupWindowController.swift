@@ -15,11 +15,14 @@ public final class PopupWindowController {
     private var hideClock = PopupHideClock()
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
-    private let selection = SelectionCapture()
+    private let selection: SelectionCapture
     private let copySelectionOverride: (@MainActor () async throws -> String)?
     private let replaceCoordinator: QuickReplaceCoordinator
     let replaceHUD: ReplaceHUD
     private var cancellables: Set<AnyCancellable> = []
+    /// True while a pinned popup is ordered out and straight back in, so
+    /// `onHide` does not take it for a real hide.
+    private var isReorderingPinned = false
 
     public convenience init() {
         self.init(presetStore: PresetStore())
@@ -33,6 +36,7 @@ public final class PopupWindowController {
         escapeHold: EscapeHold? = nil,
         hud: ReplaceHUD? = nil,
         copySelection: (@MainActor () async throws -> String)? = nil,
+        selection: SelectionCapture? = nil,
         translationService: TranslationService? = nil,
         pasteboard: PasteboardHelper = PasteboardHelper(),
         defaults: UserDefaults = .standard
@@ -40,6 +44,8 @@ public final class PopupWindowController {
         let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
         self.copySelectionOverride = copySelection
+        let selection = selection ?? SelectionCapture()
+        self.selection = selection
         self.replaceHUD = hud ?? ReplaceHUD(escapeHold: escapeHold)
         let frame = NSRect(origin: .zero, size: Self.defaultSize)
         self.panel = PopupPanel(contentRect: frame)
@@ -71,6 +77,7 @@ public final class PopupWindowController {
         self.replaceCoordinator.historyStore = historyStore
         self.replaceCoordinator.escapeHold = escapeHold
         self.panel.onHide = { [weak self, weak vm] in
+            guard self?.isReorderingPinned != true else { return }
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
             // Every way of hiding ends here, so no close path can leave a pin behind.
@@ -78,7 +85,8 @@ public final class PopupWindowController {
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         vm.onOutputOnlyFailure = { [weak self, weak vm] error in
-            guard let vm, let presetID = vm.selectedPresetID else { return }
+            // Pinned: the error card with Retry is already in the popup, and stays.
+            guard let vm, !vm.isPinned, let presetID = vm.selectedPresetID else { return }
             self?.showSelectionFailure(error, presetID: presetID, copiedText: vm.inputText)
         }
         self.panel.onCopyCommand = { [weak vm] in vm?.copyResultIfShown() ?? false }
@@ -129,7 +137,15 @@ public final class PopupWindowController {
 
     /// Copies the frontmost app's selection, then shows only its translation.
     /// The panel is hidden first: while it is key, ⌘C would hit the popup.
+    /// A pinned popup refuses instead, and keeps what it shows.
     public func quickTranslate(presetID: UUID) {
+        if isPinned {
+            // The banner would take the place of a Replace run's capsule.
+            guard !replaceHUD.isRunning else { return NSSound.beep() }
+            replaceHUD.hideBanner()
+            replaceHUD.showSelectionFailed(.pinned) {}
+            return
+        }
         hide()
         replaceHUD.hideBanner()
         Task { @MainActor in
@@ -179,12 +195,16 @@ public final class PopupWindowController {
     }
 
     /// Translates the frontmost app's selection and pastes the result over it.
-    /// The popup appears only to report a failure.
+    /// The popup appears only to report a failure. A pinned popup stays.
     public func quickReplace(presetID: UUID) {
         guard let preset = presetStore.presets.first(where: { $0.id == presetID }) else { return }
         // A repeated press while a run is active must not paste twice.
         guard !replaceCoordinator.isRunning else { return NSSound.beep() }
-        hide()
+        if isPinned {
+            releaseKeyKeepingPin()
+        } else {
+            hide()
+        }
         replaceHUD.showTranslating(presetName: preset.name) { [weak self] in
             self?.replaceCoordinator.cancel()
         }
@@ -202,9 +222,10 @@ public final class PopupWindowController {
     }
 
     /// The banner reports to someone still in the other app; with the popup
-    /// open, the error goes there and Esc stays with the popup.
+    /// open, the error goes there and Esc stays with the popup. A pinned
+    /// popup keeps its translation, so only the permission card goes into it.
     func reportReplaceFailure(_ error: Error, presetID: UUID) {
-        if panel.isVisible || error as? SelectionCapture.Failure == .accessibilityNotGranted {
+        if (panel.isVisible && !isPinned) || error as? SelectionCapture.Failure == .accessibilityNotGranted {
             replaceHUD.hide()
             showQuickError(error, presetID: presetID)
             return
@@ -290,6 +311,17 @@ public final class PopupWindowController {
 
     // MARK: - Private
 
+    /// A pinned popup that is key would receive the ⌘C meant for the other
+    /// app. Ordering it out and back in, without making it key, hands the
+    /// keyboard back to that app's window.
+    private func releaseKeyKeepingPin() {
+        guard panel.isKeyWindow else { return }
+        isReorderingPinned = true
+        defer { isReorderingPinned = false }
+        panel.orderOut(nil)
+        panel.orderFrontRegardless()
+    }
+
     private func handleEscape() {
         guard let vm = viewModel else { return hide() }
         switch PopupEscape.action(for: vm.state, isOutputOnly: vm.isOutputOnly) {
@@ -309,19 +341,31 @@ public final class PopupWindowController {
     }
 
     /// Opens at the size `source` predicts, or the shortest frame without one.
+    /// A pinned popup takes that size where it is, and is not made key: the
+    /// user is in another app.
     private func showOutputOnly(source: String? = nil) {
         let start = mach_absolute_time()
         replaceHUD.hideBanner()
+        let staysPinned = isPinned
         let mouse = NSEvent.mouseLocation
+        var target: NSRect
         if let source, let visible = screen(containing: mouse)?.visibleFrame {
-            panel.setFrame(PopupFrame.predicted(
+            target = PopupFrame.predicted(
                 textHeight: { SourceTextEstimate.height(of: source, width: $0) },
                 chromeHeight: PopupFrame.outputOnlyChrome,
                 in: visible
-            ), display: true)
+            )
         } else {
-            panel.setFrame(frame(.outputOnly, onScreenContaining: mouse), display: true)
+            target = frame(.outputOnly, onScreenContaining: mouse)
         }
+        let current = panel.frame
+        if staysPinned,
+           let visible = screen(containing: NSPoint(x: current.midX, y: current.midY))?.visibleFrame {
+            target = PopupFrame.pinned(
+                size: target.size, topLeft: NSPoint(x: current.minX, y: current.maxY), in: visible
+            )
+        }
+        panel.setFrame(target, display: true)
         let elapsedMs = Double(ticksToNanos(mach_absolute_time() - start)) / 1_000_000.0
         if elapsedMs < 150 {
             Self.logger.info("Output-only show in \(elapsedMs, privacy: .public) ms")
@@ -329,10 +373,12 @@ public final class PopupWindowController {
             Self.logger.warning("Output-only show exceeded 150ms target: \(elapsedMs, privacy: .public) ms")
         }
         panel.orderFrontRegardless()
-        panel.makeKey()
-        // No input editor here, so AppKit would focus the preset picker and
-        // draw a focus ring on it. Footer shortcuts still reach the window.
-        panel.makeFirstResponder(nil)
+        if !staysPinned {
+            panel.makeKey()
+            // No input editor here, so AppKit would focus the preset picker and
+            // draw a focus ring on it. Footer shortcuts still reach the window.
+            panel.makeFirstResponder(nil)
+        }
         autoDismisser?.start()
         DispatchQueue.main.async { [weak self] in self?.fitOutputOnly() }
     }

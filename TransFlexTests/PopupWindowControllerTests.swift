@@ -1,3 +1,4 @@
+import Carbon.HIToolbox
 import XCTest
 @testable import TransFlex
 
@@ -14,6 +15,11 @@ final class PopupWindowControllerTests: XCTestCase {
     private var controller: PopupWindowController!
     private var pasteboard: NSPasteboard!
     private var defaults: UserDefaults!
+    /// What the fake Replace selection reports: whether Accessibility is
+    /// granted, and every text a ⌘V would have pasted.
+    private var trusted = true
+    private var replaceCopies = 0
+    private var pasted: [String] = []
 
     override func setUp() async throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
@@ -38,10 +44,47 @@ final class PopupWindowControllerTests: XCTestCase {
                 copyCount += 1
                 return try copied.get()
             },
+            selection: makeSelection(),
             translationService: TranslationService(provider: { _ in provider }, apiKey: { _ in "" }),
             pasteboard: PasteboardHelper(pasteboard: pasteboard),
             defaults: defaults
         )
+    }
+
+    /// Replace Selection without real keystrokes: the tests run inside the
+    /// app, and the real capture would send ⌘C and ⌘V to whatever is in front.
+    private func makeSelection() -> SelectionCapture {
+        let board = NSPasteboard(name: .init("PopupWindowControllerTests-replace-\(UUID().uuidString)"))
+        addTeardownBlock { board.releaseGlobally() }
+        return SelectionCapture(
+            pasteboard: board,
+            isTrusted: { [unowned self] in trusted },
+            modifiersHeld: { false },
+            postCommandKey: { [unowned self] key in
+                if key == CGKeyCode(kVK_ANSI_C) {
+                    replaceCopies += 1
+                    board.clearContents()
+                    board.setString("hello", forType: .string)
+                } else if key == CGKeyCode(kVK_ANSI_V) {
+                    pasted.append(board.string(forType: .string) ?? "")
+                }
+            },
+            focus: .none,
+            pollInterval: 1_000_000,
+            copyTimeout: 30_000_000,
+            restoreDelay: 1_000_000,
+            pasteConfirmTimeout: 50_000_000
+        )
+    }
+
+    /// A full Popup with a draft, pinned and moved off its default place.
+    private func showPinnedPopup() -> NSRect {
+        controller.show()
+        controller.viewModelForTesting?.inputText = "draft"
+        controller.togglePin()
+        let opened = controller.panelFrame
+        controller.movePanel(toTopLeft: NSPoint(x: opened.minX + 40, y: opened.maxY - 40))
+        return controller.panelFrame
     }
 
     override func tearDown() async throws {
@@ -170,6 +213,148 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertTrue(controller.isVisible)
         XCTAssertFalse(controller.isPinned)
         XCTAssertEqual(controller.panelFrame, defaultFrame)
+    }
+
+    // MARK: Shortcuts while pinned
+
+    func testPinnedTranslateSelectionIsRefusedWithABanner() async throws {
+        let frame = showPinnedPopup()
+
+        controller.quickTranslate(presetID: preset.id)
+
+        XCTAssertEqual(selectionBanner?.title, "The popup is pinned")
+        XCTAssertEqual(selectionBanner?.message, "Unpin it to translate a new selection.")
+        XCTAssertEqual(selectionBanner?.canRetry, false)
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, frame)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(copyCount, 0, "nothing is copied from the other app")
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
+    func testPinnedOutputOnlyPopupRefusesTranslateSelectionToo() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
+        controller.quickTranslate(presetID: preset.id)
+        try await waitUntil({ self.controller.viewModelForTesting?.state == .done(result: "xin chào") }, "first translation done")
+        controller.togglePin()
+
+        controller.quickTranslate(presetID: preset.id)
+
+        XCTAssertEqual(selectionBanner?.title, "The popup is pinned")
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(copyCount, 1, "only the first press copied")
+        XCTAssertEqual(controller.viewModelForTesting?.state, .done(result: "xin chào"))
+    }
+
+    func testTranslateSelectionStillRunsOverAnUnpinnedPopup() async throws {
+        controller.show()
+
+        controller.quickTranslate(presetID: preset.id)
+
+        try await waitUntil({ self.copyCount == 1 }, "the selection is copied")
+        XCTAssertNil(selectionBanner)
+    }
+
+    func testPinnedTranslateSelectionDuringAReplaceRunKeepsItsCapsule() async throws {
+        _ = showPinnedPopup()
+        hud.showTranslating(presetName: "EN") {}
+
+        controller.quickTranslate(presetID: preset.id)
+
+        XCTAssertTrue(hud.isRunning, "the banner would take the capsule's place")
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        try await Task.sleep(nanoseconds: 100_000_000)
+        XCTAssertEqual(copyCount, 0)
+    }
+
+    func testPinnedReplaceKeepsThePopup() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
+        let frame = showPinnedPopup()
+
+        controller.quickReplace(presetID: preset.id)
+
+        XCTAssertTrue(controller.isVisible, "Replace does not hide a pinned popup")
+        try await waitUntil({ self.pasted == ["xin chào"] }, "the translation is pasted")
+        XCTAssertEqual(replaceCopies, 1)
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, frame)
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
+    func testReplaceStillHidesAnUnpinnedPopup() {
+        controller.show()
+
+        controller.quickReplace(presetID: preset.id)
+
+        XCTAssertFalse(controller.isVisible)
+    }
+
+    func testPinnedReplaceFailureUsesTheBanner() {
+        let frame = showPinnedPopup()
+
+        controller.reportReplaceFailure(LLMError.server(status: 503, body: ""), presetID: preset.id)
+
+        XCTAssertTrue(hud.isShowing, "the pinned translation is not replaced by the error")
+        XCTAssertTrue(hold.isHeld)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, frame)
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
+    func testPinnedPermissionCardKeepsThePinAndTopLeft() {
+        let frame = showPinnedPopup()
+
+        controller.reportReplaceFailure(SelectionCapture.Failure.accessibilityNotGranted, presetID: preset.id)
+
+        XCTAssertEqual(controller.viewModelForTesting?.state, .accessibilityRequired(granted: false))
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame.minX, frame.minX)
+        XCTAssertEqual(controller.panelFrame.maxY, frame.maxY)
+    }
+
+    func testOpenPopupFromTheReplaceBannerShowsTheErrorInThePinnedPopup() throws {
+        let frame = showPinnedPopup()
+        controller.reportReplaceFailure(LLMError.server(status: 503, body: ""), presetID: preset.id)
+
+        hud.model.onOpenPopup()
+
+        guard case .error = try XCTUnwrap(controller.viewModelForTesting?.state) else {
+            return XCTFail("the error shows in the popup: \(String(describing: controller.viewModelForTesting?.state))")
+        }
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame.minX, frame.minX)
+        XCTAssertEqual(controller.panelFrame.maxY, frame.maxY)
+    }
+
+    func testPinnedStreamFailureStaysInThePopup() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
+        controller.quickTranslate(presetID: preset.id)
+        try await waitUntil({ self.controller.viewModelForTesting?.state == .done(result: "xin chào") }, "first translation done")
+        controller.togglePin()
+        provider.scriptedEvents = []
+        provider.scriptedError = LLMError.server(status: 503, body: "")
+
+        controller.viewModelForTesting?.translate()
+
+        try await waitUntil({
+            if case .error(_, nil) = self.controller.viewModelForTesting?.state { return true }
+            return false
+        }, "the error card with Retry is in the popup")
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "hello")
+        XCTAssertNil(selectionBanner)
     }
 
     // MARK: Translate Selection banner
