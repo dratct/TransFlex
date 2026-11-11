@@ -11,7 +11,7 @@ struct WelcomeView: View {
 
     @State private var step: WelcomeStep
     @State private var shortcutKeys: [String]
-    @State private var keySkipped = false
+    @State private var keySaved = false
     @StateObject private var provider: ProviderSetupModel
 
     init(
@@ -56,7 +56,7 @@ struct WelcomeView: View {
         case .shortcut:
             WelcomeShortcutView(keys: $shortcutKeys)
         case .done:
-            WelcomeDoneView(keys: shortcutKeys, keySkipped: keySkipped)
+            WelcomeDoneView(keys: shortcutKeys, keySkipped: !keySaved)
         }
     }
 
@@ -69,10 +69,7 @@ struct WelcomeView: View {
                     .buttonStyle(WelcomeTextButtonStyle())
             }
             if step.showsSkip {
-                Button("Skip for now") {
-                    keySkipped = true
-                    advance()
-                }
+                Button("Skip for now") { advance() }
                     .buttonStyle(WelcomeTextButtonStyle())
             }
             Button(step.primaryTitle) { primaryAction() }
@@ -88,7 +85,7 @@ struct WelcomeView: View {
         // a failure stays on the step with its reason under the field.
         if step == .provider {
             guard provider.save() else { return }
-            keySkipped = false
+            keySaved = true
         }
         advance()
     }
