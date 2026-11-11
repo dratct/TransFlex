@@ -121,10 +121,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         for preset in presetsToAdd {
             let action = HotkeyAction.preset(preset.id)
             hotkey.register(action) { [weak popup] in
-                popup?.activatePreset(id: preset.id)
-                if !(popup?.isVisible ?? false) {
-                    popup?.show()
-                }
+                popup?.openForPreset(id: preset.id)
             }
             hotkey.register(.presetQuickPopup(preset.id)) { [weak popup] in
                 popup?.quickTranslate(presetID: preset.id)

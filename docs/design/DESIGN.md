@@ -164,8 +164,9 @@ The Pin button in the header, or ⌘P while the popup has the keyboard, pins
 the popup for this open. A pinned popup:
 
 - stays when another app comes forward or the user clicks elsewhere;
-- is dragged by the empty part of its header (pinned or not), and keeps its
-  top-left corner where it was dragged, while it grows and through ⌘I;
+- keeps its top-left corner where it was dragged, while it grows and through
+  ⌘I. Any popup is dragged by the empty part of its header; an unpinned one
+  goes back to its usual frame on ⌘I and on the next open;
 - shows a Close button (✕), because Esc may stop a stream or go back to the
   text instead of closing;
 - refuses Translate Selection (see Translate Selection) and is left alone by
@@ -173,11 +174,15 @@ the popup for this open. A pinned popup:
   show in a pinned popup: the Accessibility permission card, and the error
   after Open Popup is pressed on the Replace banner;
 - keeps the error card with Retry when its own translation fails before any
-  text arrives, instead of the banner window.
+  text arrives, instead of the banner window;
+- is not given the keyboard when Settings or History closes: the app behind
+  keeps it. A preset's Open shortcut selects that preset in the pinned popup
+  and gives it the keyboard.
 
 Pin again, ⌘P, or anything that hides the popup (✕, Esc, Copy & Close, ⌘Y,
-the Open Popup shortcut) ends the pin. So does Translate again in History,
-which opens the Popup at its usual frame. The next open is unpinned, at the
+the Open Popup shortcut) ends the pin. So does anything that opens the Popup
+afresh at its usual frame: Translate again in History, or Welcome's last
+button. The next open is unpinned, at the
 usual frame. Nothing about the pin is saved.
 
 VoiceOver hears what only changes on screen, once per outcome: "Translation

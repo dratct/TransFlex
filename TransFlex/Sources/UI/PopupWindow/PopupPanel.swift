@@ -43,6 +43,15 @@ final class PopupPanel: NSPanel {
         self.backgroundColor = .clear
     }
 
+    /// How often the keyboard was asked for. A locked or headless screen
+    /// refuses key status, so tests count the requests instead.
+    private(set) var keyRequests = 0
+
+    override func makeKey() {
+        keyRequests += 1
+        super.makeKey()
+    }
+
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
 

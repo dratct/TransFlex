@@ -15,6 +15,7 @@ public final class PopupWindowController {
     private var hideClock = PopupHideClock()
     private var autoDismisser: WindowAutoDismisser?
     private let presetStore: PresetStore
+    private let defaults: UserDefaults
     private let selection: SelectionCapture
     private let copySelectionOverride: (@MainActor () async throws -> String)?
     private let replaceCoordinator: QuickReplaceCoordinator
@@ -43,6 +44,7 @@ public final class PopupWindowController {
     ) {
         let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
+        self.defaults = defaults
         self.copySelectionOverride = copySelection
         let selection = selection ?? SelectionCapture()
         self.selection = selection
@@ -129,6 +131,7 @@ public final class PopupWindowController {
 
     var viewModelForTesting: PopupViewModel? { viewModel }
     var isPanelKey: Bool { panel.isKeyWindow }
+    var panelKeyRequests: Int { panel.keyRequests }
     /// The view a click lands on; `point` is measured from the panel's top-left.
     func hitView(atTopLeftOffset point: NSPoint) -> NSView? {
         guard let content = panel.contentView else { return nil }
@@ -147,6 +150,21 @@ public final class PopupWindowController {
     public func activatePreset(id: UUID) {
         guard let vm = viewModel else { return }
         vm.switchPreset(id)
+    }
+
+    /// A preset's Open shortcut: selects the preset and gives the popup the
+    /// keyboard, opening it first when it is hidden.
+    public func openForPreset(id: UUID) {
+        activatePreset(id: id)
+        guard panel.isVisible else { return show() }
+        // Only a pinned popup is visible without the keyboard.
+        panel.makeKey()
+        if viewModel?.isOutputOnly == true {
+            // No editor to focus: AppKit would ring the preset picker.
+            panel.makeFirstResponder(nil)
+        } else {
+            viewModel?.requestInputFocus()
+        }
     }
 
     /// Copies the frontmost app's selection, then shows only its translation.
@@ -262,8 +280,6 @@ public final class PopupWindowController {
 
     /// Shows the full popup and translates a History entry's text again.
     public func translateAgain(text: String, presetID: UUID) {
-        // History asked for a fresh Popup: it opens where an unpinned one does.
-        viewModel?.unpin()
         show()
         viewModel?.translateAgain(text: text, presetID: presetID)
     }
@@ -283,8 +299,10 @@ public final class PopupWindowController {
     public func show(at point: NSPoint? = nil) {
         let start = mach_absolute_time()
         replaceHUD.hideBanner()
+        // Opening is a fresh Popup at its usual frame: a pin does not carry over.
+        viewModel?.unpin()
 
-        viewModel?.openPopup(keepingDraft: hideClock.keepsDraft(policy: PopupResetPolicyStore.load()))
+        viewModel?.openPopup(keepingDraft: hideClock.keepsDraft(policy: PopupResetPolicyStore.load(from: defaults)))
 
         let reference = point ?? NSEvent.mouseLocation
         panel.setFrame(frame(.popup, onScreenContaining: reference), display: true)
@@ -311,14 +329,20 @@ public final class PopupWindowController {
     }
 
     /// Ignores the activation that follows another TransFlex window closing,
-    /// then gives the popup the keyboard back.
+    /// then gives the popup the keyboard back. A pinned popup stays without
+    /// it: the user is working in the app behind.
     public func keepThroughOtherWindowClose() {
         guard panel.isVisible else { return }
         autoDismisser?.stop()
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
             guard let self, self.panel.isVisible else { return }
             self.panel.orderFrontRegardless()
-            self.panel.makeKey()
+            if self.isPinned {
+                // The key check normally rides on the popup becoming key.
+                self.viewModel?.recheckProviderKey()
+            } else {
+                self.panel.makeKey()
+            }
             self.autoDismisser?.start()
         }
     }
@@ -346,6 +370,11 @@ public final class PopupWindowController {
     }
 
     private func showQuickError(_ error: Error, presetID: UUID) {
+        // A pinned Popup is replaced where it stands, with no hide to start
+        // the Draft's clock.
+        if panel.isVisible, viewModel?.isOutputOnly == false {
+            hideClock.recordHide(outputOnly: false)
+        }
         if error as? SelectionCapture.Failure == .accessibilityNotGranted {
             viewModel?.presentAccessibilityRequired(presetID: presetID)
         } else {

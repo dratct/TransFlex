@@ -217,6 +217,98 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertTrue(WindowDragView().acceptsFirstMouse(for: nil))
     }
 
+    /// The user pinned the popup to work in another app: Settings closing
+    /// must not hand the popup a keyboard it did not have.
+    func testSettingsCloseDoesNotAskTheKeyboardForAPinnedPopup() async throws {
+        _ = showPinnedPopup()
+        let asked = controller.panelKeyRequests
+
+        controller.keepThroughOtherWindowClose()
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertEqual(controller.panelKeyRequests, asked)
+    }
+
+    func testSettingsCloseGivesAnUnpinnedPopupTheKeyboardBack() async throws {
+        controller.show()
+        let asked = controller.panelKeyRequests
+
+        controller.keepThroughOtherWindowClose()
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        XCTAssertEqual(controller.panelKeyRequests, asked + 1)
+    }
+
+    /// A pinned popup is not made key when Settings closes, so the key
+    /// check that rides on becoming key has to run on its own.
+    func testSettingsCloseClearsTheMissingKeyCardInAPinnedPopup() async throws {
+        _ = showPinnedPopup()
+        controller.viewModelForTesting?.state = .missingKey(providerID: "mock")
+
+        controller.keepThroughOtherWindowClose()
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+    }
+
+    /// Welcome's last button opens the Popup; one that is up and pinned
+    /// would otherwise be emptied and recentred while still pinned.
+    func testOpeningThePopupAgainEndsThePin() {
+        _ = showPinnedPopup()
+
+        controller.show()
+
+        XCTAssertFalse(controller.isPinned)
+    }
+
+    /// The card replaces a pinned Popup without hiding it; the Draft's clock
+    /// still starts there, or the next open would drop the Draft at once.
+    func testDraftSurvivesAPermissionCardShownInThePinnedPopup() {
+        _ = showPinnedPopup()
+        controller.reportReplaceFailure(SelectionCapture.Failure.accessibilityNotGranted, presetID: preset.id)
+        controller.hide()
+
+        controller.show()
+
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
+    func testPresetShortcutGivesAVisiblePinnedPopupTheKeyboard() {
+        let frame = showPinnedPopup()
+        let asked = controller.panelKeyRequests
+
+        controller.openForPreset(id: preset.id)
+
+        XCTAssertEqual(controller.panelKeyRequests, asked + 1)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, frame, "a visible popup is not opened again")
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
+    func testPresetShortcutOpensAHiddenPopup() {
+        controller.openForPreset(id: preset.id)
+
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertEqual(controller.viewModelForTesting?.selectedPresetID, preset.id)
+    }
+
+    /// The drag area sits behind the header: its controls keep their clicks.
+    func testHeaderControlsAreNotTheDragArea() async throws {
+        _ = showPinnedPopup()
+        let width = controller.panelFrame.width
+        try await waitUntil({
+            self.controller.hitView(atTopLeftOffset: NSPoint(x: width * 0.5, y: 24)) is WindowDragView
+        }, "the header is laid out")
+
+        // Preset picker, then History, Settings, Pin and Close from the right edge.
+        for x in [60, width - 123, width - 93, width - 63, width - 33] {
+            let hit = controller.hitView(atTopLeftOffset: NSPoint(x: x, y: 24))
+            XCTAssertNotNil(hit, "x=\(x)")
+            XCTAssertFalse(hit is WindowDragView, "x=\(x) lands on the drag area")
+        }
+    }
+
     func testPinnedPopupGrowsFromWhereItWasMoved() async throws {
         provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
         controller.quickTranslate(presetID: preset.id)
