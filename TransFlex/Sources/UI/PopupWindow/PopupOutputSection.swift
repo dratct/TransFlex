@@ -21,9 +21,9 @@ struct PopupOutputSection: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // The Output-only popup grows from these two heights.
-                    .background(HeightReporter(label: "colsC") { viewModel.outputContentHeight = $0 })
+                    .background(HeightReporter(label: "colsC") { viewModel.reportOutputHeight(content: $0, from: .translationColumn) })
                 }
-                .background(HeightReporter(label: "colsV") { viewModel.outputVisibleHeight = $0 })
+                .background(HeightReporter(label: "colsV") { viewModel.reportOutputHeight(visible: $0, from: .translationColumn) })
                 .onChange(of: streamingLength) { _ in
                     withAnimation(.linear(duration: 0.08)) {
                         proxy.scrollTo(bottomAnchor, anchor: .bottom)
