@@ -11,6 +11,7 @@ struct WelcomeView: View {
 
     @State private var step: WelcomeStep
     @State private var shortcutKeys: [String]
+    @State private var keySaved = false
     @StateObject private var provider: ProviderSetupModel
 
     init(
@@ -55,7 +56,7 @@ struct WelcomeView: View {
         case .shortcut:
             WelcomeShortcutView(keys: $shortcutKeys)
         case .done:
-            WelcomeDoneView(keys: shortcutKeys)
+            WelcomeDoneView(keys: shortcutKeys, keySkipped: !keySaved)
         }
     }
 
@@ -82,7 +83,10 @@ struct WelcomeView: View {
     private func primaryAction() {
         // The provider step goes on only once the key is in the Keychain;
         // a failure stays on the step with its reason under the field.
-        if step == .provider, !provider.save() { return }
+        if step == .provider {
+            guard provider.save() else { return }
+            keySaved = true
+        }
         advance()
     }
 

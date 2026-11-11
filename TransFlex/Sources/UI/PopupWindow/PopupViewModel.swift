@@ -59,6 +59,7 @@ final class PopupViewModel: ObservableObject {
     private let historyRecorder = HistoryRecorder()
 
     private let isAccessibilityGranted: () -> Bool
+    private let announcer: Announcing
     private let hasAPIKey: (Preset) -> Bool
     private let openAccessibilitySettingsAction: () -> Void
     private var accessibilityPoll: Task<Void, Never>?
@@ -75,8 +76,10 @@ final class PopupViewModel: ObservableObject {
         defaults: UserDefaults = .standard,
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
         openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
-        hasAPIKey: @escaping (Preset) -> Bool = { _ in true }
+        hasAPIKey: @escaping (Preset) -> Bool = { _ in true },
+        announcer: Announcing = VoiceOverAnnouncer()
     ) {
+        self.announcer = announcer
         self.isAccessibilityGranted = isAccessibilityGranted
         self.hasAPIKey = hasAPIKey
         self.openAccessibilitySettingsAction = openAccessibilitySettings
@@ -254,6 +257,7 @@ final class PopupViewModel: ObservableObject {
                 }
             } catch {
                 self.state = .error(message: ErrorMessageHelper.friendly(error), partial: nil)
+                self.announcer.announce("Couldn’t translate. \(ErrorMessageHelper.friendly(error))")
                 return
             }
 
@@ -277,6 +281,7 @@ final class PopupViewModel: ObservableObject {
                 }
                 guard self.translationSequence == sequence else { return }
                 self.state = .done(result: accumulated)
+                self.announcer.announce("Translation ready")
                 self.updateCost(model: preset.modelID, input: inputTokens, output: outputTokens, hadImage: imageInput != nil)
                 self.autoCopyIfEnabled(accumulated)
                 self.historyRecorder.record(
@@ -297,6 +302,7 @@ final class PopupViewModel: ObservableObject {
                     self.state = .keyRejected(providerID: preset.providerID)
                 } else {
                     self.state = .error(message: message, partial: accumulated.isEmpty ? nil : accumulated)
+                    self.announcer.announce("Couldn’t translate. \(message)")
                 }
                 if self.isOutputOnly, accumulated.isEmpty, case .banner = SelectionFailure.route(
                     for: error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
@@ -550,6 +556,7 @@ final class PopupViewModel: ObservableObject {
     func copyToClipboard(_ text: String) {
         pasteboard.writeText(text)
         triggerToast(autoDismiss: true)
+        announcer.announce("Copied")
     }
 
     /// Used only by the first-run wizard gate. Probes existence via

@@ -1,11 +1,11 @@
 import SwiftUI
 
 struct HistoryExportSheet: View {
-    let store: HistoryStore
     @Binding var isPresented: Bool
+    /// Called with the chosen format; the save panel opens once this sheet has closed.
+    let onExport: (ExportFormat) -> Void
 
     @State private var selectedFormat: ExportFormat = .json
-    @State private var isExporting = false
 
     var body: some View {
         VStack(spacing: 16) {
@@ -23,24 +23,14 @@ struct HistoryExportSheet: View {
                 Button("Cancel") { isPresented = false }
                     .keyboardShortcut(.cancelAction)
                 Spacer()
-                Button("Export") { performExport() }
-                    .keyboardShortcut(.defaultAction)
-                    .disabled(isExporting)
+                Button("Export…") {
+                    onExport(selectedFormat)
+                    isPresented = false
+                }
+                .keyboardShortcut(.defaultAction)
             }
         }
         .padding()
         .frame(width: 320)
-    }
-
-    private func performExport() {
-        isExporting = true
-        do {
-            let entries = try store.allEntries()
-            HistoryExporter.export(entries: entries, as: selectedFormat)
-        } catch {
-            // Exporter logs the error
-        }
-        isExporting = false
-        isPresented = false
     }
 }

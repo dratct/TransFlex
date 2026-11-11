@@ -23,4 +23,12 @@ enum WelcomeStep: Int, CaseIterable {
 
     /// Only the key can be left for later; every other step has nothing to skip.
     var showsSkip: Bool { self == .provider }
+
+    /// The last step's title and the line under it; after Skip for now it says where the
+    /// key goes instead of claiming everything is ready.
+    static func doneHeading(keySkipped: Bool) -> (title: String, lead: String) {
+        keySkipped
+            ? ("Almost set", "Add a key any time in Settings › Providers.")
+            : ("You're all set", "\(AppIdentity.current.displayName) lives in the menu bar.")
+    }
 }

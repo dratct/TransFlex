@@ -15,6 +15,8 @@ final class QuickReplaceCoordinator {
     /// Holds Esc system-wide while a run is active, so Esc cancels it.
     var escapeHold: EscapeHold?
 
+    var announcer: Announcing = VoiceOverAnnouncer()
+
     weak var historyStore: HistoryStore? {
         didSet { historyRecorder.historyStore = historyStore }
     }
@@ -40,7 +42,13 @@ final class QuickReplaceCoordinator {
             current = nil
             isRunning = false
         }
-        try await task.value
+        do {
+            try await task.value
+        } catch {
+            if !(error is CancellationError) { announcer.announce("Couldn’t replace the selection") }
+            throw error
+        }
+        announcer.announce("Replaced with the translation")
         return true
     }
 

@@ -4,6 +4,8 @@ import SwiftUI
 struct HistorySplitView: View {
     @ObservedObject var store: HistoryStore
     @ObservedObject var presets: PresetStore
+    /// The window the export save panel attaches to.
+    var hostWindow: () -> NSWindow? = { NSApp.keyWindow }
 
     @State private var selectedEntryID: UUID?
     @State private var entries: [HistoryEntry] = []
@@ -11,12 +13,15 @@ struct HistorySplitView: View {
     @State private var searchQuery = ""
     @State private var searchResults: [HistoryEntry]?
     @State private var showExportSheet = false
+    @State private var pendingExport: ExportFormat?
+    @State private var exportError: String?
     @State private var showDeleteConfirm = false
     @State private var todayLabel: String?
     @State private var searchFocusRequest = 0
     @FocusState private var listFocused: Bool
 
     private let pageSize = 50
+    private let searchPageSize = 100
 
     var body: some View {
         content
@@ -34,8 +39,16 @@ struct HistorySplitView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showExportSheet) {
-                HistoryExportSheet(store: store, isPresented: $showExportSheet)
+            .sheet(isPresented: $showExportSheet, onDismiss: startPendingExport) {
+                HistoryExportSheet(isPresented: $showExportSheet) { pendingExport = $0 }
+            }
+            .alert(
+                "Couldn’t export history",
+                isPresented: Binding(get: { exportError != nil }, set: { if !$0 { exportError = nil } })
+            ) {
+                Button("OK") {}
+            } message: {
+                Text(exportError ?? "")
             }
             .confirmationDialog("Delete all history?", isPresented: $showDeleteConfirm) {
                 Button("Delete All", role: .destructive) { deleteAll() }
@@ -43,6 +56,9 @@ struct HistorySplitView: View {
                 Text("Every saved translation is removed. This can’t be undone.")
             }
             .onAppear(perform: loadFirstPage)
+            .onReceive(NotificationCenter.default.publisher(for: .historyDidChange, object: store)) { _ in
+                reloadAfterInsert()
+            }
     }
 
     @ViewBuilder
@@ -67,7 +83,7 @@ struct HistorySplitView: View {
                         entries: searchResults ?? entries,
                         selectedEntryID: $selectedEntryID,
                         presetName: presetName,
-                        onReachEnd: { if searchResults == nil { loadMore() } }
+                        onReachEnd: { searchResults == nil ? loadMore() : loadMoreResults() }
                     )
                     .focused($listFocused)
                 }
@@ -128,6 +144,18 @@ struct HistorySplitView: View {
         refreshToday()
     }
 
+    /// Puts a new entry at the top of the list, and of the results when it matches the
+    /// search being typed, without losing the selection or how far the list was scrolled.
+    private func reloadAfterInsert() {
+        entries = (try? store.fetchPage(offset: 0, limit: max(pageSize, entries.count + 1))) ?? entries
+        hasLoaded = true
+        if let shown = searchResults {
+            searchResults = (try? store.search(query: searchQuery, limit: max(searchPageSize, shown.count + 1))) ?? shown
+        }
+        if selectedEntryID == nil { selectedEntryID = (searchResults ?? entries).first?.id }
+        refreshToday()
+    }
+
     private func refreshToday() {
         let today = try? store.todayCost(now: Date(), calendar: .current)
         todayLabel = today.flatMap { HistoryText.today(total: $0.total, unpriced: $0.unpriced) }
@@ -144,8 +172,34 @@ struct HistorySplitView: View {
             selectedEntryID = entries.first?.id
             return
         }
-        searchResults = (try? store.search(query: query)) ?? []
+        searchResults = (try? store.search(query: query, limit: searchPageSize)) ?? []
         selectedEntryID = searchResults?.first?.id
+    }
+
+    private func loadMoreResults() {
+        guard let shown = searchResults,
+              let next = try? store.search(query: searchQuery, offset: shown.count, limit: searchPageSize),
+              !next.isEmpty else { return }
+        searchResults?.append(contentsOf: next)
+    }
+
+    /// Runs after the format sheet has gone, so the save panel opens on the History window
+    /// with no other sheet in the way.
+    private func startPendingExport() {
+        guard let format = pendingExport else { return }
+        pendingExport = nil
+        do {
+            let all = try store.allEntries()
+            guard let window = hostWindow() else {
+                exportError = "The History window wasn’t found. Try Export… again."
+                return
+            }
+            HistoryExporter.export(entries: all, as: format, from: window) { error in
+                exportError = error.localizedDescription
+            }
+        } catch {
+            exportError = error.localizedDescription
+        }
     }
 
     private func deleteEntry(_ id: UUID) {

@@ -28,7 +28,7 @@ final class HistoryWindowController {
             return
         }
 
-        let contentView = HistorySplitView(store: store, presets: presetStore)
+        let contentView = HistorySplitView(store: store, presets: presetStore) { [weak self] in self?.window }
         let hosting = NSHostingController(rootView: contentView)
 
         let frame = NSRect(origin: .zero, size: Self.defaultContentSize)

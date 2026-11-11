@@ -50,6 +50,42 @@ final class HistoryStoreTests: XCTestCase {
         XCTAssertEqual(try store.search(query: "cuộc họp").map(\.id), [meeting.id])
     }
 
+    func testPrefixSearchFindsLongerWord() throws {
+        let saved = entry("A good translation", output: "Một bản dịch tốt", at: 1_700_000_000)
+        try store.insert(saved)
+
+        XCTAssertEqual(try store.search(query: "transl").map(\.id), [saved.id])
+    }
+
+    func testPunctuationActsAsSeparator() throws {
+        let saved = entry("Visit example.com today", output: "Ghé example.com hôm nay", at: 1_700_000_000)
+        try store.insert(saved)
+        try store.insert(entry("An example of it", output: "Một ví dụ", at: 1_700_000_100))
+
+        XCTAssertEqual(try store.search(query: "example.com").map(\.id), [saved.id])
+    }
+
+    func testSearchPagesPastFirstHundred() throws {
+        for index in 0..<120 {
+            try store.insert(entry("note \(index)", output: "ghi chú", at: 1_700_000_000 + TimeInterval(index)))
+        }
+
+        let first = try store.search(query: "note", offset: 0, limit: 100)
+        let rest = try store.search(query: "note", offset: first.count, limit: 100)
+
+        XCTAssertEqual(first.count, 100)
+        XCTAssertEqual(rest.count, 20)
+        XCTAssertEqual(rest.last?.inputText, "note 0")
+    }
+
+    func testInsertPostsChange() throws {
+        let posted = expectation(forNotification: .historyDidChange, object: store)
+
+        try store.insert(entry("Hello", output: "Xin chào", at: 1_700_000_000))
+
+        wait(for: [posted], timeout: 1)
+    }
+
     func testPruneDeletesOnlyEntriesOlderThanCutoff() throws {
         let old = entry("old", output: "cũ", at: 1_700_000_000)
         let recent = entry("new", output: "mới", at: 1_700_100_000)

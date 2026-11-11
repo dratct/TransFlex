@@ -609,6 +609,88 @@ final class PopupViewModelQuickModeTests: XCTestCase {
         XCTAssertEqual(board.string(forType: .string), "Bonjour")
     }
 
+    // MARK: VoiceOver
+
+    private func announcingViewModel(_ announcer: RecordingAnnouncer) -> PopupViewModel {
+        let provider = provider!
+        let service = TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
+        return PopupViewModel(
+            translationService: service,
+            presetStore: presetStore,
+            pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMAnnounce-\(UUID().uuidString)"))),
+            announcer: announcer
+        )
+    }
+
+    func testAnnouncesDone() async throws {
+        provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .done(result: "Bonjour") })
+
+        XCTAssertEqual(announcer.messages, ["Translation ready"])
+    }
+
+    func testAnnouncesError() async throws {
+        provider.scriptedError = LLMError.offline
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state.isError })
+
+        let spoken = try XCTUnwrap(announcer.messages.last)
+        XCTAssertTrue(spoken.hasPrefix("Couldn’t translate."), spoken)
+    }
+
+    func testDismissingAPartialErrorSaysNothing() {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+        vm.state = .error(message: "Offline", partial: "Bon")
+
+        vm.dismissError()
+
+        XCTAssertEqual(vm.state, .done(result: "Bon"))
+        XCTAssertEqual(announcer.messages, [], "closing an error is not a new translation")
+    }
+
+    func testReplaceFailureShownInPopupIsLeftToReplace() throws {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.presentQuickFailure(LLMError.offline, presetID: try XCTUnwrap(presetStore.presets.first?.id))
+
+        XCTAssertEqual(announcer.messages, [], "Replace already said it could not replace")
+    }
+
+    func testStopSaysNothing() async throws {
+        provider.scriptedEvents = [.textDelta("Bon")]
+        provider.holdsOpen = true
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+        vm.inputText = "Hello"
+        vm.translate()
+        try await waitUntil({ vm.state == .streaming(accumulated: "Bon") })
+
+        vm.stop()
+
+        XCTAssertEqual(vm.state, .done(result: "Bon", stopped: true))
+        XCTAssertEqual(announcer.messages, [])
+    }
+
+    func testAnnouncesCopied() {
+        let announcer = RecordingAnnouncer()
+        let vm = announcingViewModel(announcer)
+
+        vm.copyToClipboard("Bonjour")
+
+        XCTAssertEqual(announcer.messages, ["Copied"])
+    }
+
     func testTranslateAgainCommandActsOnlyOnAShownResult() async throws {
         provider.scriptedEvents = [.textDelta("Bonjour"), .stop(reason: .complete)]
         let vm = makeViewModel()
@@ -859,4 +941,11 @@ final class PopupEscapeTests: XCTestCase {
 private extension PopupState {
     var isError: Bool { if case .error = self { return true }; return false }
     var isKeyRejected: Bool { if case .keyRejected = self { return true }; return false }
+}
+
+/// Keeps what would have been spoken, in order.
+@MainActor
+final class RecordingAnnouncer: Announcing {
+    private(set) var messages: [String] = []
+    func announce(_ message: String) { messages.append(message) }
 }

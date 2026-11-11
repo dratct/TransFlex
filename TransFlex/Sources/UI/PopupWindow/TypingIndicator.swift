@@ -23,6 +23,8 @@ struct TypingIndicator: View {
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Translating")
         .onAppear { animate = true }
     }
 }

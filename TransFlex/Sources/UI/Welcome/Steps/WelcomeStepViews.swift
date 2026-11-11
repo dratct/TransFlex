@@ -34,11 +34,12 @@ struct WelcomeShortcutView: View {
 
 struct WelcomeDoneView: View {
     let keys: [String]
+    let keySkipped: Bool
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            WelcomeHeading(title: "You're all set",
-                           lead: "\(AppIdentity.current.displayName) lives in the menu bar.")
+            let heading = WelcomeStep.doneHeading(keySkipped: keySkipped)
+            WelcomeHeading(title: heading.title, lead: heading.lead)
             Keycaps(keys: keys)
             Label {
                 Text("Look for the icon in the menu bar.")
