@@ -21,9 +21,9 @@ struct PopupOutputSection: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // The Output-only popup grows from these two heights.
-                    .background(HeightReporter { viewModel.outputContentHeight = $0 })
+                    .background(HeightReporter(label: "colsC") { viewModel.outputContentHeight = $0 })
                 }
-                .background(HeightReporter { viewModel.outputVisibleHeight = $0 })
+                .background(HeightReporter(label: "colsV") { viewModel.outputVisibleHeight = $0 })
                 .onChange(of: streamingLength) { _ in
                     withAnimation(.linear(duration: 0.08)) {
                         proxy.scrollTo(bottomAnchor, anchor: .bottom)
@@ -72,13 +72,14 @@ struct PopupOutputSection: View {
 /// not reliably leave the AppKit-backed `ScrollView`, so this writes directly.
 /// Reports its parent's height; the Output-only popup grows from it.
 struct HeightReporter: View {
+    var label = "?"
     let report: (CGFloat) -> Void
 
     var body: some View {
         GeometryReader { proxy in
             Color.clear
-                .onAppear { report(proxy.size.height) }
-                .onChange(of: proxy.size.height) { report($0) }
+                .onAppear { NSLog("[DEBUG-7c1e] %@ appear %.1f", label, proxy.size.height); report(proxy.size.height) }
+                .onChange(of: proxy.size.height) { NSLog("[DEBUG-7c1e] %@ change %.1f", label, $0); report($0) }
         }
     }
 }

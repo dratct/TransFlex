@@ -71,6 +71,7 @@ public final class PopupWindowController {
         self.replaceCoordinator.historyStore = historyStore
         self.replaceCoordinator.escapeHold = escapeHold
         self.panel.onHide = { [weak self, weak vm] in
+            NSLog("[DEBUG-7c1e] panel onHide")
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
         }
@@ -347,6 +348,7 @@ public final class PopupWindowController {
     /// Not gated on visibility: the first layout happens in `setFrame`, before
     /// the panel is ordered front, and a dropped measurement never repeats.
     private func fitOutputOnly() {
+        NSLog("[DEBUG-7c1e] fit C=%.1f V=%.1f panel=%.1f visible=%d outputOnly=%d state=%@ screen=%@", viewModel?.outputContentHeight ?? -1, viewModel?.outputVisibleHeight ?? -1, panel.frame.height, panel.isVisible ? 1 : 0, (viewModel?.isOutputOnly ?? false) ? 1 : 0, String(describing: viewModel?.state), NSStringFromRect(screen(containing: NSPoint(x: panel.frame.midX, y: panel.frame.midY))?.visibleFrame ?? .zero))
         guard let vm = viewModel, vm.isOutputOnly,
               let screenFrame = screen(containing: NSPoint(x: panel.frame.midX, y: panel.frame.midY))?.visibleFrame,
               let grown = PopupFrame.grown(

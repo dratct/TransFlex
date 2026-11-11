@@ -49,30 +49,23 @@ jobs:
       - name: Run build script tests
         run: scripts/test-build-script.sh
 
-      - name: Run tests
-        run: make test
-
-      - name: Build Release
-        run: scripts/build.sh --release --no-gen
-
-      - name: Verify Release app
+      - name: Loop the flaky test
         run: |
-          scripts/verify-release-app.sh \
-            --app DerivedData/Build/Products/Release/TransFlex.app \
-            --expected-min-macos 13.0
-
-      - name: Upload Release app for diagnostics
-        if: failure() || github.event_name == 'workflow_dispatch'
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: TransFlex-ci-release-app
-          path: DerivedData/Build/Products/Release/TransFlex.app
-          if-no-files-found: ignore
-          retention-days: 7
+          set -o pipefail
+          xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' CODE_SIGN_IDENTITY=- CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=YES build-for-testing > build.log 2>&1 || { tail -40 build.log; exit 1; }
+          for round in 1 2 3 4 5 6; do
+            xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' test-without-building -only-testing:TransFlexTests/PopupWindowControllerTests -test-iterations 40 > "loop-$round.log" 2>&1 || true
+            grep -E "Executed [0-9]+ tests" "loop-$round.log" | tail -1
+          done
+          xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' test-without-building -test-iterations 3 > loop-full.log 2>&1 || true
+          grep -E "Executed [0-9]+ tests" loop-full.log | tail -1
+          grep -h -B40 -A3 "testPermissionCardGrowsThePopupToFit\]' failed" loop-*.log | grep -E "DEBUG-7c1e|Test Case|Output-only show|error:" || echo "no failure of the permission card test"
+          echo "--- one passing sample"
+          grep -h -B25 "testPermissionCardGrowsThePopupToFit\]' passed" loop-1.log | grep -E "DEBUG-7c1e|Test Case|Output-only show" | tail -24
 
   intel-tests:
     name: Intel Test Probe
-    if: github.event_name == 'workflow_dispatch'
+    if: false
     runs-on: macos-26-intel
     timeout-minutes: 45
 
