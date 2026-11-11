@@ -53,8 +53,9 @@ _build-fast:
 release:
 	@scripts/build.sh --release
 
+# ONLY="ClassA ClassB" runs just those test classes.
 test:
-	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test
+	@xcodebuild -scheme TransFlex -derivedDataPath DerivedData -destination 'platform=macOS' $(TEST_SIGNING) test $(foreach class,$(ONLY),-only-testing:TransFlexTests/$(class))
 
 # Once per machine: creates the Debug build's own keychain and its password file. Running it
 # again keeps both. Point the Debug build at it with the line it prints.
@@ -151,7 +152,7 @@ help:
 	@echo "make permissions-reset — reset Debug privacy grants (Accessibility, Paste, ...)"
 	@echo "make fresh-reset — clear Debug grants, defaults, presets, history, caches (keeps API keys)"
 	@echo "make release    — Release build only (no kill/open)"
-	@echo "make test       — run unit tests"
+	@echo "make test       — run unit tests (ONLY=\"ClassA ClassB\" runs just those classes)"
 	@echo "make dev-keychain — once per machine: the Debug build's own keychain (no login prompt after rebuilds)"
 	@echo "make provision  — once per machine with Config/Local.xcconfig: certificate, device, profile"
 	@echo "                  (Xcode account, or ASC_KEY_PATH/ASC_KEY_ID/ASC_ISSUER_ID team API key)"
