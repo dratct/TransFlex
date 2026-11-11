@@ -4,6 +4,8 @@ import SwiftUI
 struct HistorySplitView: View {
     @ObservedObject var store: HistoryStore
     @ObservedObject var presets: PresetStore
+    /// The window the export save panel attaches to.
+    var hostWindow: () -> NSWindow? = { NSApp.keyWindow }
 
     @State private var selectedEntryID: UUID?
     @State private var entries: [HistoryEntry] = []
@@ -181,15 +183,15 @@ struct HistorySplitView: View {
         searchResults?.append(contentsOf: next)
     }
 
-    /// Runs after the format sheet has gone, so the save panel attaches to the History
-    /// window rather than to the closing sheet.
+    /// Runs after the format sheet has gone, so the save panel opens on the History window
+    /// with no other sheet in the way.
     private func startPendingExport() {
         guard let format = pendingExport else { return }
         pendingExport = nil
         do {
             let all = try store.allEntries()
-            guard let window = NSApp.keyWindow else {
-                exportError = "The History window wasn’t in front. Try Export… again."
+            guard let window = hostWindow() else {
+                exportError = "The History window wasn’t found. Try Export… again."
                 return
             }
             HistoryExporter.export(entries: all, as: format, from: window) { error in
