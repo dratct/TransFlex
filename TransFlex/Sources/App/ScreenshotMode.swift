@@ -22,6 +22,14 @@ enum ScreenshotMode {
 
     static func run(to directory: URL) {
         NSApp.activate(ignoringOtherApps: true)
+        let missing = SampleText.missingKeys(in: SampleText.vietnamese)
+        guard missing.isEmpty else {
+            // Non-zero, so the screenshots workflow fails instead of committing empty samples.
+            let message = "Screenshots: SampleText.json lacks \(missing.joined(separator: ", ")); nothing written"
+            logger.error("\(message, privacy: .public)")
+            print(message)
+            exit(1)
+        }
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         let shots = makeShots()
         Task { @MainActor in
@@ -43,8 +51,8 @@ enum ScreenshotMode {
 
     private static func makeShots() -> [Shot] {
         let presets = samplePresetStore()
-        let source = "Please review the release notes before Friday and flag anything that blocks the launch."
-        let result = "Merci de relire les notes de version avant vendredi et de signaler tout ce qui bloque le lancement."
+        let source = ClipScript.sampleSource
+        let result = ClipScript.sampleTranslation
         let wide = NSSize(width: 832, height: 520)
         let narrow = NSSize(width: 640, height: 520)
 
@@ -136,7 +144,7 @@ enum ScreenshotMode {
         "o3", "text-embedding-3-large", "tts-1", "whisper-1", "dall-e-3",
     ].map { Model(id: $0, name: $0, supportsVision: false, source: .fetched) }
 
-    private static func samplePresetStore() -> PresetStore {
+    static func samplePresetStore() -> PresetStore {
         let file = FileManager.default.temporaryDirectory
             .appendingPathComponent("transflex-screenshots-\(UUID().uuidString).json")
         let store = PresetStore(fileURL: file)
@@ -154,11 +162,12 @@ enum ScreenshotMode {
         }
         let now = Date()
         let preset = presets.presets.first?.id ?? UUID()
+        let vietnamese = SampleText.vietnamese
         let samples: [(String, String, UUID, String, Double?, TimeInterval)] = [
-            ("Please review the release notes before Friday.", "Merci de relire les notes de version avant vendredi.",
+            ("Please review the release notes before Friday.", vietnamese["historyShort"] ?? "",
              preset, "gpt-4o", 0.0004, -600),
-            ("See you tomorrow.", "A demain.", preset, "gpt-6-luna", nil, -1_200),
-            ("Cette version corrige le bug de connexion.", "This release fixes the sign-in bug.",
+            ("See you tomorrow.", vietnamese["historyTomorrow"] ?? "", preset, "gpt-6-luna", nil, -1_200),
+            (vietnamese["historyFixSource"] ?? "", "This release fixes the sign-in bug.",
              UUID(), "gpt-4o", 0.0004, -86_400),
         ]
         for (input, output, presetID, model, cost, offset) in samples {
@@ -183,7 +192,7 @@ enum ScreenshotMode {
             store = try HistoryStore(inMemory: true)
             try store.insert(HistoryEntry(
                 presetID: presets.presets.first?.id ?? UUID(), providerID: "openai", modelID: "gpt-4o",
-                inputText: nil, outputText: "Merci de relire les notes de version avant vendredi.",
+                inputText: nil, outputText: SampleText.vietnamese["historyShort"] ?? "",
                 hadImage: true, durationMs: 1_400, tokenCount: 880,
                 inputTokens: 820, outputTokens: 60, costUSD: 0.0027
             ))
@@ -198,6 +207,18 @@ enum ScreenshotMode {
     /// Hosts the view in an off-screen window, lets SwiftUI lay it out, then
     /// draws the window's content into a bitmap. No screen-recording grant needed.
     private static func capture(_ shot: Shot, appearance: NSAppearance.Name, to url: URL) async -> Bool {
+        guard let rep = await render(shot, appearance: appearance),
+              let data = rep.representation(using: .png, properties: [:]) else { return false }
+        do {
+            try data.write(to: url)
+            return true
+        } catch {
+            logger.error("Screenshot write failed: \(error.localizedDescription, privacy: .public)")
+            return false
+        }
+    }
+
+    static func render(_ shot: Shot, appearance: NSAppearance.Name) async -> NSBitmapImageRep? {
         let window = KeyableWindow(
             contentRect: NSRect(origin: NSPoint(x: -10_000, y: -10_000), size: shot.size),
             styleMask: [.borderless],
@@ -215,20 +236,34 @@ enum ScreenshotMode {
         try? await Task.sleep(nanoseconds: 600_000_000)
 
         defer { window.orderOut(nil) }
-        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return false }
+        paintSelectionMaterials(in: host, appearance: window.effectiveAppearance)
+        guard let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) else { return nil }
         host.cacheDisplay(in: host.bounds, to: rep)
-        guard let data = rep.representation(using: .png, properties: [:]) else { return false }
-        do {
-            try data.write(to: url)
-            return true
-        } catch {
-            logger.error("Screenshot write failed: \(error.localizedDescription, privacy: .public)")
-            return false
+        return rep
+    }
+
+    /// `cacheDisplay` cannot draw a backdrop material and leaves it solid black, so
+    /// the selected row of a sidebar List came out as a black pill. Swap each
+    /// selection material for the flat colour it shows in an unfocused list.
+    private static func paintSelectionMaterials(in view: NSView, appearance: NSAppearance) {
+        for case let material as NSVisualEffectView in view.subviews where material.material == .selection {
+            guard let row = material.superview else { continue }
+            let fill = NSView(frame: material.frame)
+            fill.autoresizingMask = material.autoresizingMask
+            fill.wantsLayer = true
+            appearance.performAsCurrentDrawingAppearance {
+                fill.layer?.backgroundColor = NSColor.unemphasizedSelectedContentBackgroundColor.cgColor
+            }
+            fill.layer?.cornerRadius = 5
+            fill.layer?.cornerCurve = .continuous
+            row.addSubview(fill, positioned: .below, relativeTo: material)
+            material.isHidden = true
         }
+        for subview in view.subviews { paintSelectionMaterials(in: subview, appearance: appearance) }
     }
 }
 
 /// A borderless window that can still be key, so buttons draw as active.
-private final class KeyableWindow: NSWindow {
+final class KeyableWindow: NSWindow {
     override var canBecomeKey: Bool { true }
 }

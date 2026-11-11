@@ -1,0 +1,54 @@
+---
+// Starlight's Footer, then the site's own: the support button and, for phones,
+// the links the header only shows on wide screens.
+import Default from '@astrojs/starlight/components/Footer.astro';
+import { LinkButton } from '@astrojs/starlight/components';
+import { localized, supportHref } from './links';
+
+const { locale } = Astro.locals.starlightRoute;
+const t = Astro.locals.t;
+---
+
+<Default><slot /></Default>
+<div class="tf-footer not-content">
+  <p>{t('tf.footer.free')}</p>
+  <div class="tf-footer-actions">
+    <LinkButton href={supportHref} variant="secondary" icon="heart" iconPlacement="start">
+      {t('tf.footer.support')}
+    </LinkButton>
+    <a href={localized('/support/', locale)}>{t('tf.footer.more')}</a>
+  </div>
+  <nav aria-label="TransFlex">
+    <a href={localized('/docs/install/', locale)}>{t('tf.nav.docs')}</a>
+    <a href={localized('/blog/', locale)}>{t('tf.nav.blog')}</a>
+    <a href="https://github.com/dratct/TransFlex">GitHub</a>
+  </nav>
+</div>
+
+<style>
+  .tf-footer {
+    display: grid;
+    gap: 1rem;
+    margin-top: 3rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--sl-color-hairline);
+    color: var(--sl-color-gray-2);
+    font-size: var(--sl-text-sm);
+  }
+
+  .tf-footer p {
+    margin: 0;
+  }
+
+  .tf-footer-actions,
+  .tf-footer nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem 1.25rem;
+    align-items: center;
+  }
+
+  .tf-footer a:not(.sl-link-button) {
+    color: var(--sl-color-text-accent);
+  }
+</style>

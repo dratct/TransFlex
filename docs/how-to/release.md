@@ -147,6 +147,7 @@ Asset names:
 TransFlex-0.2.0-macos-universal-signed-notarized.zip
 TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 appcast.xml
+TransFlex-macos.zip
 ```
 
 Release notes must state:
@@ -281,6 +282,7 @@ and uploads:
 TransFlex-0.2.0-macos-universal-signed-notarized.zip
 TransFlex-0.2.0-macos-universal-signed-notarized.zip.sha256
 appcast.xml
+TransFlex-macos.zip
 ```
 
 ## Auto Update
@@ -378,6 +380,7 @@ Use this checklist as the final release runbook:
 [ ] Release workflow completed
 [ ] zip asset uploaded
 [ ] sha256 asset uploaded
+[ ] TransFlex-macos.zip asset uploaded (website download link)
 [ ] release notes compatibility section is correct
 [ ] downloaded checksum verifies
 [ ] signed/notarized checks passed, if applicable

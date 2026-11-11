@@ -1,0 +1,107 @@
+---
+title: TransFlex — translate anywhere on your Mac
+description: A menu-bar translator for macOS. Press ⌥T over any app and read the translation as it streams from the AI model you choose.
+template: splash
+heroClip:
+  name: hero
+  alt: The TransFlex popup opening over a document with Option T. An English sentence is pasted in, Command Return translates it, and the Vietnamese translation streams in word by word, then shows its tokens and cost.
+hero:
+  title: Press <kbd>⌥</kbd> <kbd>T</kbd>. Read it in your language.
+  tagline: TransFlex is a menu-bar translator for macOS. It opens over any app, streams the translation from the AI model you choose, and closes with Esc.
+  actions:
+    - text: Download for Mac
+      link: https://github.com/dratct/TransFlex/releases/latest/download/TransFlex-macos.zip
+      icon: download
+      variant: primary
+    - text: Read the docs
+      link: /docs/install/
+      icon: open-book
+      variant: secondary
+    - text: Source on GitHub
+      link: https://github.com/dratct/TransFlex
+      icon: github
+      variant: minimal
+---
+
+import Download from '../../components/Download.astro';
+import Facts from '../../components/Facts.astro';
+import Flow from '../../components/Flow.astro';
+
+Free and open source · macOS 13 or later · Apple silicon and Intel
+
+<Flow title="Type or paste, then read as it streams" shot="popup-streaming" alt="The popup while a translation streams in.">
+  Press <kbd>⌥</kbd> <kbd>T</kbd> in any app. Type or paste the text, press <kbd>⌘</kbd> <kbd>⏎</kbd>, and the translation appears word by word beside it. <kbd>⌘</kbd> <kbd>C</kbd> copies it and closes the popup.
+</Flow>
+
+<Flow title="Translate the selection without leaving the app" clip="replace" alt="An English sentence is selected in a document and your shortcut is pressed. A small capsule next to the pointer says it is translating, then the sentence turns into Vietnamese and the capsule says it was replaced." reverse>
+  Give a preset its own shortcuts. **Translate Selection** shows the translation of the selected text in a small popup. **Replace Selection** swaps the selected text for its translation right where you are writing, and leaves the clipboard as it was.
+</Flow>
+
+<Flow title="One preset for each kind of text" shot="settings-presets" alt="The Presets tab of TransFlex Settings.">
+  A preset picks the provider, the model and the instructions. TransFlex starts with Natural EN ↔ VI, Technical Doc EN ↔ VI and Any → English; change them or write your own, each with its own shortcuts.
+</Flow>
+
+## Also in the box
+
+- **Images** — drop a screenshot or photo into the popup, paste it with <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, or pick a file, and translate the text in it. Turn on *Reads images* in the preset first.
+- **History** — every translation stays on your Mac. Search it, delete entries, or export it as JSON or Markdown.
+- **Providers** — OpenAI, Anthropic and Gemini, or any OpenAI-compatible server, including one running on your own Mac such as Ollama.
+- **Cost on every result** — the popup shows the tokens each translation used and what it cost.
+
+## Private, free and open
+
+<Facts>
+
+- **No account**\
+  No server of its own either. Install it, add a key, translate.
+- **Your key stays in the Keychain**\
+  Your text goes straight from your Mac to the provider you picked.
+- **No telemetry**\
+  The only other connection the app makes is its update check.
+- **Free and MIT-licensed**\
+  You pay your AI provider for what you use, and nothing else. If it saves you time, you can [support its development](https://paypal.me/truongtc1109).
+- **A native Mac app**\
+  Written in Swift, it lives in the menu bar on macOS 13 or later, on Apple silicon and Intel.
+
+</Facts>
+
+## Questions
+
+<details>
+<summary>Do I need an API key?</summary>
+
+Yes: a key from OpenAI, Anthropic or Google Gemini, or the address of an OpenAI-compatible server. The first launch walks you through adding one.
+
+</details>
+
+<details>
+<summary>Does it work offline?</summary>
+
+Only with a model running on your own Mac behind an OpenAI-compatible server, such as Ollama. The cloud providers need an internet connection.
+
+</details>
+
+<details>
+<summary>Which languages can it translate?</summary>
+
+Any language the model knows. The presets tell the model what to translate into, so a new language pair is a new preset.
+
+</details>
+
+<details>
+<summary>Why does it ask for the Accessibility permission?</summary>
+
+Only Translate Selection and Replace Selection need it: they copy the text you selected and paste the result back. The popup works without it.
+
+</details>
+
+<details>
+<summary>Is there a Windows or Linux version?</summary>
+
+No. TransFlex is a native macOS app; the earlier cross-platform version is discontinued.
+
+</details>
+
+## Get TransFlex
+
+<Download label="Download for Mac" allReleases="All releases" support="Support TransFlex" note="Free · macOS 13 or later · Apple silicon and Intel · signed and notarized by Apple" />

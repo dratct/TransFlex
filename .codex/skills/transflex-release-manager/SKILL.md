@@ -175,6 +175,8 @@ For release assets, require:
 shasum -a 256 -c TransFlex-<version>-macos-universal-<label>.zip.sha256
 ```
 
+and a `TransFlex-macos.zip` asset with the same bytes as the versioned zip; the website's download button links it through `releases/latest/download/`.
+
 For signed/notarized artifacts, also require:
 
 ```bash

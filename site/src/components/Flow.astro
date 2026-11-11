@@ -1,0 +1,23 @@
+---
+import Clip from './Clip.astro';
+import Shot from './Shot.astro';
+
+interface Props {
+  title: string;
+  /** A capture from `--screenshots`, or with `clip`, a clip from `--clips`. */
+  shot?: string;
+  clip?: string;
+  alt: string;
+  reverse?: boolean;
+}
+
+const { title, shot, clip, alt, reverse = false } = Astro.props;
+---
+
+<section class:list={['flow', { reverse }]}>
+  <div class="flow-text">
+    <h2>{title}</h2>
+    <slot />
+  </div>
+  {clip ? <Clip name={clip} alt={alt} lazy /> : shot && <Shot name={shot} alt={alt} />}
+</section>
