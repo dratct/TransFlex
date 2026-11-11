@@ -32,13 +32,21 @@ final class WindowAutoDismisser {
     private weak var window: NSWindow?
     private let label: String
     private let onDismiss: (() -> Void)?
+    private let isPinned: () -> Bool
     private var workspaceObserver: NSObjectProtocol?
     private var mouseMonitor: Any?
 
     /// `label` tags this window's dismiss events in OSLog (`make log`).
-    init(window: NSWindow, label: String, onDismiss: (() -> Void)? = nil) {
+    /// While `isPinned` returns true the window stays, whatever comes forward.
+    init(
+        window: NSWindow,
+        label: String,
+        isPinned: @escaping () -> Bool = { false },
+        onDismiss: (() -> Void)? = nil
+    ) {
         self.window = window
         self.label = label
+        self.isPinned = isPinned
         self.onDismiss = onDismiss
     }
 
@@ -90,7 +98,7 @@ final class WindowAutoDismisser {
         }
     }
 
-    private func evaluate(frontmostBundleID bundleID: String?, source: String) {
+    func evaluate(frontmostBundleID bundleID: String?, source: String) {
         guard let window = window, window.isVisible else { return }
 
         let ownBundleID = Bundle.main.bundleIdentifier ?? ""
@@ -98,7 +106,7 @@ final class WindowAutoDismisser {
 
         if bundleID == ownBundleID { return }
 
-        if PopupDismissPolicy.shouldHide(activatedBundleID: bundleID, ownBundleID: ownBundleID) {
+        if PopupDismissPolicy.shouldHide(activatedBundleID: bundleID, ownBundleID: ownBundleID, isPinned: isPinned()) {
             window.orderOut(nil)
             stop()
             onDismiss?()

@@ -92,6 +92,56 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertFalse(hold.isHeld)
     }
 
+    // MARK: Pin
+
+    func testHidingUnpins() {
+        controller.show()
+        controller.togglePin()
+        XCTAssertTrue(controller.isPinned)
+
+        controller.hide()
+
+        XCTAssertFalse(controller.isPinned, "a pin lasts one open")
+    }
+
+    func testToggleWhilePinnedClosesAndUnpins() {
+        controller.show()
+        controller.togglePin()
+
+        controller.toggle()
+
+        XCTAssertFalse(controller.isVisible)
+        XCTAssertFalse(controller.isPinned)
+    }
+
+    func testNextOpenAfterAPinIsUnpinnedAtTheDefaultFrame() {
+        controller.show(at: NSPoint(x: 200, y: 200))
+        let defaultFrame = controller.panelFrame
+        controller.togglePin()
+        controller.movePanel(toTopLeft: NSPoint(x: defaultFrame.minX + 40, y: defaultFrame.maxY - 40))
+        XCTAssertNotEqual(controller.panelFrame, defaultFrame)
+
+        controller.hide()
+        controller.show(at: NSPoint(x: 200, y: 200))
+
+        XCTAssertFalse(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, defaultFrame)
+    }
+
+    func testPinSurvivesSettingsClose() async throws {
+        controller.show()
+        controller.togglePin()
+        controller.movePanel(toTopLeft: NSPoint(x: controller.panelFrame.minX + 40, y: controller.panelFrame.maxY - 40))
+        let moved = controller.panelFrame
+
+        controller.keepThroughOtherWindowClose()
+        try await Task.sleep(nanoseconds: 500_000_000)
+
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, moved)
+    }
+
     // MARK: Translate Selection banner
 
     func testNothingSelectedShowsBannerWithoutPopup() async throws {

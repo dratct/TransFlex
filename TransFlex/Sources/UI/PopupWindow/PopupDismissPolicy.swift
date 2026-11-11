@@ -20,14 +20,17 @@ enum PopupDismissPolicy {
         "com.apple.appkit.xpc.openAndSavePanelService",
     ]
 
+    /// A pinned popup never hides this way.
     /// `nil`/empty bundle ID is treated as a real-app activation (hide).
     /// In practice every real `NSRunningApplication` has a bundleID; missing
     /// values come from anonymous helper processes we cannot whitelist.
     static func shouldHide(
         activatedBundleID: String?,
         ownBundleID: String,
-        allowlist: Set<String> = defaultSystemDialogAllowlist
+        allowlist: Set<String> = defaultSystemDialogAllowlist,
+        isPinned: Bool = false
     ) -> Bool {
+        if isPinned { return false }
         guard let id = activatedBundleID, !id.isEmpty else { return true }
         if id == ownBundleID { return false }
         if allowlist.contains(id) { return false }

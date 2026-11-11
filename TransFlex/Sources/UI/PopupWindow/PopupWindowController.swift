@@ -73,6 +73,8 @@ public final class PopupWindowController {
         self.panel.onHide = { [weak self, weak vm] in
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
+            // Every way of hiding ends here, so no close path can leave a pin behind.
+            vm?.unpin()
         }
         vm.onDismissRequest = { [weak self] in self?.hide() }
         vm.onOutputOnlyFailure = { [weak self, weak vm] error in
@@ -97,12 +99,27 @@ public final class PopupWindowController {
         host.view.frame = frame
         self.panel.contentViewController = host
 
-        self.autoDismisser = WindowAutoDismisser(window: panel, label: "popup")
+        self.autoDismisser = WindowAutoDismisser(window: panel, label: "popup", isPinned: { [weak vm] in vm?.isPinned ?? false })
         observeOutputOnlyLayout(vm)
     }
 
     public var isVisible: Bool { panel.isVisible }
     var panelFrame: NSRect { panel.frame }
+
+    // MARK: - Pin
+
+    var isPinned: Bool { viewModel?.isPinned ?? false }
+
+    func togglePin() {
+        viewModel?.togglePin()
+    }
+
+    /// Puts the panel where a drag would; tests cannot drag.
+    func movePanel(toTopLeft topLeft: NSPoint) {
+        panel.setFrameTopLeftPoint(topLeft)
+    }
+
+    var viewModelForTesting: PopupViewModel? { viewModel }
 
     /// Activates a preset by ID; a stream in flight stops and keeps its text.
     public func activatePreset(id: UUID) {
