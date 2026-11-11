@@ -71,6 +71,17 @@ for (const landing of ['index.html', 'vi/index.html']) {
   }
 }
 
+// Blog: an index in both languages, a feed, and no English plugin text on the Vietnamese one.
+for (const file of ['blog/index.html', 'vi/blog/index.html', 'blog/rss.xml']) {
+  if (!existsSync(join(distDir, file))) errors.push(`no ${file}`);
+}
+if (existsSync(join(distDir, 'vi/blog/index.html'))) {
+  const html = readFileSync(join(distDir, 'vi/blog/index.html'), 'utf8');
+  for (const english of ['All posts', 'Recent posts', 'Newer posts', 'Older posts']) {
+    if (html.includes(english)) errors.push(`vi/blog/index.html shows the plugin's English "${english}"`);
+  }
+}
+
 if (clipSets['index.html'] !== clipSets['vi/index.html']) {
   errors.push(`clips differ: English has ${clipSets['index.html']}, Vietnamese ${clipSets['vi/index.html']}`);
 }
@@ -81,6 +92,20 @@ for (const landing of ['index.html', 'vi/index.html']) {
   const grid = html.match(/<div[^>]*class="[^"]*\bfacts\b[^"]*"[^>]*>([\s\S]*?)<\/div>/)?.[1] ?? '';
   const tiles = (grid.match(/<li\b/g) ?? []).length;
   if (tiles !== 5) errors.push(`${landing}: ${tiles} fact tiles, want 5`);
+}
+
+// Support: every page offers the support link (footer), and each landing page
+// has the button beside its download.
+const supportHref = 'href="https://paypal.me/truongtc1109"';
+for (const file of walk(distDir).filter((p) => p.endsWith('.html') && !p.endsWith('404.html'))) {
+  if (!readFileSync(file, 'utf8').includes(supportHref)) errors.push(`no support link on ${relative(distDir, file)}`);
+}
+for (const landing of ['index.html', 'vi/index.html']) {
+  const block = readFileSync(join(distDir, landing), 'utf8').match(/<div[^>]*class="[^"]*\bdownload\b[^"]*"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? '';
+  if (!block.includes(supportHref)) errors.push(`no support button beside the download on ${landing}`);
+}
+for (const page of ['support/index.html', 'vi/support/index.html']) {
+  if (!existsSync(join(distDir, page))) errors.push(`no ${page}`);
 }
 
 if (errors.length > 0) {

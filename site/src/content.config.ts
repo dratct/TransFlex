@@ -14,5 +14,18 @@ export const collections = {
         }),
     }),
   }),
-  i18n: defineCollection({ loader: i18nLoader(), schema: i18nSchema() }),
+  i18n: defineCollection({
+    loader: i18nLoader(),
+    schema: i18nSchema({
+      // The site's own header and footer text (ThemeSelect.astro, Footer.astro).
+      extend: z.object({
+        'tf.nav.docs': z.string().optional(),
+        'tf.nav.blog': z.string().optional(),
+        'tf.nav.support': z.string().optional(),
+        'tf.footer.free': z.string().optional(),
+        'tf.footer.support': z.string().optional(),
+        'tf.footer.more': z.string().optional(),
+      }),
+    }),
+  }),
 };
