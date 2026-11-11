@@ -6,9 +6,7 @@ import OSLog
 final class PopupViewModel: ObservableObject {
     private static let logger = Logger(subsystem: "io.aiaz.transflex", category: "PopupViewModel")
 
-    @Published var state: PopupState = .idle {
-        didSet { announceOutcome(from: oldValue) }
-    }
+    @Published var state: PopupState = .idle
     @Published var inputText: String = "" {
         didSet { if inputText != oldValue, !inputText.isEmpty { attachError = nil } }
     }
@@ -259,6 +257,7 @@ final class PopupViewModel: ObservableObject {
                 }
             } catch {
                 self.state = .error(message: ErrorMessageHelper.friendly(error), partial: nil)
+                self.announcer.announce("Couldn’t translate. \(ErrorMessageHelper.friendly(error))")
                 return
             }
 
@@ -282,6 +281,7 @@ final class PopupViewModel: ObservableObject {
                 }
                 guard self.translationSequence == sequence else { return }
                 self.state = .done(result: accumulated)
+                self.announcer.announce("Translation ready")
                 self.updateCost(model: preset.modelID, input: inputTokens, output: outputTokens, hadImage: imageInput != nil)
                 self.autoCopyIfEnabled(accumulated)
                 self.historyRecorder.record(
@@ -302,6 +302,7 @@ final class PopupViewModel: ObservableObject {
                     self.state = .keyRejected(providerID: preset.providerID)
                 } else {
                     self.state = .error(message: message, partial: accumulated.isEmpty ? nil : accumulated)
+                    self.announcer.announce("Couldn’t translate. \(message)")
                 }
                 if self.isOutputOnly, accumulated.isEmpty, case .banner = SelectionFailure.route(
                     for: error, providerName: ProviderRegistry.shared.displayName(for: preset.providerID)
@@ -556,19 +557,6 @@ final class PopupViewModel: ObservableObject {
         pasteboard.writeText(text)
         triggerToast(autoDismiss: true)
         announcer.announce("Copied")
-    }
-
-    /// A finished or failed translation changes only what is drawn, so VoiceOver is told.
-    private func announceOutcome(from old: PopupState) {
-        guard state != old else { return }
-        switch state {
-        case .done(_, let stopped):
-            announcer.announce(stopped ? "Translation stopped" : "Translation ready")
-        case .error(let message, _):
-            announcer.announce("Couldn’t translate. \(message)")
-        default:
-            break
-        }
     }
 
     /// Used only by the first-run wizard gate. Probes existence via
