@@ -142,6 +142,36 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertEqual(controller.panelFrame, moved)
     }
 
+    func testShowInputWhilePinnedKeepsTopLeft() async throws {
+        controller.quickTranslate(presetID: preset.id)
+        try await waitUntil({ self.controller.isVisible }, "the Output-only popup is shown")
+        controller.togglePin()
+        let opened = controller.panelFrame
+        controller.movePanel(toTopLeft: NSPoint(x: opened.minX - 40, y: opened.maxY - 40))
+        let moved = controller.panelFrame
+
+        controller.viewModelForTesting?.showInput()
+
+        let frame = controller.panelFrame
+        XCTAssertGreaterThan(frame.height, moved.height, "the Popup is taller than the Output-only popup")
+        XCTAssertEqual(frame.minX, moved.minX)
+        XCTAssertEqual(frame.maxY, moved.maxY)
+        XCTAssertTrue(controller.isPinned)
+    }
+
+    func testTranslateAgainUnpinsAndRecentres() {
+        controller.show()
+        let defaultFrame = controller.panelFrame
+        controller.togglePin()
+        controller.movePanel(toTopLeft: NSPoint(x: defaultFrame.minX + 40, y: defaultFrame.maxY - 40))
+
+        controller.translateAgain(text: "hello", presetID: preset.id)
+
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertFalse(controller.isPinned)
+        XCTAssertEqual(controller.panelFrame, defaultFrame)
+    }
+
     // MARK: Translate Selection banner
 
     func testNothingSelectedShowsBannerWithoutPopup() async throws {

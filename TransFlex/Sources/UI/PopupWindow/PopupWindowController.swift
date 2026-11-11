@@ -227,6 +227,8 @@ public final class PopupWindowController {
 
     /// Shows the full popup and translates a History entry's text again.
     public func translateAgain(text: String, presetID: UUID) {
+        // History asked for a fresh Popup: it opens where an unpinned one does.
+        viewModel?.unpin()
         show()
         viewModel?.translateAgain(text: text, presetID: presetID)
     }
@@ -355,10 +357,19 @@ public final class PopupWindowController {
             }
             .store(in: &cancellables)
 
-        vm.onShowInput = { [weak self] in
+        vm.onShowInput = { [weak self, weak vm] in
             guard let self, self.panel.isVisible else { return }
-            let center = NSPoint(x: self.panel.frame.midX, y: self.panel.frame.midY)
-            self.panel.setFrame(self.frame(.popup, onScreenContaining: center), display: true)
+            let current = self.panel.frame
+            let center = NSPoint(x: current.midX, y: current.midY)
+            if vm?.isPinned == true, let visible = self.screen(containing: center)?.visibleFrame {
+                self.panel.setFrame(PopupFrame.pinned(
+                    size: PopupFrame.initial(.popup, in: visible).size,
+                    topLeft: NSPoint(x: current.minX, y: current.maxY),
+                    in: visible
+                ), display: true)
+            } else {
+                self.panel.setFrame(self.frame(.popup, onScreenContaining: center), display: true)
+            }
         }
     }
 
