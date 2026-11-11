@@ -52,6 +52,26 @@ final class PopupViewModelTests: XCTestCase {
             XCTAssertEqual(vm.selectedPresetID, secondPresetID)
         }
     }
+
+    func testTogglePinFlips() {
+        let vm = PopupViewModel(translationService: service, presetStore: presetStore)
+        XCTAssertFalse(vm.isPinned)
+
+        vm.togglePin()
+        XCTAssertTrue(vm.isPinned)
+
+        vm.togglePin()
+        XCTAssertFalse(vm.isPinned)
+    }
+
+    func testUnpinClearsThePin() {
+        let vm = PopupViewModel(translationService: service, presetStore: presetStore)
+        vm.togglePin()
+
+        vm.unpin()
+
+        XCTAssertFalse(vm.isPinned)
+    }
 }
 
 @MainActor
@@ -84,6 +104,25 @@ final class PopupViewModelQuickModeTests: XCTestCase {
             pasteboard: PasteboardHelper(pasteboard: NSPasteboard(name: .init("PopupVMQuick-\(UUID().uuidString)"))),
             hasAPIKey: hasAPIKey
         )
+    }
+
+    // MARK: Pin
+
+    /// The window controller decides when a pin ends; a new session in the
+    /// view model must not end it on the way.
+    func testNewSelectionKeepsPin() throws {
+        let vm = makeViewModel(hasAPIKey: { _ in false })
+        let presetID = try XCTUnwrap(vm.selectedPresetID)
+        vm.togglePin()
+
+        vm.startQuickTranslation(text: "hello", presetID: presetID)
+        XCTAssertTrue(vm.isPinned, "a selection shortcut keeps the pin")
+
+        vm.openPopup(keepingDraft: false)
+        XCTAssertTrue(vm.isPinned, "reopening keeps the pin")
+
+        vm.reset()
+        XCTAssertTrue(vm.isPinned, "a reset keeps the pin")
     }
 
     // MARK: Missing key (audit D2)

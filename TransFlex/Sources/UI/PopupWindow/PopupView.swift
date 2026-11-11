@@ -139,32 +139,50 @@ struct PopupView: View {
             PresetPickerView(viewModel: viewModel)
                 .focusable(false)
             Spacer()
-            headerButton(symbol: "clock.arrow.circlepath", title: "History", keys: ["⌘", "Y"]) {
-                // The popup floats above normal windows and would cover History.
-                viewModel.onDismissRequest?()
-                AppCommands.openHistory()
+            ForEach(PopupHeader.items(isPinned: viewModel.isPinned), id: \.action) { item in
+                headerButton(item)
             }
-            .keyboardShortcut("y", modifiers: .command)
-            headerButton(symbol: "gearshape", title: "Settings", keys: ["⌘", ","]) {
-                AppCommands.openSettings()
-            }
-            .keyboardShortcut(",", modifiers: .command)
         }
     }
 
-    private func headerButton(symbol: String, title: String, keys: [String], action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol)
+    /// ⌘, and ⌘P are also caught by `PopupPanel`, where a focused editor
+    /// cannot swallow them.
+    @ViewBuilder
+    private func headerButton(_ item: PopupHeader.Item) -> some View {
+        let button = Button {
+            perform(item.action)
+        } label: {
+            Image(systemName: item.symbol)
                 .font(.system(size: 13, weight: .medium))
                 .frame(width: 22, height: 22)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
-        .foregroundStyle(.secondary)
+        .foregroundStyle(item.action == .pin && viewModel.isPinned ? AnyShapeStyle(Color.accentText) : AnyShapeStyle(.secondary))
         .focusable(false)
-        .help("\(title) · \(keys.joined())")
-        .accessibilityLabel(title)
-        .accessibilityHint(KeyHint.spokenLabel(for: keys))
+        .help(item.keys.isEmpty ? item.title : "\(item.title) · \(item.keys.joined())")
+        .accessibilityLabel(item.title)
+        .accessibilityHint(item.keys.isEmpty ? "" : KeyHint.spokenLabel(for: item.keys))
+        switch item.action {
+        case .history: button.keyboardShortcut("y", modifiers: .command)
+        case .settings: button.keyboardShortcut(",", modifiers: .command)
+        case .pin, .close: button
+        }
+    }
+
+    private func perform(_ action: PopupHeader.Action) {
+        switch action {
+        case .history:
+            // The popup floats above normal windows and would cover History.
+            viewModel.onDismissRequest?()
+            AppCommands.openHistory()
+        case .settings:
+            AppCommands.openSettings()
+        case .pin:
+            viewModel.togglePin()
+        case .close:
+            viewModel.onDismissRequest?()
+        }
     }
 
     @ViewBuilder

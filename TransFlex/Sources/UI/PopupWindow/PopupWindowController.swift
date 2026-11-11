@@ -88,6 +88,7 @@ public final class PopupWindowController {
             .sink { [weak vm] _ in vm?.recheckProviderKey() }
             .store(in: &cancellables)
         self.panel.onTranslateAgainCommand = { [weak vm] in vm?.translateAgainIfShown() ?? false }
+        self.panel.onPinCommand = { [weak vm] in vm?.togglePin() }
         self.panel.onEscape = { [weak self] in self?.handleEscape() }
         self.viewModel = vm
 
