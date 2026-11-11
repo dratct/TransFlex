@@ -6,6 +6,7 @@ description: Fixes for the shortcut, permissions, keys and failed translations.
 ## The shortcut does nothing
 
 - Check that TransFlex is running: its icon is in the menu bar.
+- While the Popup is pinned, Translate selection is refused with **The popup is pinned**. Unpin it first.
 - Another app may be using the same keys. Record a different shortcut in **Settings → General → Popup → Open shortcut**.
 
 ## "One permission needed"
@@ -16,7 +17,7 @@ Translate selection and Replace selection need permission to copy your selection
 2. Turn on **TransFlex** in the list. The list is under **Privacy & Security**, named **Accessibility** (on macOS 27, **Device Control and Data Access**).
 3. Go back; the card confirms with **Permission granted**. Select your text and press the shortcut again.
 
-## "No text selected"
+## "Nothing selected"
 
 The app in front did not hand over a selection. Select the text again and retry. Some places never allow it, such as password fields. Use the Popup there: copy the text yourself and press <kbd>⌥</kbd> <kbd>T</kbd>.
 
@@ -33,14 +34,15 @@ In both cases the translation is on the clipboard: select the text and press <kb
 
 | Message | What to do |
 |---|---|
-| **API key invalid. Update in Settings.** | Replace the key in **Settings → Providers**. |
+| **OpenAI rejected the key** (or another provider) | Replace the key in **Settings → Providers**. |
 | **Add an OpenAI key** (or another provider) | The preset uses a provider with no key yet. Add the key, or switch the preset to a provider you have. |
 | **Rate limited** | The provider is limiting your requests. Wait and retry. |
 | **The provider rejected the request: …** | Read the provider's reason after the colon. Often the model name is wrong or your account cannot use it. |
-| **Provider issue. Try again.** | The provider had an error. Press <kbd>⌘</kbd> <kbd>⏎</kbd> to retry. |
-| **No internet connection.** | Check the connection. A request that gets no answer for a minute or two also ends this way. |
+| **… is having trouble. Try again in a moment.** | The provider had an error. Press <kbd>⌘</kbd> <kbd>⏎</kbd> to retry. |
+| **You're offline.** | Check the connection. |
+| **Couldn't reach the provider.** | The provider did not answer. A request with no answer for a minute or two ends this way. |
 
-If a translation stops part-way, the Popup keeps what arrived and marks it incomplete. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) starts over.
+If a translation stops part-way, the Popup keeps what arrived and marks it incomplete. A translation you stop yourself is kept too, marked stopped, and can be copied. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) starts over.
 
 ## A local server will not connect
 

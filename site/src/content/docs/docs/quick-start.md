@@ -13,11 +13,11 @@ If you skipped it in the Welcome window:
 2. Next to OpenAI, Anthropic or Gemini, click **Add Key…**.
 3. Paste the key and click **Save Key**.
 
-The three built-in presets use OpenAI, so an OpenAI key works straight away. With another provider, change the preset's provider and model first; see [Presets](/docs/presets/).
+The three built-in presets use OpenAI, so an OpenAI key works straight away. If your first key is for Anthropic or Gemini, the presets you have not edited switch to that provider by themselves.
 
 Where to get a key: [OpenAI](https://platform.openai.com/api-keys), [Anthropic](https://platform.claude.com/settings/keys), [Google AI Studio](https://aistudio.google.com/apikey).
 
-A key is not checked when you save it. If it is wrong, the first translation says **API key invalid. Update in Settings.**
+A key is not checked when you save it. If it is wrong, the first translation says so, for example **OpenAI rejected the key**.
 
 ## 2. Translate
 
@@ -25,9 +25,11 @@ A key is not checked when you save it. If it is wrong, the first translation say
 2. Type or paste your text under **Original**.
 3. Press <kbd>⌘</kbd> <kbd>⏎</kbd>.
 
-The translation streams in under **Translation**. When it finishes it is copied to the clipboard, and the footer shows what it used, for example `96 tokens · $0.0004`.
+The translation streams in under **Translation**. When it finishes, the footer shows what it used, for example `96 tokens · $0.0004`.
 
-Press <kbd>Esc</kbd> to close the Popup, or <kbd>⌘</kbd> <kbd>C</kbd> to copy the result again and close.
+Press <kbd>Esc</kbd> to close the Popup, or <kbd>⌘</kbd> <kbd>C</kbd> to copy the result and close.
+
+To keep the Popup open while you work in another app, pin it with <kbd>⌘</kbd> <kbd>P</kbd>.
 
 ## 3. Pick a preset
 

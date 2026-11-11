@@ -17,7 +17,7 @@ Chúng là preset bình thường: bạn sửa hay xoá tuỳ ý.
 
 ## Sửa hoặc thêm preset
 
-Mở **Settings → Presets**. Chọn một preset ở bên trái, hoặc thêm bằng **+**. Thay đổi được lưu ngay khi bạn sửa. **−** xoá preset đang chọn ngay lập tức, không hỏi lại.
+Mở **Settings → Presets**. Chọn một preset ở bên trái, hoặc thêm bằng **+**. Thay đổi được lưu ngay khi bạn sửa. **−** xoá preset đang chọn sau khi hỏi lại; preset cuối cùng thì không xoá được.
 
 - **Name**: tên hiện trong menu của Popup.
 - **Provider**: OpenAI, Anthropic, Gemini, hoặc một máy chủ tương thích OpenAI bạn đã thêm. Đổi nhà cung cấp sẽ xoá mô hình đang chọn.

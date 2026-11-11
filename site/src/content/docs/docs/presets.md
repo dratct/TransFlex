@@ -17,7 +17,7 @@ They are ordinary presets: edit them or delete them as you like.
 
 ## Edit or add a preset
 
-Open **Settings → Presets**. Pick a preset on the left, or add one with **+**. Changes are saved as you make them. **−** deletes the selected preset at once, without asking.
+Open **Settings → Presets**. Pick a preset on the left, or add one with **+**. Changes are saved as you make them. **−** deletes the selected preset after asking; the last preset cannot be deleted.
 
 - **Name**: what the Popup's menu shows.
 - **Provider**: OpenAI, Anthropic, Gemini, or an OpenAI-compatible endpoint you added. Changing the provider clears the model.

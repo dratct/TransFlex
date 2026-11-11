@@ -35,6 +35,6 @@ Văn bản dịch theo cách này không rời khỏi Mac của bạn.
 
 ## Chi phí
 
-Sau mỗi lần dịch, Popup hiện số token đã dùng và chi phí ước tính, ví dụ `96 tokens · $0.0004`. Con số ước tính lấy từ bảng giá có sẵn trong app. Với mô hình không có trong bảng, Popup chỉ hiện số token và History ghi **price unknown**.
+Sau mỗi lần dịch, Popup hiện số token đã dùng và chi phí ước tính, ví dụ `96 tokens · $0.0004`. Con số ước tính lấy từ bảng giá có sẵn trong app. Với mô hình không có trong bảng, Popup và History ghi **price unknown**.
 
 Đây chỉ là ước tính. Hoá đơn của nhà cung cấp mới là con số thật.

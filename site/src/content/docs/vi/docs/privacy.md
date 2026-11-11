@@ -25,8 +25,8 @@ Với mô hình chạy ngay trên Mac của bạn, như Ollama, văn bản khôn
 
 ## Clipboard
 
-- Bản dịch hoàn tất trong Popup được copy vào clipboard.
-- **Translate selection** copy đoạn bạn chọn để đọc, rồi trả lại clipboard cũ của bạn. Sau đó bản dịch hoàn tất được copy, như trên.
+- Kết quả được copy khi bạn bấm **Copy & Close**, hoặc mọi lần nếu bạn đã bật **Copy result automatically**.
+- **Translate selection** copy đoạn bạn chọn để đọc, rồi trả lại clipboard cũ của bạn. Kết quả của nó theo quy tắc trên.
 - **Replace selection** copy đoạn bạn chọn, dán bản dịch, rồi trả lại clipboard cũ sau khoảng nửa giây. Nếu dán không được, bản dịch ở lại trên clipboard.
 
 Trình quản lý clipboard có thể ghi lại những mục tồn tại ngắn ngủi này.

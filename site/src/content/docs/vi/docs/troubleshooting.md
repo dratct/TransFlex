@@ -6,6 +6,7 @@ description: Cách sửa khi phím tắt, quyền, key hay bản dịch gặp tr
 ## Bấm phím tắt mà không có gì xảy ra
 
 - Kiểm tra TransFlex có đang chạy không: icon của app nằm trên thanh menu.
+- Khi Popup đang ghim, Translate selection bị từ chối với thông báo **The popup is pinned**. Hãy bỏ ghim trước.
 - Có thể app khác đang dùng cùng tổ hợp phím. Ghi phím khác ở **Settings → General → Popup → Open shortcut**.
 
 ## "One permission needed"
@@ -16,7 +17,7 @@ Translate selection và Replace selection cần quyền để copy đoạn bạn
 2. Bật **TransFlex** trong danh sách. Danh sách nằm trong **Privacy & Security**, tên là **Accessibility** (trên macOS 27 là **Device Control and Data Access**).
 3. Quay lại; thẻ xác nhận bằng **Permission granted**. Chọn lại đoạn văn rồi bấm phím tắt lần nữa.
 
-## "No text selected"
+## "Nothing selected"
 
 App phía trước không trao đoạn đang chọn. Hãy chọn lại rồi thử lại. Có chỗ không bao giờ cho phép, ví dụ ô mật khẩu. Ở đó hãy dùng Popup: tự copy đoạn văn rồi bấm <kbd>⌥</kbd> <kbd>T</kbd>.
 
@@ -33,14 +34,15 @@ Trong cả hai trường hợp, bản dịch đang nằm trên clipboard: chọn
 
 | Thông báo | Cách xử lý |
 |---|---|
-| **API key invalid. Update in Settings.** | Thay key ở **Settings → Providers**. |
+| **OpenAI rejected the key** (hoặc nhà cung cấp khác) | Thay key ở **Settings → Providers**. |
 | **Add an OpenAI key** (hoặc nhà cung cấp khác) | Preset dùng một nhà cung cấp chưa có key. Thêm key, hoặc đổi preset sang nhà cung cấp bạn có. |
 | **Rate limited** | Nhà cung cấp đang giới hạn số yêu cầu của bạn. Đợi rồi thử lại. |
 | **The provider rejected the request: …** | Đọc lý do của nhà cung cấp sau dấu hai chấm. Thường là sai tên mô hình hoặc tài khoản của bạn chưa được dùng mô hình đó. |
-| **Provider issue. Try again.** | Nhà cung cấp gặp lỗi. Bấm <kbd>⌘</kbd> <kbd>⏎</kbd> để thử lại. |
-| **No internet connection.** | Kiểm tra kết nối. Yêu cầu không được trả lời trong một hai phút cũng kết thúc như vậy. |
+| **… is having trouble. Try again in a moment.** | Nhà cung cấp gặp lỗi. Bấm <kbd>⌘</kbd> <kbd>⏎</kbd> để thử lại. |
+| **You're offline.** | Kiểm tra kết nối. |
+| **Couldn't reach the provider.** | Nhà cung cấp không trả lời. Yêu cầu không được trả lời trong một hai phút sẽ kết thúc như vậy. |
 
-Nếu bản dịch dừng giữa chừng, Popup giữ lại phần đã nhận và đánh dấu là chưa xong. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) làm lại từ đầu.
+Nếu bản dịch dừng giữa chừng, Popup giữ lại phần đã nhận và đánh dấu là chưa xong. Bản dịch do bạn tự dừng cũng được giữ, đánh dấu là đã dừng, và copy được. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) làm lại từ đầu.
 
 ## Không kết nối được máy chủ chạy tại máy
 

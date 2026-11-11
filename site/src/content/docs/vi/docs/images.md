@@ -19,7 +19,7 @@ Mở Popup bằng <kbd>⌥</kbd> <kbd>T</kbd>, rồi làm một trong các cách
 - Copy một ảnh rồi bấm <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>.
 - Bấm <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> và chọn file.
 
-Sau đó bấm <kbd>⌘</kbd> <kbd>⏎</kbd>. Dấu **×** trên ảnh dùng để gỡ ảnh.
+Ảnh dán vào được dịch ngay. Ảnh kéo thả hoặc chọn từ file thì chờ bạn bấm <kbd>⌘</kbd> <kbd>⏎</kbd>. Dấu **×** trên ảnh dùng để gỡ ảnh.
 
 ## Giới hạn
 

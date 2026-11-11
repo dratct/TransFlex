@@ -14,7 +14,7 @@ App dịch là thứ bạn mở vài giây, nhiều lần mỗi ngày. Muốn v�
 
 ## App làm được gì
 
-- **Cửa sổ dịch trên <kbd>⌥</kbd> <kbd>T</kbd>.** Gõ hoặc dán, bấm <kbd>⌘</kbd> <kbd>⏎</kbd>, bản dịch hiện dần. Kết quả được copy sẵn.
+- **Cửa sổ dịch trên <kbd>⌥</kbd> <kbd>T</kbd>.** Gõ hoặc dán, bấm <kbd>⌘</kbd> <kbd>⏎</kbd>, bản dịch hiện dần. <kbd>⌘</kbd> <kbd>C</kbd> để copy và đóng cửa sổ.
 - **Translate Selection và Replace Selection.** Gán phím tắt riêng cho một preset để dịch đoạn bạn đang chọn trong app khác, hoặc thay nó bằng bản dịch ngay tại chỗ.
 - **Preset.** Mỗi preset chọn nhà cung cấp, mô hình và chỉ dẫn. Có sẵn ba preset; bạn sửa được hoặc tự viết.
 - **Nhà cung cấp của bạn.** OpenAI, Anthropic, Gemini, hoặc bất kỳ máy chủ tương thích OpenAI nào, kể cả máy chủ chạy ngay trên Mac của bạn.

@@ -25,8 +25,8 @@ With a model running on your own Mac, such as Ollama, your text does not leave t
 
 ## The clipboard
 
-- A finished translation in the Popup is copied to the clipboard.
-- **Translate selection** copies your selection to read it, then puts your previous clipboard back. The finished translation is then copied, as above.
+- A result is copied when you press **Copy & Close**, or every time if you turned on **Copy result automatically**.
+- **Translate selection** copies your selection to read it, then puts your previous clipboard back. Its result follows the rule above.
 - **Replace selection** copies your selection, pastes the translation, and puts your previous clipboard back about half a second later. If the paste fails, the translation stays on the clipboard.
 
 A clipboard manager may record these short-lived entries.

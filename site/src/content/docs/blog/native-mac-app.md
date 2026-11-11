@@ -14,7 +14,7 @@ A translator is a tool you open for a few seconds, many times a day. That only w
 
 ## What it does
 
-- **A popup on <kbd>⌥</kbd> <kbd>T</kbd>.** Type or paste, press <kbd>⌘</kbd> <kbd>⏎</kbd>, and the translation streams in. The result is copied for you.
+- **A popup on <kbd>⌥</kbd> <kbd>T</kbd>.** Type or paste, press <kbd>⌘</kbd> <kbd>⏎</kbd>, and the translation streams in. <kbd>⌘</kbd> <kbd>C</kbd> copies it and closes the popup.
 - **Translate Selection and Replace Selection.** Give a preset its own shortcuts to translate the text you selected in another app, or to swap it for its translation in place.
 - **Presets.** Each preset picks a provider, a model and the instructions. Three come built in; you can edit them or write your own.
 - **Your provider.** OpenAI, Anthropic, Gemini, or any OpenAI-compatible server, including one on your own Mac.

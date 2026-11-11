@@ -27,7 +27,9 @@ Translate selection and Replace selection need the Accessibility permission; Tra
 2. A small capsule beside the pointer says **Translating with** and the preset's name. <kbd>Esc</kbd> cancels.
 3. The selected text is replaced, and the capsule says **Replaced · ⌘Z to undo**.
 
-Your clipboard is put back as it was a moment later. If the text cannot be replaced, nothing is changed and the translation is left on the clipboard so you can paste it yourself.
+Your clipboard is put back as it was a moment later. If the text cannot be replaced, nothing is changed, the translation is left on the clipboard so you can paste it yourself, and a banner offers **Open Popup** and **Retry**.
+
+A shortcut can belong to one action only: recording one that is already in use is refused.
 
 ## In the Popup
 
@@ -37,11 +39,16 @@ Your clipboard is put back as it was a moment later. If the text cannot be repla
 | <kbd>⌘</kbd> <kbd>C</kbd> | With a result showing: copy it and close the Popup. |
 | <kbd>⌘</kbd> <kbd>N</kbd> | New: clear the text, the image and the result. |
 | <kbd>⌘</kbd> <kbd>I</kbd> | In the small popup of Translate selection: show the source text too. |
-| <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Paste an image from the clipboard. |
+| <kbd>⌘</kbd> <kbd>P</kbd> | Pin or unpin the Popup. A pinned Popup stays open when you switch apps, and you can drag it by its header. |
+| <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Paste an image from the clipboard and translate it. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> | Choose an image file. |
 | <kbd>⌘</kbd> <kbd>Y</kbd> | Open History. |
 | <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings. |
 | <kbd>Esc</kbd> | Stop a running translation. On an error card, go back to your text. Otherwise close the Popup. |
+
+## Copy result automatically
+
+A finished translation is copied only when you press <kbd>⌘</kbd> <kbd>C</kbd> or **Copy & Close**. To have every finished translation copied for you, turn on **Settings → General → Popup → Copy result automatically**. It is off by default.
 
 ## Keep last translation
 

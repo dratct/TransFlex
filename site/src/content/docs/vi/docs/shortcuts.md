@@ -27,7 +27,9 @@ Translate selection và Replace selection cần quyền Accessibility; TransFlex
 2. Một ô nhỏ cạnh con trỏ ghi **Translating with** kèm tên preset. <kbd>Esc</kbd> để huỷ.
 3. Đoạn đang chọn được thay bằng bản dịch, và ô nhỏ ghi **Replaced · ⌘Z to undo**.
 
-Clipboard của bạn được trả lại như cũ ngay sau đó. Nếu không thay được, app không đổi gì và để bản dịch trên clipboard cho bạn tự dán.
+Clipboard của bạn được trả lại như cũ ngay sau đó. Nếu không thay được, app không đổi gì, để bản dịch trên clipboard cho bạn tự dán, và hiện một thông báo có nút **Open Popup** và **Retry**.
+
+Mỗi phím tắt chỉ thuộc về một việc: ghi một phím đã có chỗ dùng sẽ bị từ chối.
 
 ## Trong Popup
 
@@ -37,11 +39,16 @@ Clipboard của bạn được trả lại như cũ ngay sau đó. Nếu không 
 | <kbd>⌘</kbd> <kbd>C</kbd> | Khi đang có kết quả: copy kết quả rồi đóng Popup. |
 | <kbd>⌘</kbd> <kbd>N</kbd> | Mới: xoá văn bản, ảnh và kết quả. |
 | <kbd>⌘</kbd> <kbd>I</kbd> | Ở cửa sổ nhỏ của Translate selection: hiện cả văn bản gốc. |
-| <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Dán ảnh từ clipboard. |
+| <kbd>⌘</kbd> <kbd>P</kbd> | Ghim hoặc bỏ ghim Popup. Popup đã ghim vẫn mở khi bạn chuyển app, và kéo được bằng phần đầu cửa sổ. |
+| <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Dán ảnh từ clipboard và dịch luôn. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> | Chọn một file ảnh. |
 | <kbd>⌘</kbd> <kbd>Y</kbd> | Mở History. |
 | <kbd>⌘</kbd> <kbd>,</kbd> | Mở Settings. |
 | <kbd>Esc</kbd> | Dừng bản dịch đang chạy. Ở thẻ báo lỗi: quay lại văn bản của bạn. Còn lại thì đóng Popup. |
+
+## Tự copy kết quả
+
+Bản dịch hoàn tất chỉ được copy khi bạn bấm <kbd>⌘</kbd> <kbd>C</kbd> hoặc **Copy & Close**. Muốn mọi bản dịch hoàn tất đều được copy sẵn, bật **Settings → General → Popup → Copy result automatically**. Mặc định là tắt.
 
 ## Giữ bản dịch gần nhất
 

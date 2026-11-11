@@ -13,11 +13,11 @@ Nếu bạn đã bỏ qua bước này ở cửa sổ Welcome:
 2. Cạnh OpenAI, Anthropic hoặc Gemini, bấm **Add Key…**.
 3. Dán key rồi bấm **Save Key**.
 
-Ba preset có sẵn dùng OpenAI, nên có key OpenAI là dùng được ngay. Với nhà cung cấp khác, hãy đổi nhà cung cấp và mô hình của preset trước; xem [Preset](/vi/docs/presets/).
+Ba preset có sẵn dùng OpenAI, nên có key OpenAI là dùng được ngay. Nếu key đầu tiên của bạn là Anthropic hay Gemini, các preset bạn chưa sửa sẽ tự chuyển sang nhà cung cấp đó.
 
 Lấy key ở đâu: [OpenAI](https://platform.openai.com/api-keys), [Anthropic](https://platform.claude.com/settings/keys), [Google AI Studio](https://aistudio.google.com/apikey).
 
-App không kiểm tra key lúc lưu. Nếu key sai, lần dịch đầu sẽ báo **API key invalid. Update in Settings.**
+App không kiểm tra key lúc lưu. Nếu key sai, lần dịch đầu sẽ báo, ví dụ **OpenAI rejected the key**.
 
 ## 2. Dịch
 
@@ -25,9 +25,11 @@ App không kiểm tra key lúc lưu. Nếu key sai, lần dịch đầu sẽ bá
 2. Gõ hoặc dán văn bản vào ô **Original**.
 3. Bấm <kbd>⌘</kbd> <kbd>⏎</kbd>.
 
-Bản dịch hiện dần ở ô **Translation**. Dịch xong, kết quả được copy vào clipboard, và chân cửa sổ ghi mức dùng, ví dụ `96 tokens · $0.0004`.
+Bản dịch hiện dần ở ô **Translation**. Dịch xong, chân cửa sổ ghi mức dùng, ví dụ `96 tokens · $0.0004`.
 
-Bấm <kbd>Esc</kbd> để đóng Popup, hoặc <kbd>⌘</kbd> <kbd>C</kbd> để copy lại kết quả rồi đóng.
+Bấm <kbd>Esc</kbd> để đóng Popup, hoặc <kbd>⌘</kbd> <kbd>C</kbd> để copy kết quả rồi đóng.
+
+Muốn Popup ở lại trong lúc bạn làm việc ở app khác, hãy ghim nó bằng <kbd>⌘</kbd> <kbd>P</kbd>.
 
 ## 3. Chọn preset
 

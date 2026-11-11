@@ -35,6 +35,6 @@ Text translated this way never leaves your Mac.
 
 ## Cost
 
-After each translation the Popup shows the tokens used and an estimated cost, such as `96 tokens · $0.0004`. The estimate comes from a price list built into the app. For a model that is not on the list, the Popup shows tokens only and History says **price unknown**.
+After each translation the Popup shows the tokens used and an estimated cost, such as `96 tokens · $0.0004`. The estimate comes from a price list built into the app. For a model that is not on the list, the Popup and History say **price unknown**.
 
 The number is an estimate. Your provider's bill is the real one.

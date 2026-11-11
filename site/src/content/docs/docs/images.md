@@ -19,7 +19,7 @@ Open the Popup with <kbd>⌥</kbd> <kbd>T</kbd>, then do one of these:
 - Copy an image and press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>.
 - Press <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> and choose a file.
 
-Then press <kbd>⌘</kbd> <kbd>⏎</kbd>. The **×** on the image removes it.
+A pasted image is translated straight away. A dropped or chosen image waits for <kbd>⌘</kbd> <kbd>⏎</kbd>. The **×** on the image removes it.
 
 ## Limits
 
