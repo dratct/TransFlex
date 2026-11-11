@@ -22,6 +22,10 @@ _Avoid_: quick translate.
 **Replace Selection** — a per-preset shortcut that translates the selection
 and pastes the result over it; the popup appears only on failure.
 
+**Pin** — a state of the popup for one open: it stays when another app comes
+forward and keeps the place it was dragged to. Set with the Pin button or ⌘P.
+_Avoid_: sticky, always on top, lock.
+
 **Draft** — what the user typed or attached in the Popup and has not cleared.
 _Avoid_: input state, session.
 
@@ -44,8 +48,18 @@ _Avoid_: Clear previous translation, reset policy.
 - Replace Selection shows its progress without taking focus from the app
   being edited: a capsule beside the pointer while it translates and after it
   pastes; a failure opens a notice that says nothing was changed. If the
-  Popup or Output-only popup is open when it fails, the failure shows in the Popup instead and Esc
+  Popup or Output-only popup is open and not pinned when it fails, the failure shows in the Popup instead and Esc
   is not held.
+- A pin lasts one open. Everything that hides the popup ends it, Copy & Close
+  included; the next open is unpinned and at its usual place.
+- While the popup is pinned, Translate Selection is refused: nothing is
+  copied, the pinned content stays, and a banner says to unpin first.
+- While the popup is pinned, Replace Selection runs as if no popup were open
+  and reports a failure through its notice. The pinned content changes only
+  for the Accessibility permission card, or when the user presses Open Popup
+  on that notice.
+- A translation that fails inside a pinned Output-only popup before any text
+  arrives shows its error card with Retry there, not the banner.
 - Replace Selection counts as done only when the focused field's text changed
   after the paste. If the field reads the same before and after (a read-only
   field, a page that blocks paste), it fails and leaves the translation on the

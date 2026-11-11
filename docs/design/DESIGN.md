@@ -33,7 +33,8 @@ motion:
 
 TransFlex is a translator that lives in the menu bar. Every surface is built
 to be **operated**, used many times a day. The **Popup** and the
-**Output-only popup** are read at a glance and closed within seconds.
+**Output-only popup** are read at a glance and closed within seconds; a
+pinned one stays beside the work for as long as the user wants it.
 Settings and History are standard macOS utility windows. Welcome and
 First-run are the only surfaces meant to persuade: they ask once for a
 provider key.
@@ -45,7 +46,9 @@ The app follows light, dark and *Reduce transparency* / *Increase contrast*.
 Every surface has to read correctly with an opaque background.
 
 **Precision choice:** the popup frame comes from one function of
-(mode, content). It never inherits a size from the previous open.
+(mode, content). It never inherits a size from the previous open. The one
+exception lasts a single open: a pinned popup keeps its top-left corner where
+the user dragged it.
 
 Static mockups of every screen in every state: [`mockups.html`](mockups.html).
 Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../CONTEXT.md).
@@ -94,12 +97,15 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
     the longest line that still reads easily. When the estimate still
     overflows, the width widens toward 660pt until it fits. A translation
     longer than the estimate grows downward with a fixed top edge; the
-    popup never shrinks while open. Each new Translate
+    popup never shrinks while open, except when a pinned Popup takes the
+    permission card or a Replace error (see Pin). Each new Translate
     Selection starts from its own content and never from the last size.
   - ⌘I goes from the Output-only popup to the Popup frame. No transition
-    keeps the other mode's layout.
-- The header (preset picker, History, Settings — no attach button) and the footer (cost, actions)
-  are identical in both modes.
+    keeps the other mode's layout. A pinned popup keeps its top-left
+    corner through ⌘I and is moved only as far as it takes to fit the screen.
+- The header (preset picker, History, Settings, Pin — no attach button) and the footer (cost, actions)
+  are identical in both modes. While pinned, the Pin button is filled in
+  `accent-text` and a Close button (✕) follows it.
 
 ## Elevation & Depth
 
@@ -129,7 +135,7 @@ Terms (Popup, Output-only popup, Draft…) are defined in [`CONTEXT.md`](../../C
 | `ModelPicker` | Popover: search field first (focused), text models only, grouped by family, newest first, and a "Use '<typed>' as a custom model ID" row. |
 | `ReadsImages` | A per-preset switch the user sets. The app does not detect image support: OpenAI and Gemini model lists do not report it (checked 2026-11-01). |
 | `SettingsRow` | Label (+ optional one-line explanation in `faint`) leading, one control trailing; rows grouped in a `content` box with hairline separators. |
-| `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed, offers Open Popup and Retry, and stays until closed: it holds Esc system-wide so Esc closes it from any app. When the popup is already showing, the failure goes into the popup as a card instead. When the focused field did not change after ⌘V, or the copied-from field could not be brought back before pasting, the banner says the translation is on the clipboard instead. Never takes key focus. |
+| `ReplaceCapsule` | Replace Selection feedback: a non-activating capsule beside the mouse pointer (the selection's position is not reliably known). Spinner + preset name + "esc to cancel" while translating; check + "Replaced · ⌘Z to undo" for 1.5 s; a failure hands over to the `Notice` banner window, which says nothing was changed, offers Open Popup and Retry, and stays until closed: it holds Esc system-wide so Esc closes it from any app. When the popup is already showing and not pinned, the failure goes into the popup as a card instead. When the focused field did not change after ⌘V, or the copied-from field could not be brought back before pasting, the banner says the translation is on the clipboard instead. Never takes key focus. |
 | `ProviderLogo` | The provider's own mark from `Assets.xcassets` (`ProviderOpenAI`, `ProviderAnthropic`, `ProviderGemini`) in a 28pt tile; OpenAI-compatible endpoints use initials. Used in Providers, the Provider row of a preset, and Welcome. |
 | `Toast` | Dark capsule with a check symbol, centred above the footer. Only "Copied". With Settings › General › "Copy result automatically" on, a finished translation is already on the clipboard; off (the default), only Copy puts it there. |
 | `Welcome` | 800×500, two panes. Left, 290pt: the brand panel, `brand-deep` from the top to just past the text (white text reads at 7.7:1), lightening to `brand` at the bottom, behind a small drawing of the popup; it never changes between steps. Right: "Step N of 4" (12pt, `.tertiary`), a 20pt semibold title and a `.secondary` lead, the step, then a footer with 4 progress bars on the leading side and the buttons trailing. Steps: Intro (Get Started) → Provider (Back · Skip for now · Continue) → Shortcut (Back · Continue) → Done (Back · Open Translator). Back and Skip are text buttons; the primary is the one filled button and takes Return. Continue on Provider saves the key first and stays with the error if it cannot. Shortcut and Done show the shortcut as 22pt keycaps. |
@@ -145,16 +151,38 @@ Popup states (footer primary in **bold**):
 | error, nothing received | replaced by a `Notice` card | Back to text esc + the card's own actions |
 | stopped | the text that arrived before Stop, Translation labelled "stopped"; not saved to History | as done |
 | error, partial received | partial text marked "incomplete" + `Notice` strip | New ⌘N · strip: **Retry ⌘↩** |
+| pinned (any state above) | unchanged; header: Pin filled, Close ✕ added | unchanged |
 
 The Output-only popup shows only the Translation half and adds Show text ⌘I.
 Its failures use the banner window, never an Output-only popup with an empty
 sheet. 4xx errors show the provider's reason; 5xx read "<Provider> is having
 trouble. Try again in a moment." Esc always closes, whatever holds focus.
 
+### Pin
+
+The Pin button in the header, or ⌘P while the popup has the keyboard, pins
+the popup for this open. A pinned popup:
+
+- stays when another app comes forward or the user clicks elsewhere;
+- keeps its top-left corner where it was dragged, while it grows and through ⌘I;
+- shows a Close button (✕), because Esc may stop a stream or go back to the
+  text instead of closing;
+- refuses Translate Selection (see Translate Selection) and is left alone by
+  Replace Selection, whose failures use the banner window. Two things still
+  show in a pinned popup: the Accessibility permission card, and the error
+  after Open Popup is pressed on the Replace banner;
+- keeps the error card with Retry when its own translation fails before any
+  text arrives, instead of the banner window.
+
+Pin again, ⌘P, or anything that hides the popup (✕, Esc, Copy & Close, ⌘Y,
+the Open Popup shortcut) ends the pin. The next open is unpinned, at the
+usual frame. Nothing about the pin is saved.
+
 VoiceOver hears what only changes on screen, once per outcome: "Translation
 ready", "Couldn’t translate. <reason>", "Copied", and for Replace "Replaced
 with the translation" or "Couldn’t replace the selection". Stop, Esc and
-reopening the popup say nothing. The typing dots read as "Translating".
+reopening the popup say nothing. The typing dots read as "Translating". The
+header buttons read "History", "Settings", "Pin" or "Unpin", and "Close".
 
 ## Translate Selection
 
@@ -165,6 +193,10 @@ top of the pointer's screen: "Nothing selected" (no Retry), "You're offline",
 pointer rests on it, and never holds Esc, so Esc stays with the app in front.
 A failure that needs the popup — the Accessibility permission, a rejected key,
 a broken preset — opens the popup with its card instead.
+
+While the popup is pinned the shortcut copies nothing and the same banner
+says "The popup is pinned" / "Unpin it to translate a new selection." (no
+Retry). During a Replace run it only beeps, so the capsule stays.
 
 ## History
 
