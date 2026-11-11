@@ -191,11 +191,11 @@ struct PopupView: View {
         case .accessibilityRequired(let granted):
             ScrollView {
                 AccessibilityPermissionCard(granted: granted)
-                    .background(HeightReporter { viewModel.outputContentHeight = $0 })
+                    .background(HeightReporter { viewModel.reportOutputHeight(content: $0, from: .permissionCard) })
                     // Centred like the notice cards while it fits; taller, it scrolls from the top.
                     .frame(minHeight: viewModel.outputVisibleHeight)
             }
-            .background(HeightReporter { viewModel.outputVisibleHeight = $0 })
+            .background(HeightReporter { viewModel.reportOutputHeight(visible: $0, from: .permissionCard) })
             .padding(.horizontal, Spacing.l)
         case .idle, .streaming, .done, .error:
             columns
