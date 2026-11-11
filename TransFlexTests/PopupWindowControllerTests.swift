@@ -200,6 +200,23 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertEqual(controller.panelFrame, moved)
     }
 
+    /// SwiftUI's hosting view takes the mouse-down itself, so the panel's
+    /// `isMovableByWindowBackground` never moves the popup.
+    func testEmptyHeaderSpaceDragsThePopup() async throws {
+        controller.show()
+        let width = controller.panelFrame.width
+
+        try await waitUntil({
+            self.controller.hitView(atTopLeftOffset: NSPoint(x: width * 0.5, y: 22)) is WindowDragView
+        }, "the empty part of the header is a drag area")
+    }
+
+    /// The popup rarely holds the keyboard while another app is in front;
+    /// without this the first press only focuses the panel and nothing moves.
+    func testDragAreaTakesTheFirstClick() {
+        XCTAssertTrue(WindowDragView().acceptsFirstMouse(for: nil))
+    }
+
     func testPinnedPopupGrowsFromWhereItWasMoved() async throws {
         provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
         controller.quickTranslate(presetID: preset.id)

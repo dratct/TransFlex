@@ -129,6 +129,13 @@ public final class PopupWindowController {
 
     var viewModelForTesting: PopupViewModel? { viewModel }
     var isPanelKey: Bool { panel.isKeyWindow }
+    /// The view a click lands on; `point` is measured from the panel's top-left.
+    func hitView(atTopLeftOffset point: NSPoint) -> NSView? {
+        guard let content = panel.contentView else { return nil }
+        content.layoutSubtreeIfNeeded()
+        let inWindow = NSPoint(x: point.x, y: panel.frame.height - point.y)
+        return content.hitTest(content.superview?.convert(inWindow, from: nil) ?? inWindow)
+    }
 
     /// What the auto-dismisser does when another app comes forward; tests
     /// cannot activate one.

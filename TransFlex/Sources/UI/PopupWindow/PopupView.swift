@@ -25,6 +25,7 @@ struct PopupView: View {
                     .padding(.horizontal, Spacing.l)
                     .padding(.top, Spacing.m)
                     .padding(.bottom, Spacing.l)
+                    .background(WindowDragArea())
 
                 sheet
                     .frame(maxWidth: .infinity, maxHeight: .infinity)

@@ -164,7 +164,8 @@ The Pin button in the header, or ⌘P while the popup has the keyboard, pins
 the popup for this open. A pinned popup:
 
 - stays when another app comes forward or the user clicks elsewhere;
-- keeps its top-left corner where it was dragged, while it grows and through ⌘I;
+- is dragged by the empty part of its header (pinned or not), and keeps its
+  top-left corner where it was dragged, while it grows and through ⌘I;
 - shows a Close button (✕), because Esc may stop a stream or go back to the
   text instead of closing;
 - refuses Translate Selection (see Translate Selection) and is left alone by
