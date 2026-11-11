@@ -850,6 +850,28 @@ final class PopupViewModelAccessibilityTests: XCTestCase {
         XCTAssertEqual(vm.state, .accessibilityRequired(granted: true))
     }
 
+    func testCardHeightsSurviveALateColumnMeasurement() throws {
+        let vm = makeViewModel(granted: { false })
+        vm.presentAccessibilityRequired(presetID: try XCTUnwrap(presetStore.presets.first?.id), pollInterval: 1_000_000)
+        vm.reportOutputHeight(content: 165, visible: 54, from: .permissionCard)
+
+        vm.reportOutputHeight(content: 1, visible: 83.7, from: .translationColumn)
+
+        XCTAssertEqual(vm.outputContentHeight, 165)
+        XCTAssertEqual(vm.outputVisibleHeight, 54)
+    }
+
+    func testColumnHeightsSurviveALateCardMeasurement() throws {
+        let vm = makeViewModel(granted: { false })
+        vm.startQuickTranslation(text: "hello", presetID: try XCTUnwrap(presetStore.presets.first?.id))
+        vm.reportOutputHeight(content: 300, visible: 100, from: .translationColumn)
+
+        vm.reportOutputHeight(content: 165, visible: 54, from: .permissionCard)
+
+        XCTAssertEqual(vm.outputContentHeight, 300)
+        XCTAssertEqual(vm.outputVisibleHeight, 100)
+    }
+
     func testResetStopsWatchingForPermission() async throws {
         var granted = false
         let vm = makeViewModel(granted: { granted })

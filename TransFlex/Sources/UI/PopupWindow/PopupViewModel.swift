@@ -27,8 +27,8 @@ final class PopupViewModel: ObservableObject {
     @Published private(set) var isOutputOnly: Bool = false
     /// Natural height of the output content and the height it is given,
     /// reported by the view so the controller can grow the panel to fit.
-    @Published var outputContentHeight: CGFloat = 0
-    @Published var outputVisibleHeight: CGFloat = 0
+    @Published private(set) var outputContentHeight: CGFloat = 0
+    @Published private(set) var outputVisibleHeight: CGFloat = 0
 
     private var pendingImageTranslation: ImageInput?
     /// What the user had typed before an image replaced it; removing the
@@ -375,6 +375,19 @@ final class PopupViewModel: ObservableObject {
         state = .idle
     }
 
+    /// The permission card and the Translation column are measured into the
+    /// same two heights, one at a time. SwiftUI can deliver the first
+    /// measurement of the view that just left after the one that replaced it,
+    /// and neither measures again until its size changes, so a height counts
+    /// only from the view now shown.
+    func reportOutputHeight(content: CGFloat? = nil, visible: CGFloat? = nil, from source: OutputMeasureSource) {
+        let shown: OutputMeasureSource
+        if case .accessibilityRequired = state { shown = .permissionCard } else { shown = .translationColumn }
+        guard source == shown else { return }
+        if let content { outputContentHeight = content }
+        if let visible { outputVisibleHeight = visible }
+    }
+
     /// Resets for a selection shortcut. The Popup's own session is set aside
     /// first; a second shortcut in a row keeps the one already set aside.
     private func resetForSelection() {
@@ -607,6 +620,12 @@ final class PopupViewModel: ObservableObject {
         costEstimate = CostFormat.tokens(input + output) + " · " + CostFormat.usd(cost)
     }
 
+}
+
+/// The scroll view a height measurement comes from.
+enum OutputMeasureSource {
+    case translationColumn
+    case permissionCard
 }
 
 enum PopupState: Equatable {
