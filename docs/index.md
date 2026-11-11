@@ -12,6 +12,8 @@ Use [how-to/development-workflows.md](how-to/development-workflows.md) for devel
 
 Use [how-to/release.md](how-to/release.md) for release recipes: tag builds, manual dispatch, draft prerelease review, and signed/notarized credential setup.
 
+Use [how-to/website.md](how-to/website.md) for the website in `site/`: local preview, adding pages, pictures and clips, and the Cloudflare Pages setup.
+
 ## Explanation
 
 Use [explanations/architecture.md](explanations/architecture.md) to understand architecture, provider flow, persistence, security boundaries, and current tradeoffs.

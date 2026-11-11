@@ -4,6 +4,8 @@ Native macOS quick-translation app: global hotkey `Option+T` (`Option+Q` in the 
 
 > **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Releases are signed with Developer ID and notarized; the release workflow fails when the Apple secrets are missing.
 
+Website and user docs: <https://transflex.aiaz.io>. Its source is in `site/`; see [docs/how-to/website.md](docs/how-to/website.md).
+
 ## Requirements
 
 - macOS 13 Ventura or later at runtime
