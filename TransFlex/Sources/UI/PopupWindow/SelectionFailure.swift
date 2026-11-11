@@ -5,6 +5,12 @@ struct SelectionBanner: Equatable {
     let title: String
     let message: String
     let canRetry: Bool
+
+    /// Translate Selection pressed while the popup is pinned: the pinned
+    /// translation stays, and nothing is copied.
+    static let pinned = SelectionBanner(
+        title: "The popup is pinned", message: "Unpin it to translate a new selection.", canRetry: false
+    )
 }
 
 enum SelectionFailureRoute: Equatable {

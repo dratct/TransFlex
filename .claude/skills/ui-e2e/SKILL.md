@@ -133,6 +133,17 @@ a shortcut flow; DESIGN.md › Popup states is what each state must look like.
 7. **Model picker.** Search, ↑↓, a typed custom ID; no speech, image or
    embedding models.
 8. **Light, dark, Reduce Transparency** for the popup and one Settings tab.
+9. **Pinned popup.** Pin with the header button and with ⌘P: the pin fills
+   and ✕ appears. Click into TextEdit and type: the popup stays, the text
+   goes to TextEdit, Esc there does not close the popup. Drag the popup to a
+   corner, then ⌘I: the top-left corner stays. Translate Selection from
+   TextEdit: the banner "The popup is pinned", the pinned text and the
+   clipboard unchanged. Replace Selection from TextEdit: the text is
+   replaced and the popup untouched — repeat right after clicking the popup,
+   when it holds the keyboard. ⌘, then close Settings: still pinned, same
+   place. ✕, ⌘Y and unpin-then-click-away each close it; the next open is
+   unpinned at the usual place. Dragging while a long translation streams
+   does not make it jump.
 
 Compare each screenshot with the matching `docs/design/mockups.html` figure
 and with the previous run's screenshot of the same step.

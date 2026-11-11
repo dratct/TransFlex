@@ -124,4 +124,52 @@ final class PopupFrameTests: XCTestCase {
         ))
     }
 
+
+    // MARK: Pinned
+
+    func testPinnedFrameKeepsTopLeft() {
+        let frame = PopupFrame.pinned(size: CGSize(width: 300, height: 200), topLeft: CGPoint(x: 100, y: 900), in: screen)
+        XCTAssertEqual(frame, CGRect(x: 100, y: 700, width: 300, height: 200))
+    }
+
+    func testPinnedFrameIsPushedBackOnScreen() {
+        let size = CGSize(width: 300, height: 200)
+        // Dragged to the bottom-right corner: the new size would hang off both edges.
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: 900, y: 100), in: screen),
+            CGRect(x: 700, y: 0, width: 300, height: 200)
+        )
+        // Dragged past the top-left corner.
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: -50, y: 1040), in: screen),
+            CGRect(x: 0, y: 800, width: 300, height: 200)
+        )
+        // Bigger than the screen: the top and left edges stay visible.
+        let huge = PopupFrame.pinned(size: CGSize(width: 1200, height: 1100), topLeft: CGPoint(x: 400, y: 600), in: screen)
+        XCTAssertEqual(huge.minX, screen.minX)
+        XCTAssertEqual(huge.maxY, screen.maxY)
+    }
+
+    func testPinnedFrameIsPushedOntoAScreenThatDoesNotStartAtZero() {
+        let second = CGRect(x: 1000, y: -300, width: 800, height: 600)
+        let size = CGSize(width: 300, height: 200)
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: 900, y: 400), in: second),
+            CGRect(x: 1000, y: 100, width: 300, height: 200)
+        )
+        XCTAssertEqual(
+            PopupFrame.pinned(size: size, topLeft: CGPoint(x: 1700, y: -250), in: second),
+            CGRect(x: 1500, y: -300, width: 300, height: 200)
+        )
+    }
+
+    func testGrownKeepsAMovedTopLeft() throws {
+        let moved = CGRect(x: 37, y: 500, width: 420, height: 160)
+        let grown = try XCTUnwrap(PopupFrame.grown(
+            current: moved, outputContentHeight: 300, outputVisibleHeight: 100, in: screen
+        ))
+        XCTAssertEqual(grown.minX, 37)
+        XCTAssertEqual(grown.maxY, moved.maxY)
+        XCTAssertEqual(grown.height, 360)
+    }
 }

@@ -18,6 +18,8 @@ final class PopupPanel: NSPanel {
     var onOpenSettings: (() -> Void)?
     /// ⌘↩ handler; returns true when it consumed the key.
     var onTranslateAgainCommand: (() -> Bool)?
+    /// ⌘P — pins or unpins the popup.
+    var onPinCommand: (() -> Void)?
 
     init(contentRect: NSRect) {
         // Borderless panel — no `.titled`, so AppKit draws no titlebar, no
@@ -39,6 +41,15 @@ final class PopupPanel: NSPanel {
         self.hasShadow = true
         self.isReleasedWhenClosed = false
         self.backgroundColor = .clear
+    }
+
+    /// How often the keyboard was asked for. A locked or headless screen
+    /// refuses key status, so tests count the requests instead.
+    private(set) var keyRequests = 0
+
+    override func makeKey() {
+        keyRequests += 1
+        super.makeKey()
     }
 
     override var canBecomeKey: Bool { true }
@@ -87,6 +98,10 @@ final class PopupPanel: NSPanel {
         let mods = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         if mods == .command, event.charactersIgnoringModifiers == "," {
             if let onOpenSettings { onOpenSettings() } else { AppCommands.openSettings() }
+            return true
+        }
+        if mods == .command, event.charactersIgnoringModifiers == "p", let onPinCommand {
+            onPinCommand()
             return true
         }
         // Checked before the responder chain, so a text selection in the

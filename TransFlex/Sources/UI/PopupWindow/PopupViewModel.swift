@@ -25,6 +25,10 @@ final class PopupViewModel: ObservableObject {
     /// Selection-translate mode: the popup shows only the result. Cleared by
     /// `reset()`, `showInput()` and `openPopup(keepingDraft:)`.
     @Published private(set) var isOutputOnly: Bool = false
+    /// Pinned: the popup stays up when another app comes forward and keeps
+    /// the place it was dragged to. The window controller ends the pin when
+    /// the popup hides; nothing in the view model does.
+    @Published private(set) var isPinned: Bool = false
     /// Natural height of the output content and the height it is given,
     /// reported by the view so the controller can grow the panel to fit.
     @Published private(set) var outputContentHeight: CGFloat = 0
@@ -348,6 +352,14 @@ final class PopupViewModel: ObservableObject {
         showInput()
         reset()
         requestInputFocus()
+    }
+
+    func togglePin() {
+        isPinned.toggle()
+    }
+
+    func unpin() {
+        isPinned = false
     }
 
     /// Clears the popup back to a fresh idle session. Called when the popup is

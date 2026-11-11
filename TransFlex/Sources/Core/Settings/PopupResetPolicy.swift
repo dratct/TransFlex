@@ -66,8 +66,7 @@ enum PopupResetPolicy: Equatable {
 
 @MainActor
 enum PopupResetPolicyStore {
-    static func load() -> PopupResetPolicy {
-        let defaults = UserDefaults.standard
+    static func load(from defaults: UserDefaults = .standard) -> PopupResetPolicy {
         guard defaults.object(forKey: PopupResetPolicy.storageKey) != nil else {
             return PopupResetPolicy.default
         }
