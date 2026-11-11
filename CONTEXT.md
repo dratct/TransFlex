@@ -51,7 +51,8 @@ _Avoid_: Clear previous translation, reset policy.
   Popup or Output-only popup is open and not pinned when it fails, the failure shows in the Popup instead and Esc
   is not held.
 - A pin lasts one open. Everything that hides the popup ends it, Copy & Close
-  included; the next open is unpinned and at its usual place.
+  included, and so does Translate again from History; the next open is
+  unpinned and at its usual place.
 - While the popup is pinned, Translate Selection is refused: nothing is
   copied, the pinned content stays, and a banner says to unpin first.
 - While the popup is pinned, Replace Selection runs as if no popup were open

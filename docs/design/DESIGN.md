@@ -155,7 +155,7 @@ Popup states (footer primary in **bold**):
 
 The Output-only popup shows only the Translation half and adds Show text ⌘I.
 Its failures use the banner window, never an Output-only popup with an empty
-sheet. 4xx errors show the provider's reason; 5xx read "<Provider> is having
+sheet; the one exception is a pinned popup, which keeps its error card (see Pin). 4xx errors show the provider's reason; 5xx read "<Provider> is having
 trouble. Try again in a moment." Esc always closes, whatever holds focus.
 
 ### Pin
@@ -175,7 +175,8 @@ the popup for this open. A pinned popup:
   text arrives, instead of the banner window.
 
 Pin again, ⌘P, or anything that hides the popup (✕, Esc, Copy & Close, ⌘Y,
-the Open Popup shortcut) ends the pin. The next open is unpinned, at the
+the Open Popup shortcut) ends the pin. So does Translate again in History,
+which opens the Popup at its usual frame. The next open is unpinned, at the
 usual frame. Nothing about the pin is saved.
 
 VoiceOver hears what only changes on screen, once per outcome: "Translation

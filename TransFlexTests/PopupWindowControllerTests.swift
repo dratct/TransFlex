@@ -192,10 +192,31 @@ final class PopupWindowControllerTests: XCTestCase {
 
         controller.keepThroughOtherWindowClose()
         try await Task.sleep(nanoseconds: 500_000_000)
+        // The app that was behind Settings comes forward as it closes.
+        controller.otherAppCameForward(bundleID: "com.apple.TextEdit")
 
         XCTAssertTrue(controller.isVisible)
         XCTAssertTrue(controller.isPinned)
         XCTAssertEqual(controller.panelFrame, moved)
+    }
+
+    func testPinnedPopupGrowsFromWhereItWasMoved() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
+        controller.quickTranslate(presetID: preset.id)
+        try await waitUntil({ self.controller.viewModelForTesting?.state == .done(result: "xin chào") }, "translation done")
+        controller.togglePin()
+        let opened = controller.panelFrame
+        controller.movePanel(toTopLeft: NSPoint(x: opened.minX - 30, y: opened.maxY - 30))
+        let moved = controller.panelFrame
+
+        // Sent on every poll: the view's own late measurement may overwrite one report.
+        try await waitUntil({
+            self.controller.viewModelForTesting?.reportOutputHeight(content: 300, visible: 20, from: .translationColumn)
+            return self.controller.panelFrame.height > moved.height + 1
+        }, "the popup grows with its content")
+        XCTAssertEqual(controller.panelFrame.minX, moved.minX)
+        XCTAssertEqual(controller.panelFrame.maxY, moved.maxY)
+        XCTAssertTrue(controller.isPinned)
     }
 
     func testShowInputWhilePinnedKeepsTopLeft() async throws {

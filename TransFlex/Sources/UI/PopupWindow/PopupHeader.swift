@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which buttons the popup header shows (DESIGN.md › Popup header).
+/// Which buttons the popup header shows (DESIGN.md › Pin).
 /// Pure, so the table is tested without a window.
 enum PopupHeader {
     enum Action: Hashable {

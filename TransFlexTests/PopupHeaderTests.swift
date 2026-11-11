@@ -1,7 +1,7 @@
 import XCTest
 @testable import TransFlex
 
-/// DESIGN.md › Popup header: which buttons it shows, pinned or not.
+/// DESIGN.md › Pin: which buttons the header shows, pinned or not.
 final class PopupHeaderTests: XCTestCase {
     func testUnpinnedHeaderHasNoClose() {
         let items = PopupHeader.items(isPinned: false)
