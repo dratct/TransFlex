@@ -303,12 +303,29 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
     }
 
-    func testReplaceStillHidesAnUnpinnedPopup() {
+    /// While the pinned popup holds the keyboard, the ⌘C meant for the other
+    /// app would land in it.
+    func testPinnedReplaceTakesTheKeyboardFromThePopup() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
+        _ = showPinnedPopup()
+        try XCTSkipUnless(controller.isPanelKey, "the test host did not make the popup key")
+
+        controller.quickReplace(presetID: preset.id)
+
+        XCTAssertFalse(controller.isPanelKey)
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertTrue(controller.isPinned)
+        try await waitUntil({ self.pasted == ["xin chào"] }, "the run finishes")
+    }
+
+    func testReplaceStillHidesAnUnpinnedPopup() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào"), .stop(reason: .complete)]
         controller.show()
 
         controller.quickReplace(presetID: preset.id)
 
         XCTAssertFalse(controller.isVisible)
+        try await waitUntil({ self.pasted == ["xin chào"] }, "the run finishes")
     }
 
     func testPinnedReplaceFailureUsesTheBanner() {

@@ -128,6 +128,7 @@ public final class PopupWindowController {
     }
 
     var viewModelForTesting: PopupViewModel? { viewModel }
+    var isPanelKey: Bool { panel.isKeyWindow }
 
     /// What the auto-dismisser does when another app comes forward; tests
     /// cannot activate one.
