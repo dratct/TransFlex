@@ -27,6 +27,7 @@
     ]
   },
   "enabledPlugins": {
-    "swift-lsp@claude-plugins-official": true
+    "swift-lsp@claude-plugins-official": true,
+    "claude-code-setup@anthropic-plugin-directory": true
   }
 }
