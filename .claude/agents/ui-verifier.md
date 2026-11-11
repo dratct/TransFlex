@@ -20,8 +20,12 @@ Rules:
 - Do not edit source files. Temporary `TMP` log lines are the only exception,
   and you remove them before returning.
 - Save screenshots to the scratchpad directory you are given, never the repo.
-- A step that needs the owner (password, Touch ID, recording a shortcut):
-  stop that flow and report it as not run, with what the owner must do.
+- See and act through `cua-driver` (section 3 of the skill), not
+  `screencapture` or `osascript`: it also works when the screen is shared.
+- Leave the app as you found it: close what you opened, save no file.
+- A step that needs the owner (password, Touch ID, a permission prompt,
+  recording a shortcut): stop that flow and report it as not run, with what
+  the owner must do.
 
 Return, per flow: `PASS` or `FAIL`, one line on what you saw, the screenshot
 path, and for a FAIL the smallest observable fact that shows it (a measured
