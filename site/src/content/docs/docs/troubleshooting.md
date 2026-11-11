@@ -38,9 +38,9 @@ In both cases the translation is on the clipboard: select the text and press <kb
 | **Rate limited** | The provider is limiting your requests. Wait and retry. |
 | **The provider rejected the request: …** | Read the provider's reason after the colon. Often the model name is wrong or your account cannot use it. |
 | **Provider issue. Try again.** | The provider had an error. Press <kbd>⌘</kbd> <kbd>⏎</kbd> to retry. |
-| **No internet connection.** | Check the connection. A request that gets no answer for 60 seconds also ends this way. |
+| **No internet connection.** | Check the connection. A request that gets no answer for a minute or two also ends this way. |
 
-If a translation stops part-way, the Popup keeps what arrived. **Continue** (<kbd>⌘</kbd> <kbd>P</kbd>) carries on from there; **Retry** starts over.
+If a translation stops part-way, the Popup keeps what arrived and marks it incomplete. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) starts over.
 
 ## A local server will not connect
 

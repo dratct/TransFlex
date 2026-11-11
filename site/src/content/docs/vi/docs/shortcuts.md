@@ -37,12 +37,11 @@ Clipboard của bạn được trả lại như cũ ngay sau đó. Nếu không 
 | <kbd>⌘</kbd> <kbd>C</kbd> | Khi đang có kết quả: copy kết quả rồi đóng Popup. |
 | <kbd>⌘</kbd> <kbd>N</kbd> | Mới: xoá văn bản, ảnh và kết quả. |
 | <kbd>⌘</kbd> <kbd>I</kbd> | Ở cửa sổ nhỏ của Translate selection: hiện cả văn bản gốc. |
-| <kbd>⌘</kbd> <kbd>P</kbd> | Khi bản dịch dừng giữa chừng: dịch tiếp từ phần đã có. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Dán ảnh từ clipboard. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> | Chọn một file ảnh. |
 | <kbd>⌘</kbd> <kbd>Y</kbd> | Mở History. |
 | <kbd>⌘</kbd> <kbd>,</kbd> | Mở Settings. |
-| <kbd>Esc</kbd> | Dừng bản dịch đang chạy; nếu không thì đóng Popup. |
+| <kbd>Esc</kbd> | Dừng bản dịch đang chạy. Ở thẻ báo lỗi: quay lại văn bản của bạn. Còn lại thì đóng Popup. |
 
 ## Giữ bản dịch gần nhất
 

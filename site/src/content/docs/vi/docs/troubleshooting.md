@@ -38,9 +38,9 @@ Trong cả hai trường hợp, bản dịch đang nằm trên clipboard: chọn
 | **Rate limited** | Nhà cung cấp đang giới hạn số yêu cầu của bạn. Đợi rồi thử lại. |
 | **The provider rejected the request: …** | Đọc lý do của nhà cung cấp sau dấu hai chấm. Thường là sai tên mô hình hoặc tài khoản của bạn chưa được dùng mô hình đó. |
 | **Provider issue. Try again.** | Nhà cung cấp gặp lỗi. Bấm <kbd>⌘</kbd> <kbd>⏎</kbd> để thử lại. |
-| **No internet connection.** | Kiểm tra kết nối. Yêu cầu không được trả lời trong 60 giây cũng kết thúc như vậy. |
+| **No internet connection.** | Kiểm tra kết nối. Yêu cầu không được trả lời trong một hai phút cũng kết thúc như vậy. |
 
-Nếu bản dịch dừng giữa chừng, Popup giữ lại phần đã nhận. **Continue** (<kbd>⌘</kbd> <kbd>P</kbd>) dịch tiếp từ đó; **Retry** làm lại từ đầu.
+Nếu bản dịch dừng giữa chừng, Popup giữ lại phần đã nhận và đánh dấu là chưa xong. **Retry** (<kbd>⌘</kbd> <kbd>⏎</kbd>) làm lại từ đầu.
 
 ## Không kết nối được máy chủ chạy tại máy
 

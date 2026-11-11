@@ -37,12 +37,11 @@ Your clipboard is put back as it was a moment later. If the text cannot be repla
 | <kbd>⌘</kbd> <kbd>C</kbd> | With a result showing: copy it and close the Popup. |
 | <kbd>⌘</kbd> <kbd>N</kbd> | New: clear the text, the image and the result. |
 | <kbd>⌘</kbd> <kbd>I</kbd> | In the small popup of Translate selection: show the source text too. |
-| <kbd>⌘</kbd> <kbd>P</kbd> | After a translation that stopped part-way: continue from what arrived. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd> | Paste an image from the clipboard. |
 | <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>O</kbd> | Choose an image file. |
 | <kbd>⌘</kbd> <kbd>Y</kbd> | Open History. |
 | <kbd>⌘</kbd> <kbd>,</kbd> | Open Settings. |
-| <kbd>Esc</kbd> | Stop a running translation; otherwise close the Popup. |
+| <kbd>Esc</kbd> | Stop a running translation. On an error card, go back to your text. Otherwise close the Popup. |
 
 ## Keep last translation
 

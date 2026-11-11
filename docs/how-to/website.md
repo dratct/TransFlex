@@ -68,8 +68,8 @@ Done once, in the Cloudflare dashboard, by the account owner.
 5. Optional, under build watch paths: include `site/*`, so a change to the app
    alone does not rebuild the site.
 
-After that every push to `main` that touches `site/` publishes the site, and
-every pull request gets a preview URL.
+After that a push to `main` publishes the site (only when it touches `site/`,
+if you set the watch path), and Cloudflare builds a preview for other branches.
 
 ### The old site
 
