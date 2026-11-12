@@ -55,55 +55,60 @@ files into `site/src/assets/clips/` and the `.mp4` files into
 
 The site is static files. It is served by the owner's own web server, managed
 with aaPanel, at `transflex.aiaz.io`. The `Deploy site` job in
-`.github/workflows/site.yml` builds `site/` and copies `site/dist` to the
-server with `rsync` over SSH (`site/scripts/deploy.sh`), after the checks pass,
-on every push to `main` that touches `site/`.
+`.github/workflows/site.yml` builds `site/` and uploads `site/dist` to the
+server over FTP (`site/scripts/deploy.sh`, which runs `lftp`), after the checks
+pass, on every push to `main` that touches `site/`.
 
 The job stays off until the repository variable `SITE_DEPLOY_ENABLED` is
 `true`. Set it up once:
 
-1. In aaPanel, add a website for `transflex.aiaz.io` (static; no PHP or
-   database) and issue its certificate. Note the site folder, normally
-   `/www/wwwroot/transflex.aiaz.io`.
-2. On your own machine, make a key pair used for nothing else:
+1. In aaPanel, open Website → PHP Project → Add site. Domain
+   `transflex.aiaz.io`, PHP version Static, no database. Turn on Create FTP in
+   the same form and note the FTP user and password. Then issue the site's
+   certificate under its SSL settings. The site is static: do not add it as a
+   Node project.
 
-   ```sh
-   ssh-keygen -t ed25519 -N "" -C "transflex-site-deploy" -f transflex-site-deploy
-   ```
-
-3. On the server, give the deploy user that key and write access to the site
-   folder. Use a user that can write there and nowhere it does not need to;
-   avoid `root`. Append `transflex-site-deploy.pub` to that user's
-   `~/.ssh/authorized_keys`.
-4. Read the server's host key, and check it against the server before trusting
-   it:
-
-   ```sh
-   ssh-keyscan -p 22 <server address>
-   ```
-
-5. In the GitHub repository, under Settings → Secrets and variables → Actions,
+   The FTP account's home is the site folder
+   (`/www/wwwroot/transflex.aiaz.io`), so the upload goes to `/`.
+2. In the GitHub repository, under Settings → Secrets and variables → Actions,
    add these secrets:
 
    | Secret | Value |
    |---|---|
-   | `SITE_DEPLOY_HOST` | The server's address |
-   | `SITE_DEPLOY_PORT` | The SSH port; leave unset for 22 |
-   | `SITE_DEPLOY_USER` | The deploy user |
-   | `SITE_DEPLOY_PATH` | The site folder, e.g. `/www/wwwroot/transflex.aiaz.io` |
-   | `SITE_DEPLOY_SSH_KEY` | The whole private key file `transflex-site-deploy` |
-   | `SITE_DEPLOY_KNOWN_HOSTS` | The `ssh-keyscan` output from step 4 |
+   | `SITE_DEPLOY_FTP_HOST` | The server's address |
+   | `SITE_DEPLOY_FTP_USER` | The FTP user from step 1 |
+   | `SITE_DEPLOY_FTP_PASSWORD` | Its password |
+   | `SITE_DEPLOY_FTP_PORT` | Only if the port is not 21 |
 
-   Then delete the private key file from your machine.
-6. Add the variable `SITE_DEPLOY_ENABLED` = `true`, and run the `Site` workflow
-   from the Actions tab (Run workflow, branch `main`) for the first deploy.
+3. On the Variables tab of the same page, add:
 
-The copy replaces everything in the site folder except `.user.ini`,
+   | Variable | Value |
+   |---|---|
+   | `SITE_DEPLOY_FTP_TLS` | See below. Leave unset for `verify`. |
+   | `SITE_DEPLOY_FTP_DIR` | Only if the account's home is not the site folder |
+   | `SITE_DEPLOY_ENABLED` | `true` |
+
+4. Run the `Site` workflow from the Actions tab (Run workflow, branch `main`)
+   for the first deploy.
+
+`SITE_DEPLOY_FTP_TLS` chooses how the connection is protected:
+
+- `verify` (default): encrypted, and the server's certificate must be one
+  GitHub's runner trusts. Use it when the FTP server presents a real
+  certificate for the address in `SITE_DEPLOY_FTP_HOST`.
+- `encrypt`: encrypted, but any certificate is accepted. Use it for the
+  self-signed certificate aaPanel's FTP server ships with. The password is not
+  readable on the way, but the server's identity is not proven.
+- `off`: plain FTP. The password crosses the internet in clear text; use it
+  only if the server offers no TLS at all.
+
+The upload replaces everything in the site folder except `.user.ini`,
 `.well-known/` and `.htaccess`, which belong to the server. Keep nothing else
-there. The job fails, and changes nothing, when a secret is missing or the
-server's host key does not match.
+there. The job fails when a secret is missing, the login is refused, or the
+server does not offer the protection asked for.
 
-In aaPanel's site settings, point the 404 page at `/404.html`.
+In aaPanel's site settings, point the 404 page at `/404.html`. The server's
+firewall must allow the FTP server's passive port range.
 
 ### The old site
 
