@@ -114,6 +114,8 @@
 .clip video {
   position: absolute;
   inset: 0;
+  /* Starlight gives an element that follows another in page content a top margin. */
+  margin: 0;
   width: 100%;
   height: 100%;
   border-radius: var(--tf-radius);
