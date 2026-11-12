@@ -166,3 +166,15 @@ Reset flags:
 ```bash
 make welcome-reset
 ```
+
+App appears in the Dock
+
+Confirm `LSUIElement=YES` in `Info.plist` and the `.accessory` activation policy in `AppDelegate`.
+
+Hotkey did not change after editing the default
+
+`KeyboardShortcuts` persists user overrides. Delete the stored shortcut, then relaunch:
+
+```bash
+defaults delete io.aiaz.transflex KeyboardShortcuts_openPopup
+```
