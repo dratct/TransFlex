@@ -1,0 +1,87 @@
+name: Site
+
+on:
+  pull_request:
+    paths:
+      - "site/**"
+      - ".github/workflows/site.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "site/**"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: Build and check site
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: site
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build and check
+        run: npm run check
+
+  deploy:
+    name: Deploy site
+    # Off until the server and its secrets exist (docs/how-to/website.md).
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && vars.SITE_DEPLOY_ENABLED == 'true'
+    needs: check
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: site-deploy
+      cancel-in-progress: false
+    defaults:
+      run:
+        working-directory: site
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Node
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: site/.nvmrc
+          cache: npm
+          cache-dependency-path: site/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install --yes lftp
+
+      - name: Upload to the web server
+        env:
+          DEPLOY_FTP_HOST: ${{ secrets.SITE_DEPLOY_FTP_HOST }}
+          DEPLOY_FTP_PORT: ${{ secrets.SITE_DEPLOY_FTP_PORT }}
+          DEPLOY_FTP_USER: ${{ secrets.SITE_DEPLOY_FTP_USER }}
+          DEPLOY_FTP_PASSWORD: ${{ secrets.SITE_DEPLOY_FTP_PASSWORD }}
+          DEPLOY_FTP_DIR: ${{ vars.SITE_DEPLOY_FTP_DIR }}
+          DEPLOY_FTP_TLS: ${{ vars.SITE_DEPLOY_FTP_TLS }}
+        run: scripts/deploy.sh dist

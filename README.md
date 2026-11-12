@@ -95,6 +95,7 @@ beside the released app) and launches it. `make help` lists every target.
 | Understand how it is put together | [Architecture](docs/explanations/architecture.md) |
 | Look up commands, storage paths and troubleshooting | [Commands and runtime](docs/reference/commands-and-runtime.md) |
 | Cut a release | [Release](docs/how-to/release.md) |
+| Work on the website in `site/` | [Website](docs/how-to/website.md) |
 
 ## Contributing
 

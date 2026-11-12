@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.astro/
+
+# The repo root ignores screenshots/ (app captures); these are the site's own images.
+!src/assets/screenshots/

@@ -1,0 +1,244 @@
+---
+// The landing page's hero, laid out as the app's own popup at page size: the
+// headline in the other language on the left as the Original, the page's
+// headline on the right as the Translation, streaming in word by word. A
+// looping clip (`heroClip`) or a pair of images sits below, over the band's edge.
+import { LinkButton } from '@astrojs/starlight/components';
+import { Image } from 'astro:assets';
+import Clip from './Clip.astro';
+
+const { data } = Astro.locals.starlightRoute.entry;
+const clip = data.heroClip;
+const notes = data.heroNotes ?? [];
+const original = data.heroOriginal;
+const { title = data.title, tagline, image, actions = [] } = data.hero || {};
+const pair = image && 'dark' in image ? image : undefined;
+const imageAttrs = {
+  loading: 'eager' as const,
+  decoding: 'async' as const,
+  widths: [640, 1040],
+  sizes: '(min-width: 50rem) 34rem, 100vw',
+  alt: image?.alt || '',
+};
+---
+
+<div class="hero">
+  <div class="band">
+    <div class:list={['panes', { split: original }]}>
+      {
+        original && (
+          <div class="pane original" aria-hidden="true">
+            <p class="pane-label">Original</p>
+            <p class="original-text" lang={original.lang} set:html={original.text} />
+          </div>
+        )
+      }
+      {original && <div class="rule" aria-hidden="true" />}
+      <div class="pane">
+        {original && <p class="pane-label translation-label" aria-hidden="true">Translation</p>}
+        <h1 id="_top" data-page-title data-stream={original ? '' : undefined} set:html={title} />
+      </div>
+    </div>
+    <div class="sl-flex below">
+      {tagline && <div class="tagline" set:html={tagline} />}
+      {
+        actions.length > 0 && (
+          <div class="sl-flex actions">
+            {actions.map(({ attrs: { class: className, ...attrs } = {}, icon, link: href, text, variant }) => (
+              <LinkButton {href} {variant} icon={icon?.name} class:list={[className]} {...attrs}>
+                {text}
+                {icon?.html && <Fragment set:html={icon.html} />}
+              </LinkButton>
+            ))}
+          </div>
+        )
+      }
+      {notes.length > 0 && <ul class="notes">{notes.map((note) => <li>{note}</li>)}</ul>}
+    </div>
+  </div>
+  {clip && <Clip name={clip.name} alt={clip.alt} sizes="(min-width: 72rem) 67.5rem, 100vw" />}
+  {
+    !clip && pair && (
+      <figure class="shot">
+        <Image src={pair.dark} class="light:sl-hidden" {...imageAttrs} />
+        <Image src={pair.light} class="dark:sl-hidden" {...imageAttrs} />
+      </figure>
+    )
+  }
+</div>
+
+<script>
+  // Streams the headline in word by word, as the popup streams a translation.
+  // Without this script, or under reduced motion, the headline is simply there.
+  const headline = document.querySelector<HTMLElement>('h1[data-stream]');
+  if (headline && !matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    const pieces: HTMLElement[] = [];
+    for (const node of [...headline.childNodes]) {
+      if (node.nodeType === Node.TEXT_NODE) {
+        const fragment = document.createDocumentFragment();
+        for (const part of (node.textContent ?? '').split(/(\s+)/)) {
+          if (part.trim() === '') {
+            fragment.append(part);
+            continue;
+          }
+          const word = document.createElement('span');
+          word.textContent = part;
+          pieces.push(word);
+          fragment.append(word);
+        }
+        node.replaceWith(fragment);
+      } else if (node instanceof HTMLElement) {
+        pieces.push(node);
+      }
+    }
+    for (const piece of pieces) piece.style.opacity = '0';
+    headline.classList.add('is-streaming');
+    pieces.forEach((piece, index) => {
+      setTimeout(() => {
+        piece.style.opacity = '';
+        if (index === pieces.length - 1) setTimeout(() => headline.classList.remove('is-streaming'), 900);
+      }, 500 + index * 170);
+    });
+  }
+</script>
+
+<style>
+  @layer starlight.core {
+    .hero {
+      display: grid;
+      grid-template-columns: 100%;
+      padding-bottom: 1rem;
+    }
+
+    /* A band of the app's dark green, edge to edge, in both themes. The colour
+       variables are re-set so the buttons and text inside read on it. */
+    .band {
+      --sl-color-white: var(--tf-on-ink);
+      --sl-color-gray-2: #b9cbc5;
+      --sl-color-gray-3: #8fa69e;
+      --sl-color-black: var(--tf-ink);
+      --sl-color-text-accent: var(--tf-mint);
+      /* Up to the header: Starlight's content panel has 1.5rem of padding above. */
+      margin-top: -1.5rem;
+      padding-block: clamp(2.25rem, 5vw, 4rem) clamp(7rem, 22vw, 17rem);
+      background: var(--tf-ink);
+      box-shadow: 0 0 0 100vmax var(--tf-ink);
+      clip-path: inset(0 -100vmax);
+      color: var(--tf-on-ink);
+    }
+
+    .panes {
+      display: grid;
+      gap: 1.5rem;
+    }
+
+    .pane-label {
+      margin-bottom: 0.9rem;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-xs);
+      font-weight: 600;
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+    }
+
+    .translation-label {
+      color: var(--tf-mint);
+    }
+
+    h1,
+    .original-text {
+      font-size: clamp(2.25rem, calc(0.75rem + 4.6vw), 4.25rem);
+      line-height: 1.04;
+      font-weight: 800;
+      letter-spacing: -0.035em;
+      text-wrap: balance;
+    }
+
+    h1 {
+      color: var(--tf-on-ink);
+    }
+
+    .original-text {
+      color: rgb(241 247 244 / 0.4);
+    }
+
+    /* The caret that follows the streamed words. */
+    h1:global(.is-streaming)::after {
+      content: '';
+      display: inline-block;
+      width: 0.09em;
+      height: 0.85em;
+      margin-inline-start: 0.12em;
+      background: var(--tf-mint);
+      vertical-align: baseline;
+    }
+
+    /* The shortcut and its full stop stay on one line. */
+    :global(.keys) {
+      white-space: nowrap;
+    }
+
+    h1 :global(span),
+    h1 :global(kbd) {
+      transition: opacity 0.18s ease-out;
+    }
+
+    /* The popup's divider: a hairline with the accent drawn part-way down it. */
+    .rule {
+      height: 2px;
+      background: linear-gradient(to right, var(--tf-mint) 0 38%, rgb(241 247 244 / 0.14) 38%);
+    }
+
+    .below {
+      flex-direction: column;
+      gap: 1.5rem;
+      margin-top: clamp(1.75rem, 4vw, 2.75rem);
+    }
+
+    .tagline {
+      max-width: 48ch;
+      font-size: clamp(var(--sl-text-base), calc(0.5rem + 1.2vw), var(--sl-text-xl));
+      line-height: 1.5;
+      color: var(--sl-color-gray-2);
+    }
+
+    .actions {
+      gap: 1rem 1.5rem;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .notes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-sm);
+    }
+
+    /* The dot trails its item, so a wrapped line never starts with one. */
+    .notes li:not(:last-child)::after {
+      content: '·';
+      margin-inline: 0.75rem;
+    }
+
+    @media (min-width: 50rem) {
+      .panes.split {
+        grid-template-columns: minmax(0, 0.8fr) 2px minmax(0, 1fr);
+        gap: clamp(1.5rem, 3vw, 3rem);
+      }
+
+      .rule {
+        height: auto;
+        background: linear-gradient(to bottom, var(--tf-mint) 0 46%, rgb(241 247 244 / 0.14) 46%);
+      }
+
+      .original-text {
+        font-size: clamp(2rem, calc(0.5rem + 3.4vw), 3.25rem);
+      }
+    }
+  }
+</style>

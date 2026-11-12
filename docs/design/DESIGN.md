@@ -158,6 +158,25 @@ Its failures use the banner window, never an Output-only popup with an empty
 sheet; the one exception is a pinned popup, which keeps its error card (see Pin). 4xx errors show the provider's reason; 5xx read "<Provider> is having
 trouble. Try again in a moment." Esc always closes, whatever holds focus.
 
+### Website (`site/`)
+
+The site at transflex.aiaz.io is Starlight with the app's tokens
+(`site/src/styles/theme.css`): the same accent, set in Be Vietnam Pro. The landing page
+persuades; Docs and Blog are read. Its one bold move is a hero laid out as the
+popup at page size, on dark green, with the shortcut drawn as keycaps. Every picture is a real `--screenshots` capture,
+light and dark, swapped with the page theme (`Shot.astro`); Hero and Header
+are overridden only to keep the capture's aspect ratio and to give phones a
+language picker.
+
+The site has two calls to action of equal weight: the download, filled in the
+accent, and the support button, filled in a warm coral of its own (`.tf-support`)
+so the two are never confused. The support button is in the header of every
+page, beside the download in the hero and in the closing block, and in the footer.
+
+The hero and Replace row are `--clips` renders of the app's views over a still
+(shown without JavaScript or motion), never `autoplay`, which runs before
+reduced motion is checked. Privacy and licence: five tiles, three over two.
+
 ### Pin
 
 The Pin button in the header, or ⌘P while the popup has the keyboard, pins
@@ -245,5 +264,8 @@ the save panel on the History window; a failed write shows an alert.
   capsule. History's daily total is the window subtitle.
 - Don't open a window behind another one of the app's windows. Settings and
   History come to the front and cascade by 24pt.
+- Don't style an element's `display` from the site's unlayered CSS where
+  Starlight hides it with a layered utility (`light:sl-hidden`, `md:sl-hidden`):
+  the unlayered rule wins and both theme images, or the phone-hidden ⌘K, show.
 - Don't hide Settings or History when another app comes forward. They float
   only while TransFlex is active and stay open behind the other app.

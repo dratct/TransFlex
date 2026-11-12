@@ -1,0 +1,24 @@
+---
+// A real capture of the app (`TransFlex --screenshots`), shown in the theme the page is in.
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+
+interface Props {
+  name: string;
+  alt: string;
+}
+
+const { name, alt } = Astro.props;
+const shots = import.meta.glob<{ default: ImageMetadata }>('../assets/screenshots/*.png', { eager: true });
+
+function shot(theme: 'light' | 'dark'): ImageMetadata {
+  const found = shots[`../assets/screenshots/${name}-${theme}.png`];
+  if (!found) throw new Error(`Missing screenshot ${name}-${theme}.png in src/assets/screenshots`);
+  return found.default;
+}
+---
+
+<figure class="shot">
+  <Image src={shot('dark')} alt={alt} class="light:sl-hidden" widths={[480, 832]} sizes="(min-width: 50rem) 30rem, 100vw" />
+  <Image src={shot('light')} alt={alt} class="dark:sl-hidden" widths={[480, 832]} sizes="(min-width: 50rem) 30rem, 100vw" />
+</figure>

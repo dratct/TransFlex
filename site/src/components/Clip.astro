@@ -1,0 +1,83 @@
+---
+// A looping clip of the app (`TransFlex --clips`), over the still of its last frame.
+// The still is what shows without JavaScript, under reduced motion, and until the
+// movie plays; the script below picks the movie for the page's theme and plays it.
+import type { ImageMetadata } from 'astro';
+import { Image } from 'astro:assets';
+
+interface Props {
+  name: string;
+  alt: string;
+  /** Load and play only while on screen; otherwise as the page loads. */
+  lazy?: boolean;
+  sizes?: string;
+}
+
+const { name, alt, lazy = false, sizes = '(min-width: 50rem) 30rem, 100vw' } = Astro.props;
+const stills = import.meta.glob<{ default: ImageMetadata }>('../assets/clips/*-poster.png', { eager: true });
+
+function still(theme: 'light' | 'dark'): ImageMetadata {
+  const found = stills[`../assets/clips/${name}-${theme}-poster.png`];
+  if (!found) throw new Error(`Missing ${name}-${theme}-poster.png in src/assets/clips`);
+  return found.default;
+}
+const imageAttrs = { alt, sizes, widths: [640, 1040], loading: lazy ? ('lazy' as const) : ('eager' as const) };
+---
+
+<figure class="shot clip">
+  <Image src={still('dark')} class="light:sl-hidden" {...imageAttrs} />
+  <Image src={still('light')} class="dark:sl-hidden" {...imageAttrs} />
+  <video
+    data-clip={name}
+    data-lazy={lazy ? '' : undefined}
+    data-light={`/clips/${name}-light.mp4`}
+    data-dark={`/clips/${name}-dark.mp4`}
+    muted
+    loop
+    playsinline
+    preload="none"
+    width="1200"
+    height="750"
+    aria-hidden="true"></video>
+</figure>
+
+<script>
+  const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
+  const videos = [...document.querySelectorAll<HTMLVideoElement>('video[data-clip]')];
+  const onScreen = new Set<HTMLVideoElement>(videos.filter((video) => !('lazy' in video.dataset)));
+
+  function refresh(video: HTMLVideoElement) {
+    const figure = video.closest('.clip');
+    if (reduceMotion.matches || !onScreen.has(video)) {
+      video.pause();
+      if (reduceMotion.matches) figure?.classList.remove('is-playing');
+      return;
+    }
+    const theme = document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light';
+    const src = video.dataset[theme];
+    if (src && video.getAttribute('src') !== src) {
+      figure?.classList.remove('is-playing');
+      video.src = src;
+    }
+    // A blocked play() leaves the still in place, which is the fallback anyway.
+    video.play().catch(() => {});
+  }
+
+  for (const video of videos) {
+    video.addEventListener('playing', () => video.closest('.clip')?.classList.add('is-playing'));
+    if ('lazy' in video.dataset) {
+      new IntersectionObserver(
+        ([entry]) => {
+          if (entry.isIntersecting) onScreen.add(video);
+          else onScreen.delete(video);
+          refresh(video);
+        },
+        { threshold: 0.25 },
+      ).observe(video);
+    }
+  }
+  const refreshAll = () => videos.forEach(refresh);
+  new MutationObserver(refreshAll).observe(document.documentElement, { attributeFilter: ['data-theme'] });
+  reduceMotion.addEventListener('change', refreshAll);
+  refreshAll();
+</script>

@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" role="img" aria-labelledby="title desc">
+  <title id="title">TransFlex app icon</title>
+  <desc id="desc">A dark macOS app icon with abstract language marks connected by an S-shaped neural translation thread.</desc>
+  <defs>
+    <linearGradient id="bg" x1="160" y1="110" x2="860" y2="930" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#09243a"/>
+      <stop offset="0.44" stop-color="#06182c"/>
+      <stop offset="1" stop-color="#071126"/>
+    </linearGradient>
+    <radialGradient id="edgeGlow" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(182 194) rotate(46) scale(950 840)">
+      <stop offset="0" stop-color="#20d6c5" stop-opacity="0.38"/>
+      <stop offset="0.36" stop-color="#136bcf" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#142a66" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="thread" x1="392" y1="248" x2="666" y2="790" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1ff5b9"/>
+      <stop offset="0.52" stop-color="#46f4ff"/>
+      <stop offset="1" stop-color="#1682ff"/>
+    </linearGradient>
+    <linearGradient id="threadDim" x1="366" y1="182" x2="704" y2="870" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#19d9ad" stop-opacity="0.78"/>
+      <stop offset="0.54" stop-color="#40e9ff" stop-opacity="0.72"/>
+      <stop offset="1" stop-color="#1171df" stop-opacity="0.42"/>
+    </linearGradient>
+    <linearGradient id="mark" x1="220" y1="360" x2="835" y2="650" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/>
+      <stop offset="0.62" stop-color="#f4f8ff"/>
+      <stop offset="1" stop-color="#dce8ff"/>
+    </linearGradient>
+    <filter id="softShadow" x="-40%" y="-40%" width="180%" height="180%">
+      <feDropShadow dx="0" dy="10" stdDeviation="16" flood-color="#000814" flood-opacity="0.34"/>
+    </filter>
+    <filter id="threadGlow" x="-70%" y="-70%" width="240%" height="240%">
+      <feGaussianBlur stdDeviation="10" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.08 0 0 0 0 0.95 0 0 0 0 0.95 0 0 0 0.72 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="nodeGlow" x="-90%" y="-90%" width="280%" height="280%">
+      <feGaussianBlur stdDeviation="14" result="blur"/>
+      <feColorMatrix in="blur" type="matrix" values="0 0 0 0 0.06 0 0 0 0 0.96 0 0 0 0 0.76 0 0 0 0.9 0" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#bg)"/>
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="url(#edgeGlow)"/>
+  <rect x="64" y="64" width="896" height="896" rx="214" fill="none" stroke="#224579" stroke-width="5" opacity="0.62"/>
+
+  <g filter="url(#softShadow)" fill="url(#mark)">
+    <rect x="224" y="400" width="190" height="34" rx="17"/>
+    <circle cx="250" cy="488" r="28"/>
+    <rect x="305" y="474" width="112" height="30" rx="15"/>
+    <path d="M254 560a16 16 0 0 1 22.6 0l34 34a16 16 0 0 1 0 22.6l-34 34a16 16 0 0 1-22.6 0l-34-34a16 16 0 0 1 0-22.6l34-34Z"/>
+    <rect x="310" y="586" width="100" height="28" rx="14"/>
+
+    <rect x="676" y="400" width="166" height="34" rx="17"/>
+    <rect x="676" y="470" width="166" height="34" rx="17"/>
+    <path d="M733 546a14 14 0 0 1 19.8 0l30 30a14 14 0 0 1 0 19.8l-30 30a14 14 0 0 1-19.8 0l-30-30a14 14 0 0 1 0-19.8l30-30Z"/>
+    <circle cx="688" cy="666" r="24"/>
+    <rect x="742" y="652" width="104" height="29" rx="14.5"/>
+  </g>
+
+  <g filter="url(#threadGlow)" fill="none" stroke-linecap="round">
+    <path d="M365 188C345 278 395 340 444 354C513 374 573 427 555 503C536 583 467 599 518 675C559 736 650 721 704 836" stroke="url(#threadDim)" stroke-width="7" opacity="0.34"/>
+    <path d="M382 184C359 286 407 329 448 352C524 396 579 438 559 508C541 572 481 616 528 670C579 729 673 720 728 824" stroke="url(#threadDim)" stroke-width="8" opacity="0.46"/>
+    <path d="M398 185C374 294 415 330 452 353C548 413 578 452 562 514C544 584 488 617 538 667C600 727 692 704 746 792" stroke="url(#threadDim)" stroke-width="8" opacity="0.34"/>
+    <path d="M416 197C385 310 428 335 456 354C577 434 580 472 566 520C548 586 506 615 555 674C606 737 670 753 700 850" stroke="url(#threadDim)" stroke-width="6" opacity="0.24"/>
+    <path d="M430 350C526 390 580 448 558 516C536 584 493 620 548 676C580 708 621 718 616 704" stroke="url(#thread)" stroke-width="17"/>
+  </g>
+
+  <g filter="url(#nodeGlow)">
+    <circle cx="430" cy="350" r="34" fill="#21f0b4" opacity="0.98"/>
+    <circle cx="430" cy="350" r="19" fill="#f7ffff"/>
+    <circle cx="558" cy="516" r="34" fill="#35f0ed" opacity="0.98"/>
+    <circle cx="558" cy="516" r="19" fill="#f7ffff"/>
+    <circle cx="616" cy="704" r="34" fill="#22a9ff" opacity="0.98"/>
+    <circle cx="616" cy="704" r="19" fill="#f7ffff"/>
+  </g>
+
+  <path d="M622 410l10 29 29 10-29 10-10 29-10-29-29-10 29-10 10-29Z" fill="#f8ffff" opacity="0.92" filter="url(#softShadow)"/>
+</svg>
