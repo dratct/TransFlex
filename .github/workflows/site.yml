@@ -73,12 +73,15 @@ jobs:
       - name: Build
         run: npm run build
 
-      - name: Copy to the web server
+      - name: Install lftp
+        run: sudo apt-get update && sudo apt-get install --yes lftp
+
+      - name: Upload to the web server
         env:
-          DEPLOY_HOST: ${{ secrets.SITE_DEPLOY_HOST }}
-          DEPLOY_PORT: ${{ secrets.SITE_DEPLOY_PORT }}
-          DEPLOY_USER: ${{ secrets.SITE_DEPLOY_USER }}
-          DEPLOY_PATH: ${{ secrets.SITE_DEPLOY_PATH }}
-          DEPLOY_SSH_KEY: ${{ secrets.SITE_DEPLOY_SSH_KEY }}
-          DEPLOY_KNOWN_HOSTS: ${{ secrets.SITE_DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_FTP_HOST: ${{ secrets.SITE_DEPLOY_FTP_HOST }}
+          DEPLOY_FTP_PORT: ${{ secrets.SITE_DEPLOY_FTP_PORT }}
+          DEPLOY_FTP_USER: ${{ secrets.SITE_DEPLOY_FTP_USER }}
+          DEPLOY_FTP_PASSWORD: ${{ secrets.SITE_DEPLOY_FTP_PASSWORD }}
+          DEPLOY_FTP_DIR: ${{ vars.SITE_DEPLOY_FTP_DIR }}
+          DEPLOY_FTP_TLS: ${{ vars.SITE_DEPLOY_FTP_TLS }}
         run: scripts/deploy.sh dist
