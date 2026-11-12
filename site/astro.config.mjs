@@ -34,7 +34,14 @@ export default defineConfig({
         },
         'support',
       ],
-      customCss: ['./src/styles/theme.css'],
+      customCss: [
+        '@fontsource/be-vietnam-pro/400.css',
+        '@fontsource/be-vietnam-pro/500.css',
+        '@fontsource/be-vietnam-pro/600.css',
+        '@fontsource/be-vietnam-pro/700.css',
+        '@fontsource/be-vietnam-pro/800.css',
+        './src/styles/theme.css',
+      ],
       components: {
         Header: './src/components/Header.astro',
         Hero: './src/components/Hero.astro',

@@ -5,18 +5,31 @@ template: splash
 heroClip:
   name: hero
   alt: Bấm Option T trên một tài liệu thì cửa sổ TransFlex mở ra. Một câu tiếng Anh được dán vào, Command Return dịch nó, bản dịch tiếng Việt hiện ra từng chữ, rồi hiện số token và chi phí.
+heroOriginal:
+  text: Press <span class="keys"><kbd>⌥</kbd> <kbd>T</kbd>.</span> Read it in your language.
+  lang: en
+heroNotes:
+  - Miễn phí, mã nguồn mở
+  - macOS 13 trở lên
+  - chip Apple và Intel
 hero:
-  title: Bấm <kbd>⌥</kbd> <kbd>T</kbd>. Đọc bằng tiếng của bạn.
+  title: Bấm <span class="keys"><kbd>⌥</kbd> <kbd>T</kbd>.</span> Đọc bằng tiếng của bạn.
   tagline: TransFlex là ứng dụng dịch nằm trên thanh menu macOS. Nó mở ngay trên app bạn đang dùng, hiện bản dịch dần từng chữ từ mô hình AI bạn chọn, và đóng bằng Esc.
   actions:
     - text: Tải về cho Mac
       link: https://github.com/dratct/TransFlex/releases/latest/download/TransFlex-macos.zip
       icon: download
       variant: primary
+    - text: Ủng hộ TransFlex
+      link: https://paypal.me/truongtc1109
+      icon: heart
+      variant: primary
+      attrs:
+        class: tf-support
     - text: Đọc hướng dẫn
       link: /vi/docs/install/
       icon: open-book
-      variant: secondary
+      variant: minimal
     - text: Mã nguồn trên GitHub
       link: https://github.com/dratct/TransFlex
       icon: github
@@ -24,29 +37,36 @@ hero:
 ---
 
 import Download from '../../../components/Download.astro';
+import Extras from '../../../components/Extras.astro';
 import Facts from '../../../components/Facts.astro';
 import Flow from '../../../components/Flow.astro';
 
-Miễn phí, mã nguồn mở · macOS 13 trở lên · chip Apple và Intel
-
-<Flow title="Gõ hoặc dán, rồi đọc khi bản dịch hiện dần" shot="popup-streaming" alt="Cửa sổ dịch khi bản dịch đang hiện dần.">
+<Flow label="01 · Popup" title="Gõ hoặc dán, rồi đọc khi bản dịch hiện dần" shot="popup-streaming" alt="Cửa sổ dịch khi bản dịch đang hiện dần.">
   Bấm <kbd>⌥</kbd> <kbd>T</kbd> ở bất kỳ app nào. Gõ hoặc dán đoạn chữ, bấm <kbd>⌘</kbd> <kbd>⏎</kbd>, bản dịch hiện dần ngay bên cạnh. <kbd>⌘</kbd> <kbd>C</kbd> để copy và đóng cửa sổ.
 </Flow>
 
-<Flow title="Dịch đoạn đang chọn mà không rời app" clip="replace" alt="Một câu tiếng Anh được chọn trong tài liệu và bạn bấm phím tắt của mình. Một khung nhỏ cạnh con trỏ báo đang dịch, rồi câu đổi thành tiếng Việt và khung báo đã thay." reverse>
+<Flow label="02 · Đoạn đang chọn" title="Dịch đoạn đang chọn mà không rời app" clip="replace" alt="Một câu tiếng Anh được chọn trong tài liệu và bạn bấm phím tắt của mình. Một khung nhỏ cạnh con trỏ báo đang dịch, rồi câu đổi thành tiếng Việt và khung báo đã thay." reverse>
   Gán phím tắt riêng cho một preset. **Translate Selection** hiện bản dịch của đoạn đang chọn trong một cửa sổ nhỏ. **Replace Selection** thay đoạn đang chọn bằng bản dịch ngay chỗ bạn đang viết, và trả clipboard về như cũ.
 </Flow>
 
-<Flow title="Mỗi loại văn bản một preset" shot="settings-presets" alt="Thẻ Presets trong phần cài đặt TransFlex.">
+<Flow label="03 · Preset" title="Mỗi loại văn bản một preset" shot="settings-presets" alt="Thẻ Presets trong phần cài đặt TransFlex.">
   Preset chọn nhà cung cấp, mô hình và chỉ dẫn dịch. TransFlex có sẵn Natural EN ↔ VI, Technical Doc EN ↔ VI và Any → English; bạn sửa chúng hoặc tự viết preset mới, mỗi preset có phím tắt riêng.
 </Flow>
 
 ## Còn có
 
-- **Ảnh** — thả ảnh chụp màn hình hay ảnh chụp vào cửa sổ dịch, dán bằng <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, hoặc chọn file, để dịch chữ trong ảnh. Cần bật *Reads images* trong preset trước.
-- **Lịch sử** — mọi bản dịch nằm trên máy Mac của bạn. Tìm kiếm, xoá từng mục, hoặc xuất ra JSON hay Markdown.
-- **Nhà cung cấp** — OpenAI, Anthropic, Gemini, hoặc bất kỳ máy chủ tương thích OpenAI nào, kể cả máy chủ chạy ngay trên Mac của bạn như Ollama.
-- **Chi phí trên từng kết quả** — cửa sổ dịch hiện số token và chi phí của mỗi lần dịch.
+<Extras>
+
+- **Ảnh**\
+  Thả ảnh chụp màn hình hay ảnh chụp vào cửa sổ dịch, dán bằng <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, hoặc chọn file, để dịch chữ trong ảnh. Cần bật *Reads images* trong preset trước.
+- **Lịch sử**\
+  Mọi bản dịch nằm trên máy Mac của bạn. Tìm kiếm, xoá từng mục, hoặc xuất ra JSON hay Markdown.
+- **Nhà cung cấp**\
+  OpenAI, Anthropic, Gemini, hoặc bất kỳ máy chủ tương thích OpenAI nào, kể cả máy chủ chạy ngay trên Mac của bạn như Ollama.
+- **Chi phí trên từng kết quả**\
+  Cửa sổ dịch hiện số token và chi phí của mỗi lần dịch.
+
+</Extras>
 
 ## Riêng tư, miễn phí, mã nguồn mở
 
