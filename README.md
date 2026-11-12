@@ -1,156 +1,106 @@
+<div align="center">
+
+<img src="TransFlex/Sources/Resources/Brand/transflex-app-icon-render.png" width="128" alt="TransFlex app icon">
+
 # TransFlex
 
-Native macOS quick-translation app: global hotkey `Option+T` (`Option+Q` in the Debug build) opens a floating popup, streams translation from the selected LLM provider, and keeps provider keys in macOS Keychain.
+**Translate anything you select on your Mac, with the AI model you choose.**
 
-> **Status:** active alpha. Core popup, providers, presets, settings, image translation, onboarding, and history are implemented. Releases are signed with Developer ID and notarized; the release workflow fails when the Apple secrets are missing.
+A native macOS menu-bar translator. Press a shortcut in any app and the
+translation streams in right there. Your API keys stay in your Keychain.
 
-Website and user docs: <https://transflex.aiaz.io>. Its source is in `site/`; see [docs/how-to/website.md](docs/how-to/website.md).
+[![Latest release](https://img.shields.io/github/v/release/dratct/TransFlex?label=release)](https://github.com/dratct/TransFlex/releases/latest)
+[![CI](https://github.com/dratct/TransFlex/actions/workflows/ci.yml/badge.svg)](https://github.com/dratct/TransFlex/actions/workflows/ci.yml)
+[![macOS 13+](https://img.shields.io/badge/macOS-13%2B-blue)](#install)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Requirements
+[**Download**](https://github.com/dratct/TransFlex/releases/latest) ·
+[Website](https://transflex.aiaz.io/) ·
+[Docs](docs/index.md) ·
+[Report a bug](https://github.com/dratct/TransFlex/issues)
 
-- macOS 13 Ventura or later at runtime
-- Release artifacts are universal macOS apps for Intel and Apple Silicon
-- Xcode 15+ with Command Line Tools (tested with Xcode 26.5)
-- [`xcodegen`](https://github.com/yonaskolb/XcodeGen) via `brew install xcodegen`
-- Optional: [`xcbeautify`](https://github.com/cpisciotta/xcbeautify) for cleaner build logs
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/popup-dark.png">
+  <img src="docs/images/popup-light.png" width="720" alt="The TransFlex popup: the original text on the left, the translation on the right">
+</picture>
 
-## Quick Start
+</div>
+
+## Features
+
+- **Popup translator.** One shortcut opens a floating panel: type or paste, press <kbd>⌘</kbd><kbd>⏎</kbd>, and the result streams in.
+- **Translate Selection.** A shortcut per preset translates the text you have selected in any app and shows only the result.
+- **Replace Selection.** Another shortcut translates the selection and pastes the result over it, without leaving the app you are writing in.
+- **Image translation.** Drop or paste a screenshot and translate the text in it with a vision model.
+- **Presets.** Save a prompt, provider and model together (say, "Natural EN ↔ VI" on one model and "Formal email" on another) and switch between them from the popup.
+- **Your own provider.** OpenAI, Anthropic and Gemini are built in. Add any OpenAI-compatible endpoint, such as Ollama, LM Studio or vLLM running on your Mac.
+- **History with cost.** Every translation is kept locally with its model, duration, tokens and price, and can be searched and exported.
+- **Pin.** Keep the popup beside another app while you work, and drag it where you want it.
+
+<div align="center">
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/history-dark.png">
+  <img src="docs/images/history-light.png" width="720" alt="The History window: a searchable list of past translations with model, tokens and cost">
+</picture>
+</div>
+
+## Install
+
+1. Download the latest `TransFlex-…-macos-universal-signed-notarized.zip` from [Releases](https://github.com/dratct/TransFlex/releases/latest).
+2. Unzip it and move `TransFlex.app` to `/Applications`.
+3. Open it. TransFlex lives in the menu bar and has no Dock icon.
+
+TransFlex needs macOS 13 Ventura or later and runs on Apple Silicon and Intel.
+Releases are signed with a Developer ID and notarized by Apple. The app
+updates itself through [Sparkle](https://sparkle-project.org/).
+
+## Getting started
+
+1. On first launch, the welcome window asks for a provider and its API key. The key is saved in your Keychain.
+2. Press <kbd>⌥</kbd><kbd>T</kbd> to open the popup. You can change the shortcut in Settings.
+3. Type or paste text, pick a preset, and press <kbd>⌘</kbd><kbd>⏎</kbd>.
+
+To translate what you have selected in another app, give a preset a
+Translate Selection or Replace Selection shortcut in Settings. macOS asks for
+the Accessibility permission the first time, because TransFlex has to copy
+the selection and paste the result.
+
+## Privacy
+
+- API keys are stored in the macOS Keychain only.
+- Text goes straight from your Mac to the provider you chose. There is no TransFlex server.
+- No telemetry, analytics or usage pings.
+- Traffic is HTTPS only, except plain HTTP to `localhost` for local models.
+
+See [SECURITY.md](SECURITY.md) to report a vulnerability.
+
+## Build from source
+
+You need Xcode 15 or later and [XcodeGen](https://github.com/yonaskolb/XcodeGen).
 
 ```bash
 brew install xcodegen
-xcodegen generate
 make test
-scripts/build.sh
-open DerivedData/Build/Products/Debug/TransFlexDev.app
+make build
 ```
 
-TransFlex is a menu-bar app (`LSUIElement=YES`) with no Dock icon. Click the menu-bar icon or press `Option+Q` (`Option+T` in Release builds) to open the popup. Use the status menu's Quit item or `Command+Q` to exit.
+`make build` generates the Xcode project from `project.yml`, builds the Debug
+app (`TransFlex Dev`, which opens with <kbd>⌥</kbd><kbd>Q</kbd> so it can run
+beside the released app) and launches it. `make help` lists every target.
 
-## Build
-
-```bash
-scripts/build.sh           # Debug build, regenerates TransFlex.xcodeproj
-scripts/build.sh --release # Release build
-scripts/build.sh --no-gen  # Skip XcodeGen when project is already current
-```
-
-The build script regenerates `TransFlex.xcodeproj` from `project.yml`, builds with ad-hoc signing by default (or with your Apple team when `Config/Local.xcconfig` exists; see [docs/how-to/development-workflows.md](docs/how-to/development-workflows.md)), and outputs `DerivedData/Build/Products/Debug/TransFlexDev.app` for Debug. Release builds output `DerivedData/Build/Products/Release/TransFlex.app`.
-
-Debug and Release use separate app identities so you can run both without mixing data:
-
-| Build | Display name | App bundle | Bundle ID |
-|---|---|---|---|
-| Debug | `TransFlex Dev` | `DerivedData/Build/Products/Debug/TransFlexDev.app` | `io.aiaz.transflex.dev` |
-| Release | `TransFlex` | `DerivedData/Build/Products/Release/TransFlex.app` | `io.aiaz.transflex` |
-
-Release version values can be injected for CI-built bundles:
-
-```bash
-MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release
-```
-
-## Release
-
-Public alpha releases are created by GitHub Actions from existing tags such as `v0.2.0` or `v0.2.0-alpha.1`. The artifact is named like `TransFlex-0.2.0-macos-universal-signed-notarized.zip`, includes a `.sha256` checksum, requires macOS 13 Ventura or later, and runs on Intel and Apple Silicon.
-
-Signing and notarization need Apple Developer ID credentials configured as GitHub Secrets; see [docs/how-to/release.md](docs/how-to/release.md).
-
-AI-assisted release review is handled by the project skill `transflex-release-manager` for Codex CLI and Claude Code. The skill inspects tags, commits, diffs, release automation, and current platform docs before recommending a version, release notes, gates, and approval commands. It does not tag, push, or publish without explicit approval.
-
-Project-local skill files live in `.codex/skills/transflex-release-manager/SKILL.md` and `.claude/skills/transflex-release-manager/SKILL.md`.
-
-## Test
-
-```bash
-make test
-
-xcodebuild -scheme TransFlex \
-  -derivedDataPath DerivedData \
-  -destination 'platform=macOS' \
-  CODE_SIGN_IDENTITY=- \
-  CODE_SIGNING_REQUIRED=NO \
-  CODE_SIGNING_ALLOWED=YES \
-  test
-```
-
-If a sandboxed automation cannot write Xcode or SwiftPM caches under `~/Library` or `~/.cache`, rerun the same command outside the sandbox.
-
-## Useful Make Targets
-
-```bash
-make run          # kill TransFlexDev, build-fast, open Debug app
-make build        # full build, then open TransFlexDev.app
-make release      # Release build only
-make welcome-test # reset onboarding flags, build, open app
-make clean        # remove generated Xcode/build artifacts
-```
-
-## Project Layout
-
-```text
-project.yml                 # XcodeGen spec; edit this, not .xcodeproj
-TransFlex/
-  Info.plist
-  TransFlex.entitlements
-  Sources/
-    App/                    # AppDelegate, menu bar, app commands
-    Core/                   # Keychain, hotkey, settings policy, security helpers
-    History/                # GRDB-backed translation history
-    Presets/                # Preset models and JSON persistence
-    Providers/              # OpenAI, Anthropic, Gemini, OpenAI-compatible adapters
-    Translation/            # Prompt/input/result orchestration
-    UI/                     # SwiftUI/AppKit windows, popup, settings, welcome, history
-TransFlexTests/             # Unit tests
-docs/                       # Diataxis-lite project docs
-scripts/build.sh            # XcodeGen + xcodebuild wrapper
-```
-
-## Dependencies
-
-Dependencies are declared in `project.yml` and resolved by SwiftPM when XcodeGen generates the project.
-
-| Package | Version in `project.yml` | Purpose |
-|---|---:|---|
-| [GRDB](https://github.com/groue/GRDB.swift) | `from: 7.10.0` | SQLite history |
-| [KeyboardShortcuts](https://github.com/sindresorhus/KeyboardShortcuts) | `from: 2.4.0` | Global hotkeys |
-
-`TransFlex.xcodeproj` and its generated `Package.resolved` are build artifacts and are not committed.
-
-## Documentation
-
-Docs follow a Diataxis-lite split:
-
-- [Tutorials](docs/tutorials/): guided first success.
-- [How-to](docs/how-to/): task recipes.
-- [Explanations](docs/explanations/): architecture, security model, and tradeoffs.
-- [Reference](docs/reference/): commands, file layout, provider IDs, runtime storage, troubleshooting.
-
-Start with [docs/index.md](docs/index.md). Code conventions live in [docs/reference/code-standards.md](docs/reference/code-standards.md), and macOS-specific pitfalls live in [docs/reference/macos-platform-gotchas.md](docs/reference/macos-platform-gotchas.md).
-
-## Security
-
-- API keys are stored in Keychain only.
-- Network transport is HTTPS-only except explicit localhost HTTP for OpenAI-compatible local servers.
-- `NSAllowsArbitraryLoads` remains `false`.
-- Provider errors and URLs are redacted before leaving provider boundaries.
-- No telemetry, analytics, or usage pings.
-
-See [SECURITY.md](SECURITY.md) for reporting guidance.
+| I want to… | Read |
+|---|---|
+| Build and run it for the first time | [Getting started](docs/tutorials/getting-started.md) |
+| Build, sign, test and debug day to day | [Development workflows](docs/how-to/development-workflows.md) |
+| Understand how it is put together | [Architecture](docs/explanations/architecture.md) |
+| Look up commands, storage paths and troubleshooting | [Commands and runtime](docs/reference/commands-and-runtime.md) |
+| Cut a release | [Release](docs/how-to/release.md) |
+| Work on the website in `site/` | [Website](docs/how-to/website.md) |
 
 ## Contributing
 
-Contributions are welcome while the project is still alpha. Please read [CONTRIBUTING.md](CONTRIBUTING.md), run `make test`, and keep docs in the Diataxis-lite structure.
+Bug reports and pull requests are welcome. Read [CONTRIBUTING.md](CONTRIBUTING.md) first, and run `make test` before you open a pull request.
 
 ## License
 
-TransFlex is released under the [MIT License](LICENSE). Provider icon and trademark notices are listed in [NOTICE.md](NOTICE.md).
-
-## Troubleshooting
-
-**`xcodegen: command not found`**: install with `brew install xcodegen`.
-
-**Build fails because Xcode is not selected**: run `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
-
-**App appears in the Dock**: confirm `LSUIElement=YES` in `Info.plist` and `.accessory` activation policy in `AppDelegate`.
-
-**Hotkey did not change after editing the default**: `KeyboardShortcuts` persists user overrides. Delete the stored shortcut with `defaults delete io.aiaz.transflex KeyboardShortcuts_openPopup`, then relaunch.
+[MIT](LICENSE). Provider icons and trademarks are credited in [NOTICE.md](NOTICE.md).
