@@ -3,6 +3,8 @@ import Clip from './Clip.astro';
 import Shot from './Shot.astro';
 
 interface Props {
+  /** A short numbered name above the title, e.g. `01 · Popup`. */
+  label?: string;
   title: string;
   /** A capture from `--screenshots`, or with `clip`, a clip from `--clips`. */
   shot?: string;
@@ -11,11 +13,12 @@ interface Props {
   reverse?: boolean;
 }
 
-const { title, shot, clip, alt, reverse = false } = Astro.props;
+const { label, title, shot, clip, alt, reverse = false } = Astro.props;
 ---
 
 <section class:list={['flow', { reverse }]}>
   <div class="flow-text">
+    {label && <p class="flow-label">{label}</p>}
     <h2>{title}</h2>
     <slot />
   </div>

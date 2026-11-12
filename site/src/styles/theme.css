@@ -66,17 +66,27 @@
   display: grid;
   gap: 1.5rem;
   align-items: center;
-  margin-block: 4rem;
+  margin-block: clamp(4rem, 10vw, 7.5rem);
 }
 
 .flow-text h2 {
   margin-top: 0;
 }
 
+/* The numbered name over each way of using the app. */
+.flow-label {
+  margin: 0 0 0.75rem;
+  color: var(--sl-color-text-accent);
+  font-size: var(--sl-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
 @media (min-width: 50rem) {
   .flow {
-    grid-template-columns: 1fr 1.4fr;
-    gap: 3rem;
+    grid-template-columns: 1fr 1.6fr;
+    gap: 4rem;
   }
 
   .flow.reverse .flow-text {
@@ -172,4 +182,97 @@
 
 .facts a {
   color: var(--sl-color-text-accent);
+}
+
+/* Landing page only (the page with a hero): tighter, larger headings and
+   sections ruled with hairlines instead of boxes. */
+[data-has-hero] .sl-markdown-content h2 {
+  font-size: clamp(1.75rem, calc(1rem + 2.2vw), 2.5rem);
+  line-height: 1.12;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+[data-has-hero] .sl-markdown-content > h2 {
+  margin-top: clamp(4rem, 10vw, 7.5rem);
+}
+
+[data-has-hero] .flow-text p:not(.flow-label) {
+  color: var(--sl-color-gray-2);
+}
+
+.extras ul {
+  display: grid;
+  gap: 0 3rem;
+  margin: 2rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.extras li {
+  margin: 0;
+  padding-block: 1.25rem;
+  border-top: 1px solid var(--sl-color-hairline);
+  color: var(--sl-color-gray-2);
+  line-height: 1.55;
+}
+
+.extras strong {
+  color: var(--sl-color-white);
+}
+
+@media (min-width: 50rem) {
+  .extras ul {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+/* Questions: a ruled list that opens in place, without Starlight's side bar. */
+[data-has-hero] .sl-markdown-content details {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-top: 1px solid var(--sl-color-hairline);
+}
+
+[data-has-hero] .sl-markdown-content details:last-of-type {
+  border-bottom: 1px solid var(--sl-color-hairline);
+}
+
+[data-has-hero] .sl-markdown-content h2 + details {
+  margin-top: 2rem;
+}
+
+[data-has-hero] .sl-markdown-content summary {
+  padding-block: 1.1rem;
+  color: var(--sl-color-white);
+  font-size: var(--sl-text-lg);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+[data-has-hero] .sl-markdown-content details > :not(summary) {
+  max-width: 60ch;
+  margin: 0 0 1.25rem;
+  color: var(--sl-color-gray-2);
+}
+
+/* The last word: the download, in a panel of its own. */
+[data-has-hero] .download {
+  margin-top: 2rem;
+  padding: clamp(1.5rem, 5vw, 3rem);
+  border: 1px solid var(--sl-color-hairline);
+  border-radius: calc(var(--tf-radius) * 2);
+  background: var(--sl-color-gray-6);
+}
+
+/* A wider picture needs a softer, deeper shadow and a larger corner. */
+.hero .shot img,
+.hero .clip video {
+  border-radius: calc(var(--tf-radius) * 1.4);
+}
+
+/* On the panel's own background the note needs the stronger grey to stay readable. */
+[data-has-hero] .download .download-note {
+  color: var(--sl-color-gray-2);
 }

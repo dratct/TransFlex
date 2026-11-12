@@ -5,6 +5,10 @@ template: splash
 heroClip:
   name: hero
   alt: The TransFlex popup opening over a document with Option T. An English sentence is pasted in, Command Return translates it, and the Vietnamese translation streams in word by word, then shows its tokens and cost.
+heroNotes:
+  - Free and open source
+  - macOS 13 or later
+  - Apple silicon and Intel
 hero:
   title: Press <kbd>⌥</kbd> <kbd>T</kbd>. Read it in your language.
   tagline: TransFlex is a menu-bar translator for macOS. It opens over any app, streams the translation from the AI model you choose, and closes with Esc.
@@ -24,29 +28,36 @@ hero:
 ---
 
 import Download from '../../components/Download.astro';
+import Extras from '../../components/Extras.astro';
 import Facts from '../../components/Facts.astro';
 import Flow from '../../components/Flow.astro';
 
-Free and open source · macOS 13 or later · Apple silicon and Intel
-
-<Flow title="Type or paste, then read as it streams" shot="popup-streaming" alt="The popup while a translation streams in.">
+<Flow label="01 · Popup" title="Type or paste, then read as it streams" shot="popup-streaming" alt="The popup while a translation streams in.">
   Press <kbd>⌥</kbd> <kbd>T</kbd> in any app. Type or paste the text, press <kbd>⌘</kbd> <kbd>⏎</kbd>, and the translation appears word by word beside it. <kbd>⌘</kbd> <kbd>C</kbd> copies it and closes the popup.
 </Flow>
 
-<Flow title="Translate the selection without leaving the app" clip="replace" alt="An English sentence is selected in a document and your shortcut is pressed. A small capsule next to the pointer says it is translating, then the sentence turns into Vietnamese and the capsule says it was replaced." reverse>
+<Flow label="02 · Selection" title="Translate the selection without leaving the app" clip="replace" alt="An English sentence is selected in a document and your shortcut is pressed. A small capsule next to the pointer says it is translating, then the sentence turns into Vietnamese and the capsule says it was replaced." reverse>
   Give a preset its own shortcuts. **Translate Selection** shows the translation of the selected text in a small popup. **Replace Selection** swaps the selected text for its translation right where you are writing, and leaves the clipboard as it was.
 </Flow>
 
-<Flow title="One preset for each kind of text" shot="settings-presets" alt="The Presets tab of TransFlex Settings.">
+<Flow label="03 · Presets" title="One preset for each kind of text" shot="settings-presets" alt="The Presets tab of TransFlex Settings.">
   A preset picks the provider, the model and the instructions. TransFlex starts with Natural EN ↔ VI, Technical Doc EN ↔ VI and Any → English; change them or write your own, each with its own shortcuts.
 </Flow>
 
 ## Also in the box
 
-- **Images** — drop a screenshot or photo into the popup, paste it with <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, or pick a file, and translate the text in it. Turn on *Reads images* in the preset first.
-- **History** — every translation stays on your Mac. Search it, delete entries, or export it as JSON or Markdown.
-- **Providers** — OpenAI, Anthropic and Gemini, or any OpenAI-compatible server, including one running on your own Mac such as Ollama.
-- **Cost on every result** — the popup shows the tokens each translation used and what it cost.
+<Extras>
+
+- **Images**\
+  Drop a screenshot or photo into the popup, paste it with <kbd>⌘</kbd> <kbd>⇧</kbd> <kbd>V</kbd>, or pick a file, and translate the text in it. Turn on *Reads images* in the preset first.
+- **History**\
+  Every translation stays on your Mac. Search it, delete entries, or export it as JSON or Markdown.
+- **Providers**\
+  OpenAI, Anthropic and Gemini, or any OpenAI-compatible server, including one running on your own Mac such as Ollama.
+- **Cost on every result**\
+  The popup shows the tokens each translation used and what it cost.
+
+</Extras>
 
 ## Private, free and open
 

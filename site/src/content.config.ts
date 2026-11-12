@@ -11,6 +11,8 @@ export const collections = {
         blogSchema(context).extend({
           // A looping clip in the hero in place of `hero.image`: names files from `TransFlex --clips`.
           heroClip: z.object({ name: z.string(), alt: z.string() }).optional(),
+          // Short facts under the hero's buttons: licence, system, chips.
+          heroNotes: z.array(z.string()).optional(),
         }),
     }),
   }),

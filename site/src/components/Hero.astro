@@ -8,6 +8,7 @@ import Clip from './Clip.astro';
 
 const { data } = Astro.locals.starlightRoute.entry;
 const clip = data.heroClip;
+const notes = data.heroNotes ?? [];
 const { title = data.title, tagline, image, actions = [] } = data.hero || {};
 const pair = image && 'dark' in image ? image : undefined;
 const imageAttrs = {
@@ -20,15 +21,6 @@ const imageAttrs = {
 ---
 
 <div class="hero">
-  {clip && <Clip name={clip.name} alt={clip.alt} sizes={imageAttrs.sizes} />}
-  {
-    !clip && pair && (
-      <figure class="shot">
-        <Image src={pair.dark} class="light:sl-hidden" {...imageAttrs} />
-        <Image src={pair.light} class="dark:sl-hidden" {...imageAttrs} />
-      </figure>
-    )
-  }
   <div class="sl-flex stack">
     <div class="sl-flex copy">
       <h1 id="_top" data-page-title set:html={title} />
@@ -46,22 +38,28 @@ const imageAttrs = {
         </div>
       )
     }
+    {notes.length > 0 && <ul class="notes">{notes.map((note) => <li>{note}</li>)}</ul>}
   </div>
+  {clip && <Clip name={clip.name} alt={clip.alt} sizes="(min-width: 72rem) 67.5rem, 100vw" />}
+  {
+    !clip && pair && (
+      <figure class="shot">
+        <Image src={pair.dark} class="light:sl-hidden" {...imageAttrs} />
+        <Image src={pair.light} class="dark:sl-hidden" {...imageAttrs} />
+      </figure>
+    )
+  }
 </div>
 
 <style>
   @layer starlight.core {
+    /* The copy, then the picture across the whole column: the app is the
+       largest thing on the first screen. */
     .hero {
       display: grid;
       grid-template-columns: 100%;
-      align-items: center;
-      gap: 2rem;
-      padding-bottom: 1rem;
-    }
-
-    /* The headline and Download come first on a phone; the picture follows. */
-    .hero > :global(.shot) {
-      order: 2;
+      gap: clamp(2rem, 6vw, 4rem);
+      padding-block: clamp(1.5rem, 6vw, 5rem) 1rem;
     }
 
     .stack {
@@ -71,36 +69,46 @@ const imageAttrs = {
 
     .copy {
       flex-direction: column;
-      gap: 1rem;
-    }
-
-    .copy > * {
-      max-width: 50ch;
+      gap: 1.25rem;
     }
 
     h1 {
-      font-size: clamp(var(--sl-text-3xl), calc(0.25rem + 5vw), var(--sl-text-6xl));
-      line-height: var(--sl-line-height-headings);
-      font-weight: 600;
+      max-width: 14ch;
+      font-size: clamp(2.5rem, calc(1rem + 6.5vw), 5.25rem);
+      line-height: 1.02;
+      font-weight: 700;
+      letter-spacing: -0.03em;
       color: var(--sl-color-white);
     }
 
     .tagline {
-      font-size: clamp(var(--sl-text-base), calc(0.0625rem + 2vw), var(--sl-text-xl));
+      max-width: 46ch;
+      font-size: clamp(var(--sl-text-base), calc(0.5rem + 1.2vw), var(--sl-text-xl));
+      line-height: 1.5;
       color: var(--sl-color-gray-2);
     }
 
     .actions {
-      gap: 1rem 2rem;
+      gap: 1rem 1.5rem;
       flex-wrap: wrap;
+      align-items: center;
     }
 
-    @media (min-width: 50rem) {
-      .hero {
-        grid-template-columns: 1fr 1.15fr;
-        gap: 3rem;
-        padding-block: clamp(2.5rem, calc(1rem + 10vmin), 8rem);
-      }
+    .notes {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.25rem 0;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      color: var(--sl-color-gray-3);
+      font-size: var(--sl-text-sm);
+    }
+
+    /* The dot trails its item, so a wrapped line never starts with one. */
+    .notes li:not(:last-child)::after {
+      content: '·';
+      margin-inline: 0.75rem;
     }
   }
 </style>
