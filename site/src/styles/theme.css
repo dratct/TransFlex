@@ -47,6 +47,13 @@
 
 /* No `display` here: Starlight hides the other theme's image with a layered `display: none`,
    and an unlayered `display` would win over it and show both. */
+/* margin 0: Starlight gives an element that follows another in page content a
+   top margin, which pushed the second still, and the movie, 1rem down. */
+.shot img,
+.clip video {
+  margin: 0;
+}
+
 .shot img {
   vertical-align: middle;
   width: 100%;
@@ -114,8 +121,6 @@
 .clip video {
   position: absolute;
   inset: 0;
-  /* Starlight gives an element that follows another in page content a top margin. */
-  margin: 0;
   width: 100%;
   height: 100%;
   border-radius: var(--tf-radius);
