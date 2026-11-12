@@ -20,4 +20,13 @@ final class UpdateMenuTests: XCTestCase {
         XCTAssertFalse(AboutTab.showsUpdates(updater: nil))
         XCTAssertTrue(AboutTab.showsUpdates(updater: AppUpdater(driver: FakeDriver())))
     }
+
+    func testEveryStatusMenuSymbolResolvesToAnImage() {
+        for symbol in StatusMenuSymbol.allCases {
+            XCTAssertNotNil(
+                NSImage(systemSymbolName: symbol.rawValue, accessibilityDescription: nil),
+                "No SF Symbol named \(symbol.rawValue)"
+            )
+        }
+    }
 }
