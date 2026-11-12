@@ -51,31 +51,66 @@ files into `site/src/assets/clips/` and the `.mp4` files into
 `site/public/clips/`. See
 [the clips record](../decisions/2026-11-08-website-clips-6397.md).
 
-## Deploy on Cloudflare Pages
+## Deploy to the web server
 
-Done once, in the Cloudflare dashboard, by the account owner.
+The site is static files. It is served by the owner's own web server, managed
+with aaPanel, at `transflex.aiaz.io`. The `Deploy site` job in
+`.github/workflows/site.yml` builds `site/` and copies `site/dist` to the
+server with `rsync` over SSH (`site/scripts/deploy.sh`), after the checks pass,
+on every push to `main` that touches `site/`.
 
-1. Workers & Pages → Create → Pages → connect the `dratct/TransFlex` repository.
-2. Build settings:
-   - Production branch: `main`
-   - Root directory: `site`
-   - Build command: `npm run build`
-   - Build output directory: `dist`
-3. Environment variable `NODE_VERSION` = `24`. The Pages build image defaults to
-   Node 22 (read 2026-11-11); the variable pins the version CI uses.
-4. Custom domains → add `transflex.aiaz.io`. `aiaz.io` is already on
-   Cloudflare, so the DNS record is created for you.
-5. Optional, under build watch paths: include `site/*`, so a change to the app
-   alone does not rebuild the site.
+The job stays off until the repository variable `SITE_DEPLOY_ENABLED` is
+`true`. Set it up once:
 
-After that a push to `main` publishes the site (only when it touches `site/`,
-if you set the watch path), and Cloudflare builds a preview for other branches.
+1. In aaPanel, add a website for `transflex.aiaz.io` (static; no PHP or
+   database) and issue its certificate. Note the site folder, normally
+   `/www/wwwroot/transflex.aiaz.io`.
+2. On your own machine, make a key pair used for nothing else:
+
+   ```sh
+   ssh-keygen -t ed25519 -N "" -C "transflex-site-deploy" -f transflex-site-deploy
+   ```
+
+3. On the server, give the deploy user that key and write access to the site
+   folder. Use a user that can write there and nowhere it does not need to;
+   avoid `root`. Append `transflex-site-deploy.pub` to that user's
+   `~/.ssh/authorized_keys`.
+4. Read the server's host key, and check it against the server before trusting
+   it:
+
+   ```sh
+   ssh-keyscan -p 22 <server address>
+   ```
+
+5. In the GitHub repository, under Settings → Secrets and variables → Actions,
+   add these secrets:
+
+   | Secret | Value |
+   |---|---|
+   | `SITE_DEPLOY_HOST` | The server's address |
+   | `SITE_DEPLOY_PORT` | The SSH port; leave unset for 22 |
+   | `SITE_DEPLOY_USER` | The deploy user |
+   | `SITE_DEPLOY_PATH` | The site folder, e.g. `/www/wwwroot/transflex.aiaz.io` |
+   | `SITE_DEPLOY_SSH_KEY` | The whole private key file `transflex-site-deploy` |
+   | `SITE_DEPLOY_KNOWN_HOSTS` | The `ssh-keyscan` output from step 4 |
+
+   Then delete the private key file from your machine.
+6. Add the variable `SITE_DEPLOY_ENABLED` = `true`, and run the `Site` workflow
+   from the Actions tab (Run workflow, branch `main`) for the first deploy.
+
+The copy replaces everything in the site folder except `.user.ini`,
+`.well-known/` and `.htaccess`, which belong to the server. Keep nothing else
+there. The job fails, and changes nothing, when a secret is missing or the
+server's host key does not match.
+
+In aaPanel's site settings, point the 404 page at `/404.html`.
 
 ### The old site
 
-`transflex-web.pages.dev` describes the discontinued cross-platform app. Once
-the new site is live, redirect it: in that Pages project add a `_redirects`
-file with `/* https://transflex.aiaz.io/:splat 301`, or delete the project.
+`transflex.aiaz.io` served the site of the discontinued cross-platform app
+until the first deploy (checked 2026-11-12). The first deploy empties the site
+folder, so back up anything there you still want. `transflex-web.pages.dev`
+is a separate copy of the old site: delete that project or redirect it.
 
 ### The download button
 
