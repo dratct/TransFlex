@@ -187,8 +187,8 @@ figcaption b { color: var(--label); font-weight: 600; }
 .popover .opt .chk { width: 14px; color: var(--accent); } .popover .opt.on .chk { color: #fff; }
 .popover hr { border: 0; border-top: .5px solid var(--hair-2); margin: 6px 4px; }
 .menu { width: 250px; padding: 5px; border-radius: 10px; background: var(--material); backdrop-filter: blur(40px) saturate(1.6); box-shadow: var(--shadow-win); }
-.menu .m { display: flex; align-items: center; justify-content: space-between; height: 24px; padding: 0 10px; border-radius: 5px; }
-.menu .m.on { background: var(--accent); color: #fff; } .menu .m span:last-child { color: var(--label-3); } .menu .m.on span:last-child { color: rgba(255,255,255,.8); }
+.menu .m { display: flex; align-items: center; gap: 7px; height: 24px; padding: 0 10px; border-radius: 5px; }
+.menu .m.on { background: var(--accent); color: #fff; } .menu .m span:last-child { margin-left: auto; color: var(--label-3); } .menu .m.on span:last-child { color: rgba(255,255,255,.8); }
 .menu .h { font-size: 11px; font-weight: 600; color: var(--label-3); padding: 4px 10px 2px; }
 .menu hr { border: 0; border-top: .5px solid var(--hair-2); margin: 5px 8px; }
 .welcome { width: 800px; height: 500px; display: flex; flex-direction: row; }
@@ -281,6 +281,8 @@ figcaption b { color: var(--label); font-weight: 600; }
   <symbol id="cursor" viewBox="0 0 24 24"><path d="M9 4h2v16H9M6 4h6M6 20h6M15 8h5M15 12h5M15 16h3"/></symbol>
   <symbol id="wifi" viewBox="0 0 24 24"><path d="M2 8.8a15 15 0 0120 0M5 12.6a10 10 0 0114 0M8.5 16.3a5 5 0 017 0M12 20h.01M3 3l18 18"/></symbol>
   <symbol id="search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></symbol>
+  <symbol id="power" viewBox="0 0 24 24"><path d="M12 4v8M7.5 6.8a7 7 0 1 0 9 0"/></symbol>
+  <symbol id="update" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v8M8.5 12.5L12 16l3.5-3.5"/></symbol>
   <symbol id="clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
   <symbol id="keyboard" viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2.5"/><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10"/></symbol>
   <symbol id="cloud" viewBox="0 0 24 24"><path d="M7 18a4.5 4.5 0 01-.5-9 6 6 0 0111.5 1.5A3.8 3.8 0 0117.5 18z"/></symbol>
@@ -654,11 +656,12 @@ figcaption b { color: var(--label); font-weight: 600; }
     <figure>
       <div class="menu">
         <div class="h">TransFlex</div>
-        <div class="m on"><span>Open Popup</span><span>⌥V</span></div>
-        <div class="m"><span>History</span><span>⌘Y</span></div>
-        <hr><div class="m"><span>Settings…</span><span>⌘,</span></div><div class="m"><span>Quit TransFlex</span><span>⌘Q</span></div>
+        <div class="m on"><svg class="i s"><use href="#translate"/></svg><span>Open Popup</span><span>⌥V</span></div>
+        <div class="m"><svg class="i s"><use href="#clock"/></svg><span>History</span><span>⌘Y</span></div>
+        <hr><div class="m"><svg class="i s"><use href="#update"/></svg><span>Check for Updates…</span><span></span></div>
+        <div class="m"><svg class="i s"><use href="#gear"/></svg><span>Settings…</span><span>⌘,</span></div><div class="m"><svg class="i s"><use href="#power"/></svg><span>Quit TransFlex</span><span>⌘Q</span></div>
       </div>
-      <figcaption><b>Menu bar.</b> Text-only items with their shortcuts; no icon on one item only.</figcaption>
+      <figcaption><b>Menu bar.</b> Every item carries its own symbol and its shortcut; never an icon on some items only.</figcaption>
     </figure>
   </div>
 </section>

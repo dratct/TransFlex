@@ -35,7 +35,7 @@ final class StatusBarController: NSObject {
         let image = NSImage(named: "MenuBarIcon")
             ?? NSImage(systemSymbolName: "sparkle", accessibilityDescription: appName)
         image?.isTemplate = true
-        image?.size = NSSize(width: 18, height: 18)
+        image?.size = NSSize(width: 22, height: 22)
         baseIcon = image
         button.image = image
         button.toolTip = appName
@@ -50,30 +50,33 @@ final class StatusBarController: NSObject {
     private func configureMenu() {
         let appName = AppIdentity.current.displayName
         let menu = NSMenu()
-        let openItem = makeItem("Open Popup", action: #selector(openPopup), key: "")
+        let openItem = makeItem("Open Popup", symbol: .openPopup, action: #selector(openPopup), key: "")
         // Mirrors the user's recorded hotkey and follows later changes to it.
         openItem.setShortcut(for: .openPopup)
         menu.addItem(openItem)
-        menu.addItem(makeItem("History", action: #selector(openHistory), key: "y"))
+        menu.addItem(makeItem("History", symbol: .history, action: #selector(openHistory), key: "y"))
         menu.addItem(.separator())
         if updater != nil {
-            let item = makeItem(UpdateMenu.title(updateFound: false), action: #selector(checkForUpdates), key: "")
+            let item = makeItem(
+                UpdateMenu.title(updateFound: false), symbol: .update, action: #selector(checkForUpdates), key: ""
+            )
             updateItem = item
             menu.addItem(item)
         }
-        menu.addItem(makeItem("Settings…", action: #selector(openSettings), key: ","))
-        menu.addItem(makeItem("Quit \(appName)", action: #selector(quit), key: "q"))
+        menu.addItem(makeItem("Settings…", symbol: .settings, action: #selector(openSettings), key: ","))
+        menu.addItem(makeItem("Quit \(appName)", symbol: .quit, action: #selector(quit), key: "q"))
         statusItem.menu = menu
     }
 
-    private func makeItem(_ title: String, action: Selector, key: String) -> NSMenuItem {
+    private func makeItem(_ title: String, symbol: StatusMenuSymbol, action: Selector, key: String) -> NSMenuItem {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.target = self
-        // Text-only items: AppKit would otherwise add a symbol to Settings alone.
+        item.image = NSImage(systemSymbolName: symbol.rawValue, accessibilityDescription: nil)
+        // macOS 27 hides menu item images unless the item asks for them.
         // Swift 6.4 ships with the macOS 27 SDK that declares this property.
         #if compiler(>=6.4)
         if #available(macOS 27.0, *) {
-            item.preferredImageVisibility = .hidden
+            item.preferredImageVisibility = .visible
         }
         #endif
         return item
@@ -108,6 +111,16 @@ extension StatusBarController: NSMenuItemValidation {
         // Sparkle refuses a second check while one is already on screen.
         return updater?.canCheckForUpdates ?? false
     }
+}
+
+/// One SF Symbol per status menu item. Every name must exist on the
+/// deployment target (macOS 13): a missing symbol leaves that item bare.
+enum StatusMenuSymbol: String, CaseIterable {
+    case openPopup = "character.bubble"
+    case history = "clock.arrow.circlepath"
+    case update = "arrow.down.circle"
+    case settings = "gearshape"
+    case quit = "power"
 }
 
 enum UpdateMenu {
