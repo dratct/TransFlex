@@ -39,8 +39,8 @@ translation streams in right there. Your API keys stay in your Keychain.
 
 <div align="center">
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="docs/images/history-dark.png">
-  <img src="docs/images/history-light.png" width="720" alt="The History window: a searchable list of past translations with model, tokens and cost">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/presets-dark.png">
+  <img src="docs/images/presets-light.png" width="640" alt="Settings, Presets tab: each preset has a name, a provider, a model, instructions and shortcuts">
 </picture>
 </div>
 
