@@ -26,17 +26,20 @@ case "${DEPLOY_FTP_TLS:-verify}" in
   *) echo "deploy: DEPLOY_FTP_TLS must be verify, encrypt or off" >&2; exit 1 ;;
 esac
 
+# Two transfers at a time and patient retries: a panel's FTP server limits
+# connections per address, and four at once left files behind.
 # The password reaches lftp through the environment, not the command line.
 # The server's own files survive --delete: aaPanel's .user.ini, the
 # certificate challenge folder and .htaccess.
 export LFTP_PASSWORD="$DEPLOY_FTP_PASSWORD"
 lftp -c "
 set cmd:fail-exit true
-set net:max-retries 2
+set net:max-retries 6
+set net:reconnect-interval-base 5
 set net:timeout 30
 $tls
 open --env-password -u '$DEPLOY_FTP_USER' -p ${DEPLOY_FTP_PORT:-21} '$DEPLOY_FTP_HOST'
-mirror --reverse --delete --no-perms --parallel=4 \
+mirror --reverse --delete --no-perms --parallel=2 \
   --exclude-glob .user.ini --exclude-glob .well-known/ --exclude-glob .htaccess \
   '$dist/' '${DEPLOY_FTP_DIR:-/}'
 "
