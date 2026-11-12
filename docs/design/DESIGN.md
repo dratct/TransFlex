@@ -168,6 +168,11 @@ light and dark, swapped with the page theme (`Shot.astro`); Hero and Header
 are overridden only to keep the capture's aspect ratio and to give phones a
 language picker.
 
+The site has two calls to action of equal weight: the download, filled in the
+accent, and the support button, filled in a warm coral of its own (`.tf-support`)
+so the two are never confused. The support button is in the header of every
+page, beside the download in the hero and in the closing block, and in the footer.
+
 The hero and Replace row are `--clips` renders of the app's views over a still
 (shown without JavaScript or motion), never `autoplay`, which runs before
 reduced motion is checked. Privacy and licence: five tiles, three over two.

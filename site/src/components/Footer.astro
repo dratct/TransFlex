@@ -13,7 +13,7 @@ const t = Astro.locals.t;
 <div class="tf-footer not-content">
   <p>{t('tf.footer.free')}</p>
   <div class="tf-footer-actions">
-    <LinkButton href={supportHref} variant="secondary" icon="heart" iconPlacement="start">
+    <LinkButton href={supportHref} class="tf-support" icon="heart" iconPlacement="start">
       {t('tf.footer.support')}
     </LinkButton>
     <a href={localized('/support/', locale)}>{t('tf.footer.more')}</a>

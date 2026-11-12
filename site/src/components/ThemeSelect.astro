@@ -1,6 +1,7 @@
 ---
-// The header's links to Docs, Blog and the support page, before Starlight's theme
-// picker. Wide screens only; on a phone the same links are in the footer.
+// The header's links to Docs and Blog and the support button, before Starlight's
+// theme picker. Wide screens only: a phone gets the button from Header.astro and
+// the other links from the footer.
 import Default from '@astrojs/starlight/components/ThemeSelect.astro';
 import { Icon } from '@astrojs/starlight/components';
 import { localized, supportHref } from './links';
@@ -12,7 +13,7 @@ const t = Astro.locals.t;
 <nav class="tf-nav" aria-label="TransFlex">
   <a href={localized('/docs/install/', locale)}>{t('tf.nav.docs')}</a>
   <a href={localized('/blog/', locale)}>{t('tf.nav.blog')}</a>
-  <a class="tf-nav-support" href={supportHref}><Icon name="heart" />{t('tf.nav.support')}</a>
+  <a class="tf-support tf-nav-support" href={supportHref}><Icon name="heart" />{t('tf.nav.support')}</a>
 </nav>
 <Default><slot /></Default>
 
@@ -42,10 +43,6 @@ const t = Astro.locals.t;
   }
 
   .tf-nav a:hover {
-    color: var(--sl-color-text-accent);
-  }
-
-  .tf-nav-support :global(svg) {
     color: var(--sl-color-text-accent);
   }
 </style>

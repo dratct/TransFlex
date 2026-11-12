@@ -95,7 +95,7 @@ for (const landing of ['index.html', 'vi/index.html']) {
 }
 
 // Support: every page offers the support link (footer), and each landing page
-// has the button beside its download.
+// has the button among its hero actions and beside its download.
 const supportHref = 'href="https://paypal.me/truongtc1109"';
 for (const file of walk(distDir).filter((p) => p.endsWith('.html') && !p.endsWith('404.html'))) {
   if (!readFileSync(file, 'utf8').includes(supportHref)) errors.push(`no support link on ${relative(distDir, file)}`);
@@ -103,6 +103,8 @@ for (const file of walk(distDir).filter((p) => p.endsWith('.html') && !p.endsWit
 for (const landing of ['index.html', 'vi/index.html']) {
   const block = readFileSync(join(distDir, landing), 'utf8').match(/<div[^>]*class="[^"]*\bdownload\b[^"]*"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? '';
   if (!block.includes(supportHref)) errors.push(`no support button beside the download on ${landing}`);
+  const actions = readFileSync(join(distDir, landing), 'utf8').match(/<div[^>]*class="[^"]*\bactions\b[^"]*"[^>]*>[\s\S]*?<\/div>/)?.[0] ?? '';
+  if (!actions.includes(supportHref)) errors.push(`no support button among the hero actions on ${landing}`);
 }
 for (const page of ['support/index.html', 'vi/support/index.html']) {
   if (!existsSync(join(distDir, page))) errors.push(`no ${page}`);

@@ -20,6 +20,7 @@
   --tf-ink: #06281f;
   --tf-on-ink: #f1f7f4;
   --tf-mint: #3dd6ac;
+  --tf-heart: #ff7a66;
 }
 
 /* Content keycaps only: Starlight's search button has its own `kbd`, hidden on phones by a
@@ -349,4 +350,31 @@
 /* On the dark green the note takes the band's light grey. */
 [data-has-hero] .download .download-note {
   color: #b9cbc5;
+}
+
+/* The support button, wherever it appears: filled in a warm colour of its own,
+   so it carries the same weight as the download and is never mistaken for it. */
+.tf-support,
+.sl-link-button.tf-support,
+.tf-nav a.tf-support {
+  border-color: var(--tf-heart);
+  background: var(--tf-heart);
+  color: var(--tf-ink);
+}
+
+.tf-support:hover,
+.tf-nav a.tf-support:hover {
+  border-color: #ff9584;
+  background: #ff9584;
+  color: var(--tf-ink);
+}
+
+/* In the header it is a pill, small enough to sit beside the search on a phone. */
+.tf-nav-support,
+.tf-header-support {
+  padding: 0.3rem 0.85rem;
+  border-radius: 999rem;
+  font-size: var(--sl-text-sm);
+  font-weight: 600;
+  text-decoration: none;
 }
