@@ -161,9 +161,9 @@ trouble. Try again in a moment." Esc always closes, whatever holds focus.
 ### Website (`site/`)
 
 The site at transflex.aiaz.io is Starlight with the app's tokens
-(`site/src/styles/theme.css`): the same accent, SF Pro first. The landing page
-persuades; Docs and Blog are read. Its one bold move is the shortcut drawn as
-keycaps in the headline. Every picture is a real `--screenshots` capture,
+(`site/src/styles/theme.css`): the same accent, set in Be Vietnam Pro. The landing page
+persuades; Docs and Blog are read. Its one bold move is a hero laid out as the
+popup at page size, on dark green, with the shortcut drawn as keycaps. Every picture is a real `--screenshots` capture,
 light and dark, swapped with the page theme (`Shot.astro`); Hero and Header
 are overridden only to keep the capture's aspect ratio and to give phones a
 language picker.

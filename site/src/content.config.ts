@@ -13,6 +13,8 @@ export const collections = {
           heroClip: z.object({ name: z.string(), alt: z.string() }).optional(),
           // Short facts under the hero's buttons: licence, system, chips.
           heroNotes: z.array(z.string()).optional(),
+          // The headline in the other language, shown as the text being translated.
+          heroOriginal: z.object({ text: z.string(), lang: z.string() }).optional(),
         }),
     }),
   }),

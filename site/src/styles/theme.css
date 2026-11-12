@@ -1,6 +1,7 @@
 /* Colors from docs/design/DESIGN.md: accent for links and buttons, brand only in the logo. */
 :root {
-  --sl-font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
+  /* Be Vietnam Pro carries the Vietnamese subset; the system faces are the fallback. */
+  --sl-font: 'Be Vietnam Pro', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', sans-serif;
   --sl-color-accent-low: #0b3d31;
   --sl-color-accent: #0e8466;
   --sl-color-accent-high: #3dd6ac;
@@ -15,6 +16,10 @@
 :root {
   --tf-radius: 0.625rem; /* rounded 10 in DESIGN.md: panes and cards */
   --tf-shadow: 0 1.25rem 3rem -1rem rgb(0 0 0 / 0.35);
+  /* The landing page's dark green band, and the text and mint that sit on it. */
+  --tf-ink: #06281f;
+  --tf-on-ink: #f1f7f4;
+  --tf-mint: #3dd6ac;
 }
 
 /* Content keycaps only: Starlight's search button has its own `kbd`, hidden on phones by a
@@ -35,14 +40,36 @@
   text-align: center;
 }
 
-.hero h1 kbd {
-  font-size: 0.8em;
-  border-color: var(--sl-color-accent);
-  color: var(--sl-color-accent-high);
+/* The headline's keycaps: large, on the band, with a lit edge. */
+.hero h1 kbd,
+.hero .original-text kbd {
+  min-width: 1.35em;
+  padding: 0 0.22em;
+  border: 2px solid var(--tf-mint);
+  border-bottom-width: 0.14em;
+  border-radius: 0.2em;
+  background: rgb(61 214 172 / 0.1);
+  color: var(--tf-mint);
+  font-size: 0.82em;
+  line-height: 1.25;
+  letter-spacing: 0;
+}
+
+.hero .original-text kbd {
+  border-color: rgb(241 247 244 / 0.32);
+  background: none;
+  color: inherit;
 }
 
 .shot {
   margin: 0;
+}
+
+/* The hero's picture rides over the band's lower edge. Here, not in Hero.astro:
+   the rule above is unlayered and would win over a layered one. */
+.hero > .shot {
+  position: relative;
+  margin-top: calc(-1 * clamp(5rem, 17vw, 13rem));
 }
 
 /* No `display` here: Starlight hides the other theme's image with a layered `display: none`,
@@ -73,14 +100,27 @@
   margin-top: 0;
 }
 
-/* The numbered name over each way of using the app. */
+/* The numbered name over each way of using the app: an outlined numeral,
+   the name small beside it. */
 .flow-label {
-  margin: 0 0 0.75rem;
+  display: flex;
+  gap: 0.75rem;
+  align-items: baseline;
+  margin: 0 0 1rem;
   color: var(--sl-color-text-accent);
   font-size: var(--sl-text-sm);
   font-weight: 600;
-  letter-spacing: 0.02em;
-  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.flow-number {
+  color: transparent;
+  font-size: clamp(3rem, calc(1.5rem + 4vw), 4.5rem);
+  font-weight: 800;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+  -webkit-text-stroke: 1.5px var(--sl-color-text-accent);
 }
 
 @media (min-width: 50rem) {
@@ -257,13 +297,47 @@
   color: var(--sl-color-gray-2);
 }
 
-/* The last word: the download, in a panel of its own. */
+/* The last word: the download, on the same dark green as the hero, with the
+   shortcut drawn large beside it. */
 [data-has-hero] .download {
+  --sl-color-white: var(--tf-on-ink);
+  --sl-color-black: var(--tf-ink);
+  --sl-color-text-accent: var(--tf-mint);
+  position: relative;
   margin-top: 2rem;
-  padding: clamp(1.5rem, 5vw, 3rem);
-  border: 1px solid var(--sl-color-hairline);
+  padding: clamp(1.75rem, 5vw, 3.5rem);
   border-radius: calc(var(--tf-radius) * 2);
-  background: var(--sl-color-gray-6);
+  background: var(--tf-ink);
+  color: var(--tf-on-ink);
+  overflow: hidden;
+}
+
+.download-keys {
+  display: none;
+}
+
+@media (min-width: 50rem) {
+  [data-has-hero] .download-keys {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-end: clamp(1.75rem, 5vw, 3.5rem);
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+  }
+
+  [data-has-hero] .download-keys kbd {
+    min-width: 1.35em;
+    padding: 0 0.2em;
+    border: 2px solid var(--tf-mint);
+    border-bottom-width: 0.14em;
+    border-radius: 0.2em;
+    background: rgb(61 214 172 / 0.1);
+    color: var(--tf-mint);
+    font-size: 4.5rem;
+    font-weight: 800;
+    line-height: 1.25;
+  }
 }
 
 /* A wider picture needs a softer, deeper shadow and a larger corner. */
@@ -272,7 +346,7 @@
   border-radius: calc(var(--tf-radius) * 1.4);
 }
 
-/* On the panel's own background the note needs the stronger grey to stay readable. */
+/* On the dark green the note takes the band's light grey. */
 [data-has-hero] .download .download-note {
-  color: var(--sl-color-gray-2);
+  color: #b9cbc5;
 }

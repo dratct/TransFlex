@@ -14,11 +14,20 @@ interface Props {
 }
 
 const { label, title, shot, clip, alt, reverse = false } = Astro.props;
+// `01 · Popup`: the number is drawn large, the name small beside it.
+const [number, name] = (label ?? '').split(' · ');
 ---
 
 <section class:list={['flow', { reverse }]}>
   <div class="flow-text">
-    {label && <p class="flow-label">{label}</p>}
+    {
+      label && (
+        <p class="flow-label">
+          <span class="flow-number">{number}</span>
+          {name}
+        </p>
+      )
+    }
     <h2>{title}</h2>
     <slot />
   </div>
