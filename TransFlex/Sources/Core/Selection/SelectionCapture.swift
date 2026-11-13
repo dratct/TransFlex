@@ -137,6 +137,9 @@ final class SelectionCapture {
             guard focus.isInPlace(target, copied.text) else { return false }
         }
         if target.element != nil, target.checksSelection { return true }
+        // A cancelled copy does not wait for the app to answer, so its text
+        // would land on the clipboard after the old one was put back.
+        guard !Task.isCancelled else { return false }
         return (try? await copySelection()) == copied.text
     }
 

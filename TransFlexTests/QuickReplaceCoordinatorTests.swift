@@ -39,6 +39,8 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
 
     /// False: the app the text came from is unknown, as when nothing is frontmost.
     private var copies = 0
+    /// Runs while the source app is being brought back, like an Esc then.
+    private var onRestore: (() -> Void)?
     private var knowsTarget = true
     /// What the next ⌘C copies, when it differs from the first selection.
     private var nextSelection: String?
@@ -72,6 +74,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
                 restore: { [weak self] _ in
                     guard let self else { return }
                     self.restoreCalls += 1
+                    self.onRestore?()
                     if self.targetRestorable { self.targetInPlace = true }
                 },
                 text: { [weak self] _ in self?.field }
@@ -204,6 +207,23 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertEqual(restoreCalls, 1)
         XCTAssertEqual(copies, 1)
         XCTAssertEqual(pasted, ["triển khai"])
+    }
+
+    func testEscWhileTheSelectionIsConfirmedCancelsWithoutAnotherCopy() async throws {
+        let coordinator = try await stoppedCoordinator()
+        targetInPlace = false
+        copies = 0
+        onRestore = { coordinator.cancel() }
+
+        do {
+            _ = try await coordinator.runSendingAnyway(preset: preset)
+            XCTFail("a cancelled run pastes nothing")
+        } catch {
+            XCTAssertTrue(error is CancellationError, "\(type(of: error))")
+        }
+        XCTAssertEqual(copies, 0, "no ⌘C after Esc: the copy would stay on the clipboard")
+        XCTAssertEqual(pasted, [])
+        XCTAssertNotEqual(pasteboard.string(forType: .string), "triển khai")
     }
 
     func testDroppedSelectionCannotBeSentAnyway() async throws {
