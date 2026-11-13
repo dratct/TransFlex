@@ -3,6 +3,7 @@ set -euo pipefail
 
 APP_PATH=""
 EXPECTED_MIN_MACOS="13.0"
+EXPECTED_MIN_SDK="27.0"
 EXPECTED_MARKETING_VERSION=""
 EXPECTED_BUILD_VERSION=""
 EXPECTED_ARCHS="arm64 x86_64"
@@ -15,6 +16,7 @@ Usage:
 
 Options:
   --expected-min-macos VERSION
+  --expected-min-sdk VERSION   oldest macOS SDK the app may be built with (default 27.0)
   --expected-marketing-version VERSION
   --expected-build-version VERSION
   --expected-archs "arm64 x86_64"
@@ -46,6 +48,11 @@ while [[ $# -gt 0 ]]; do
     --expected-min-macos)
       require_value "$@"
       EXPECTED_MIN_MACOS="${2:-}"
+      shift 2
+      ;;
+    --expected-min-sdk)
+      require_value "$@"
+      EXPECTED_MIN_SDK="${2:-}"
       shift 2
       ;;
     --expected-marketing-version)
@@ -108,6 +115,21 @@ build_version="$(plist_value CFBundleVersion)"
 
 if [[ "$min_macos" != "$EXPECTED_MIN_MACOS" ]]; then
   fail "LSMinimumSystemVersion expected '$EXPECTED_MIN_MACOS' but found '$min_macos'."
+fi
+# The app is developed and checked by hand against the macOS 27 SDK. An older
+# SDK builds a different app: other system defaults, and none of the code
+# that needs the newer SDK to compile.
+sdk_name="$(plist_value DTSDKName 2>/dev/null || true)"
+sdk_version="${sdk_name#macosx}"
+if [[ ! "$sdk_version" =~ ^[0-9]+(\.[0-9]+)*$ ]]; then
+  fail "DTSDKName '$sdk_name' does not name a macOS SDK."
+fi
+if ! awk -v have="$sdk_version" -v want="$EXPECTED_MIN_SDK" 'BEGIN {
+  split(have, h, "."); split(want, w, ".")
+  for (i = 1; i <= 3; i++) { if (h[i] + 0 > w[i] + 0) exit 0; if (h[i] + 0 < w[i] + 0) exit 1 }
+  exit 0
+}'; then
+  fail "built with the macOS $sdk_version SDK; a release needs $EXPECTED_MIN_SDK or newer."
 fi
 if [[ -z "$marketing_version" ]]; then
   fail "CFBundleShortVersionString is empty."
@@ -201,6 +223,7 @@ fi
 
 echo "==> Verified release app: $APP_PATH"
 echo "    LSMinimumSystemVersion=$min_macos"
+echo "    DTSDKName=$sdk_name"
 echo "    CFBundleShortVersionString=$marketing_version"
 echo "    CFBundleVersion=$build_version"
 echo "    architectures=$EXPECTED_ARCHS"
