@@ -346,6 +346,20 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertTrue(controller.isPinned)
     }
 
+    /// Two presses can both pass the running check before the first run
+    /// starts; the second run then does nothing and must leave the capsule.
+    func testAReplaceThatDidNotStartLeavesTheRunningCapsule() async throws {
+        provider.holdsOpen = true
+
+        controller.quickReplace(presetID: preset.id)
+        controller.quickReplace(presetID: preset.id)
+        try await waitUntil({ !self.provider.capturedMessages.isEmpty }, "the first run is translating")
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertTrue(hud.isRunning, "still the capsule of the run in flight, not Replaced")
+        hold.press()
+    }
+
     func testSendAnywayOnTheBannerSendsTheSelection() async throws {
         provider.scriptedEvents = [.textDelta("xin chào")]
         replaceSelection = Self.flagged
@@ -356,7 +370,7 @@ final class PopupWindowControllerTests: XCTestCase {
 
         try await waitUntil({ !self.provider.capturedMessages.isEmpty }, "the selection is sent")
         XCTAssertTrue(provider.capturedMessages.last?.content.contains(SecretScannerTests.githubToken) ?? false)
-        XCTAssertEqual(replaceCopies, 1, "the selection is not copied again")
+        XCTAssertEqual(replaceCopies, 1, "an unknown source app gets no second ⌘C")
     }
 
     func testTranslateSelectionWithASecretOpensTheCardAndKeepsThePopupsDraft() async throws {

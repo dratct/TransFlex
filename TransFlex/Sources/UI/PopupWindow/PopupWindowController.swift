@@ -254,7 +254,7 @@ public final class PopupWindowController {
     private func finishReplace(presetID: UUID, _ run: @escaping @MainActor () async throws -> Bool) {
         Task { @MainActor in
             do {
-                // False: another run is in flight and owns the capsule.
+                // False: this run did not start, so the HUD is not its to change.
                 guard try await run() else { return }
                 replaceHUD.showReplaced()
             } catch is CancellationError {

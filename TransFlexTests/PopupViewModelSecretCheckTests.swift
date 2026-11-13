@@ -302,6 +302,20 @@ final class PopupViewModelSecretCheckTests: XCTestCase {
         if case .secretFound = vm.state {} else { XCTFail("kept as a Draft, but the next send still asks") }
     }
 
+    func testSentAnywayDraftSetAsideBehindASelectionComesBack() async throws {
+        let vm = try flaggedViewModel()
+        vm.sendAnyway()
+        try await waitUntil({ vm.state == .done(result: "bonjour") })
+        vm.startQuickTranslation(text: "hello", presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        vm.popupDidHide()
+        vm.openPopup(keepingDraft: true)
+        XCTAssertEqual(vm.inputText, Self.flagged)
+
+        vm.popupDidHide()
+        XCTAssertEqual(vm.inputText, Self.flagged, "still the sent-anyway Draft after coming back")
+    }
+
     /// A selection shortcut sets the Popup's Draft aside; hiding must not
     /// hand a flagged one back later.
     func testFlaggedDraftSetAsideBehindASelectionIsDropped() throws {

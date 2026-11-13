@@ -38,6 +38,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
     private var restoreCalls = 0
 
     /// False: the app the text came from is unknown, as when nothing is frontmost.
+    private var copies = 0
     private var knowsTarget = true
     /// What the next ⌘C copies, when it differs from the first selection.
     private var nextSelection: String?
@@ -53,6 +54,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
             postCommandKey: { [weak self] key in
                 guard let self else { return }
                 if key == CGKeyCode(kVK_ANSI_C) {
+                    self.copies += 1
                     self.pasteboard.clearContents()
                     self.pasteboard.setString(self.nextSelection ?? selection, forType: .string)
                 } else if key == CGKeyCode(kVK_ANSI_V) {
@@ -174,6 +176,34 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         }
         XCTAssertEqual(pasted, [])
         XCTAssertEqual(pasteboard.string(forType: .string), "triển khai")
+    }
+
+    /// The check reads the selection of the app the text came from, so that
+    /// app is brought back first; when it cannot be, no ⌘C goes to whatever
+    /// app is in front instead.
+    func testSendAnywayNeverReadsAnotherAppsSelection() async throws {
+        let coordinator = try await stoppedCoordinator()
+        targetInPlace = false
+        targetRestorable = false
+        copies = 0
+
+        _ = try? await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertEqual(restoreCalls, 1)
+        XCTAssertEqual(copies, 0, "no ⌘C outside the app the text came from")
+        XCTAssertEqual(pasted, [])
+    }
+
+    func testSendAnywayReadsTheSelectionAgainOnceTheSourceAppIsBack() async throws {
+        let coordinator = try await stoppedCoordinator()
+        targetInPlace = false
+        copies = 0
+
+        _ = try await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertEqual(restoreCalls, 1)
+        XCTAssertEqual(copies, 1)
+        XCTAssertEqual(pasted, ["triển khai"])
     }
 
     func testDroppedSelectionCannotBeSentAnyway() async throws {

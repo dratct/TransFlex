@@ -58,8 +58,8 @@ final class QuickReplaceCoordinator {
     }
 
     /// Send anyway on the Secret check banner: translates the selection the
-    /// check stopped and pastes over it, without copying again and without
-    /// saving to History. Returns `false` when no selection is waiting.
+    /// check stopped and pastes over it while it is still the selection,
+    /// without saving to History. Returns `false` when no selection is waiting.
     @discardableResult
     func runSendingAnyway(preset: Preset) async throws -> Bool {
         guard !isRunning, let copied = parked else { return false }
@@ -132,9 +132,15 @@ final class QuickReplaceCoordinator {
         guard !translated.isEmpty else { throw EmptyResult() }
         let replacement = Self.keepingEdgeWhitespace(of: original, around: translated)
 
-        if !recordsHistory, await !isStillSelected(copied) {
-            selection.leaveOnClipboard(replacement)
-            throw SelectionCapture.Failure.targetLost
+        // Send anyway can come long after the copy: the banner waits with
+        // no time limit, so the selection is confirmed before any ⌘V.
+        if !recordsHistory {
+            let stillSelected = await selection.isStillSelected(copied)
+            try Task.checkCancellation()
+            if !stillSelected {
+                selection.leaveOnClipboard(replacement)
+                throw SelectionCapture.Failure.targetLost
+            }
         }
 
         try await selection.paste(replacement, over: copied)
@@ -144,17 +150,6 @@ final class QuickReplaceCoordinator {
             inputTokens: inputTokens, outputTokens: outputTokens,
             hadImage: false, startTime: startedAt
         )
-    }
-
-    /// Send anyway can come long after the copy: the banner waits with no
-    /// time limit. `paste` can compare the field only where the app exposes
-    /// it; elsewhere (a browser) it would paste at whatever caret the same
-    /// app has now. There the selection is copied again, and anything other
-    /// than the text that was stopped means the user moved on.
-    private func isStillSelected(_ copied: SelectionCapture.CopiedSelection) async -> Bool {
-        guard let target = copied.target else { return false }
-        if target.element != nil, target.checksSelection { return true }
-        return (try? await selection.copySelection()) == copied.text
     }
 
     /// Selections often include a trailing newline (triple-click a line);

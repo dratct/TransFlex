@@ -125,6 +125,21 @@ final class SelectionCapture {
         return CopiedSelection(text: text, target: focus.capture(text))
     }
 
+    /// Whether `copied` is still what is selected where it came from, for a
+    /// paste that comes long after the copy. The app it came from is brought
+    /// back first. Where the field can be compared, `paste` does that; where
+    /// it cannot (a browser), the selection is copied again there, and never
+    /// from another app.
+    func isStillSelected(_ copied: CopiedSelection) async -> Bool {
+        guard let target = copied.target else { return false }
+        if !focus.isInPlace(target, copied.text) {
+            await focus.restore(target)
+            guard focus.isInPlace(target, copied.text) else { return false }
+        }
+        if target.element != nil, target.checksSelection { return true }
+        return (try? await copySelection()) == copied.text
+    }
+
     /// Puts `text` on the clipboard for the user to paste, when it cannot be
     /// pasted for them.
     func leaveOnClipboard(_ text: String) {
