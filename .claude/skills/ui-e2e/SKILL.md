@@ -87,9 +87,9 @@ cua-driver call end_session '{"session":"tf"}'
   full size with `"max_image_dimension":0`, then crop the region with
   `sips -c <height> <width> --cropOffset <y> <x> in.png --out crop.png`
   and read the crop. A capture scaled to 1400px hides a 16pt glyph.
-- A status menu's item images depend on the SDK the app was built with:
-  macOS 27 hides them unless the item asks to keep them. Seeing them in
-  TransFlexDev does not show them in a CI-built TransFlex.
+- macOS 27 hides a status menu item's image unless the item asks to keep it
+  (`MenuItemImages.keepVisible`). Seeing the images in TransFlexDev does not
+  show them in a CI-built TransFlex: check that app's menu too.
 - The popup is a non-activating panel: selection shortcuts copy from
   whatever app is frontmost, so bring that app forward and select real text
   there before firing the shortcut.

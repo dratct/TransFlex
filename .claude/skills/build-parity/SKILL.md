@@ -41,9 +41,9 @@ No run for the branch yet: push the branch and start one with
 ## 2. Compare
 
 ```bash
-# Builds only. `make build-fast` would also relaunch the app and, without
+# Builds only. `make build` would also relaunch the app and, without
 # Config/Local.xcconfig (a fresh worktree), reset its privacy grants.
-scripts/build.sh --no-gen
+scripts/build.sh
 scripts/check-build-parity.sh --release "$S/app/TransFlex.app" \
   --probe <text> [--probe <text>]...
 ```
@@ -71,6 +71,12 @@ calls, using process name `TransFlex` instead of `TransFlexDev`.
 - It is the real app: bundle id `io.aiaz.transflex`, the same preferences
   and history as an installed TransFlex. Quit the installed one first, tell
   the owner, change no setting, and quit the CI-built one when done.
+- A workflow build is version 0.1.0, so it opens Sparkle's Software Update
+  window offering the latest release, and Welcome on a Mac that never ran
+  TransFlex. Never press Install Update: it would replace the app under
+  test. Leave both windows alone and end with `pkill -x TransFlex`.
+- The status item has no window: find it in a full-size
+  `get_desktop_state` capture and click it by pixel.
 - An unsigned CI build has no Accessibility grant and keeps keys on the file
   keychain, so selection shortcuts and provider calls may not work. Menus,
   windows and layout do.
