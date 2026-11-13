@@ -312,6 +312,25 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertTrue(isSecretCard(controller.viewModelForTesting?.state), "the next send asks again")
     }
 
+    func testTranslateSelectionWithASecretOpensTheCardAndKeepsThePopupsDraft() async throws {
+        controller.show()
+        controller.viewModelForTesting?.inputText = "draft"
+        controller.hide()
+        copied = .success(Self.flagged)
+
+        controller.quickTranslate(presetID: preset.id)
+
+        try await waitUntil({ self.isSecretCard(self.controller.viewModelForTesting?.state) }, "the card shows")
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertEqual(controller.viewModelForTesting?.isOutputOnly, true)
+        XCTAssertNil(selectionBanner)
+        XCTAssertTrue(provider.capturedMessages.isEmpty, "nothing was sent")
+
+        controller.hide()
+        controller.show()
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+    }
+
     /// The card replaces a pinned Popup without hiding it; the Draft's clock
     /// still starts there, or the next open would drop the Draft at once.
     func testDraftSurvivesAPermissionCardShownInThePinnedPopup() {

@@ -296,6 +296,53 @@ final class PopupViewModelSecretCheckTests: XCTestCase {
         XCTAssertEqual(vm.inputText, "hello")
     }
 
+    // MARK: Translate Selection
+
+    func testSelectionWithASecretOpensTheCardAndSendsNothing() throws {
+        let vm = makeViewModel()
+        var bannerFailures = 0
+        vm.onOutputOnlyFailure = { _ in bannerFailures += 1 }
+
+        vm.startQuickTranslation(text: Self.flagged, presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        XCTAssertTrue(vm.isOutputOnly)
+        if case .secretFound = vm.state {} else { XCTFail("the card shows") }
+        XCTAssertFalse(wasSent)
+        XCTAssertEqual(bannerFailures, 0, "a card, not the banner")
+    }
+
+    func testShowTextOnTheCardShowsTheEditorWithTheSelection() throws {
+        let vm = makeViewModel()
+        vm.startQuickTranslation(text: Self.flagged, presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        vm.showInput()
+
+        XCTAssertFalse(vm.isOutputOnly)
+        XCTAssertEqual(vm.state, .idle)
+        XCTAssertEqual(vm.inputText, Self.flagged)
+    }
+
+    func testSendAnywayFromTheOutputOnlyCardTranslates() async throws {
+        let vm = makeViewModel()
+        vm.startQuickTranslation(text: Self.flagged, presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        vm.sendAnyway()
+
+        try await waitUntil({ vm.state == .done(result: "bonjour") })
+        XCTAssertTrue(vm.isOutputOnly)
+    }
+
+    func testHidingTheOutputOnlyCardKeepsThePopupsOwnDraft() throws {
+        let vm = makeViewModel()
+        vm.inputText = "my draft"
+        vm.startQuickTranslation(text: Self.flagged, presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        vm.popupDidHide()
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "my draft")
+    }
+
     // MARK: The value never leaves the scanner
 
     func testStateAndAnnouncementNeverCarryTheValue() throws {

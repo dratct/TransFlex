@@ -67,8 +67,9 @@ enum PopupFooter {
             return isOutputOnly ? showText : [Item(action: .backToText, prominence: .plain)]
         case .secretFound:
             // Neither button takes ⌘↩: a habitual second press sends nothing.
+            // Esc closes the Output-only popup, so its safe choice is ⌘I.
             return [Item(action: .sendAnyway, prominence: .secondary),
-                    Item(action: .backToText, prominence: .primary)]
+                    Item(action: isOutputOnly ? .showText : .backToText, prominence: .primary)]
         case .accessibilityRequired(granted: false):
             return [Item(action: .openSystemSettings, prominence: .primary)]
         case .accessibilityRequired(granted: true):
