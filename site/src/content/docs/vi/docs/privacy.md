@@ -17,6 +17,18 @@ Ngoài ra không còn gì khác. Nhà cung cấp làm gì với văn bản của
 
 Với mô hình chạy ngay trên Mac của bạn, như Ollama, văn bản không rời khỏi máy; xem [Nhà cung cấp](/vi/docs/providers/).
 
+## Kiểm tra secret
+
+Trước khi văn bản của bạn được gửi tới nhà cung cấp, TransFlex tìm trong đó các API key và token có dạng đã biết: key của OpenAI, Anthropic và Google, token của GitHub, AWS, Slack và Stripe, khối private key, và đường link có kèm mật khẩu. Tìm thấy thì TransFlex không gửi gì. Nó cho biết loại đã tìm thấy, chỉ kèm bốn ký tự đầu và bốn ký tự cuối, rồi để bạn chọn: quay lại văn bản, hoặc **Send anyway**.
+
+- Chỉ đọc chữ. Ảnh không bao giờ được kiểm tra.
+- Chỉ biết các dạng trên. Mật khẩu thường, hoặc token không có dạng cố định, sẽ lọt qua.
+- Bỏ qua khi mô hình chạy ngay trên Mac của bạn.
+- Bản dịch gửi bằng **Send anyway** không được lưu vào Lịch sử.
+- Văn bản bị chặn không được giữ lại trong Popup sau khi Popup đóng.
+
+Đây là một lưới an toàn, không phải một bảo đảm. Tính năng bật sẵn; tắt ở **Settings › General › Check for secrets before sending**.
+
 ## Những gì nằm lại trên Mac
 
 - **API key**: trong Keychain của macOS.
