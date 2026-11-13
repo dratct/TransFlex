@@ -125,6 +125,13 @@ final class SelectionCapture {
         return CopiedSelection(text: text, target: focus.capture(text))
     }
 
+    /// Puts `text` on the clipboard for the user to paste, when it cannot be
+    /// pasted for them.
+    func leaveOnClipboard(_ text: String) {
+        pasteboard.clearContents()
+        pasteboard.setString(text, forType: .string)
+    }
+
     /// Pastes `text` over the selection `copied` came from, then restores
     /// the previous clipboard unless something else wrote to it meanwhile.
     ///

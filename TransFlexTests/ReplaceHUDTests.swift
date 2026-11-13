@@ -36,6 +36,73 @@ final class ReplaceHUDTests: XCTestCase {
         XCTAssertTrue(screen.contains(frame), "\(frame) outside \(screen)")
     }
 
+    // MARK: - Secret check banner
+
+    private static let match = SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2")
+
+    private func secretHUD(_ hold: RecordingEscapeHold, sendAnyway: @escaping () -> Void = {}, dismiss: @escaping () -> Void = {}) -> ReplaceHUD {
+        let hud = ReplaceHUD(escapeHold: hold)
+        hud.showSecretFound(Self.match, providerName: "OpenAI", onSendAnyway: sendAnyway, onDismiss: dismiss)
+        addTeardownBlock { hud.hide() }
+        return hud
+    }
+
+    func testSecretBannerSaysWhatWasFoundAndThatItWasNotSent() {
+        XCTAssertEqual(
+            ReplaceHUD.secretMessage(for: Self.match, providerName: "OpenAI"),
+            "ghp_…9xQ2 · Not sent to OpenAI. Your text was left as it was."
+        )
+        XCTAssertEqual(
+            ReplaceHUD.secretMessage(for: SecretMatch(kind: "Private key", masked: ""), providerName: "OpenAI"),
+            "Not sent to OpenAI. Your text was left as it was."
+        )
+    }
+
+    func testSecretBannerHoldsEscapeAndStaysUntilClosed() {
+        let hold = RecordingEscapeHold()
+        let hud = secretHUD(hold)
+        XCTAssertTrue(hud.isShowing)
+        XCTAssertTrue(hold.isHeld)
+        XCTAssertEqual(hud.model.phase, .secretFound(Self.match, providerName: "OpenAI"))
+    }
+
+    func testEscapeClosesSecretBannerReleasesAndDropsTheSelection() {
+        let hold = RecordingEscapeHold()
+        var dismissed = 0
+        let hud = secretHUD(hold, dismiss: { dismissed += 1 })
+
+        hold.press()
+
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+        XCTAssertEqual(dismissed, 1)
+    }
+
+    func testCloseButtonAndHideBannerDropTheSelectionToo() {
+        var dismissed = 0
+        let first = secretHUD(RecordingEscapeHold(), dismiss: { dismissed += 1 })
+        first.model.onClose()
+        let second = secretHUD(RecordingEscapeHold(), dismiss: { dismissed += 1 })
+        second.hideBanner()
+
+        XCTAssertFalse(first.isShowing)
+        XCTAssertFalse(second.isShowing)
+        XCTAssertEqual(dismissed, 2)
+    }
+
+    func testSendAnywayReleasesEscapeFirstAndDoesNotCountAsDismissed() {
+        let hold = RecordingEscapeHold()
+        var dismissed = 0
+        var heldWhenSent: Bool?
+        let hud = secretHUD(hold, sendAnyway: { heldWhenSent = hold.isHeld }, dismiss: { dismissed += 1 })
+
+        hud.model.onSendAnyway()
+
+        XCTAssertEqual(heldWhenSent, false, "the resumed run takes its own hold")
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertEqual(dismissed, 0)
+    }
+
     // MARK: - Esc while the failure banner shows
 
     private func failedHUD(_ hold: RecordingEscapeHold, openPopup: @escaping () -> Void = {}, retry: @escaping () -> Void = {}) -> ReplaceHUD {

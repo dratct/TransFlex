@@ -37,6 +37,12 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
     private var targetRestorable = true
     private var restoreCalls = 0
 
+    /// False: the app the text came from is unknown, as when nothing is frontmost.
+    private var knowsTarget = true
+    /// What the next ⌘C copies, when it differs from the first selection.
+    private var nextSelection: String?
+    private var secretCheck = SecretCheck(isOn: { true }, isOnThisMac: { _ in false })
+
     private func makeCoordinator(selection: String) -> QuickReplaceCoordinator {
         let provider = provider!
         let service = TranslationService(provider: { _ in provider }, apiKey: { _ in "" })
@@ -48,7 +54,7 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
                 guard let self else { return }
                 if key == CGKeyCode(kVK_ANSI_C) {
                     self.pasteboard.clearContents()
-                    self.pasteboard.setString(selection, forType: .string)
+                    self.pasteboard.setString(self.nextSelection ?? selection, forType: .string)
                 } else if key == CGKeyCode(kVK_ANSI_V) {
                     let text = self.pasteboard.string(forType: .string) ?? ""
                     self.pasted.append(text)
@@ -56,7 +62,10 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
                 }
             },
             focus: SelectionCapture.Focus(
-                capture: { _ in SelectionCapture.TextTarget(pid: 42, element: nil, range: nil, checksSelection: false) },
+                capture: { [weak self] _ in
+                    guard self?.knowsTarget ?? true else { return nil }
+                    return SelectionCapture.TextTarget(pid: 42, element: nil, range: nil, checksSelection: false)
+                },
                 isInPlace: { [weak self] _, _ in self?.targetInPlace ?? false },
                 restore: { [weak self] _ in
                     guard let self else { return }
@@ -70,7 +79,131 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
             restoreDelay: 1_000_000,
             pasteConfirmTimeout: 50_000_000
         )
-        return QuickReplaceCoordinator(translationService: service, selection: capture)
+        return QuickReplaceCoordinator(translationService: service, selection: capture, secretCheck: secretCheck)
+    }
+
+    // MARK: Secret check
+
+    private static let flagged = "deploy with \(SecretScannerTests.githubToken) today"
+
+    private func stoppedCoordinator() async throws -> QuickReplaceCoordinator {
+        provider.scriptedEvents = [.textDelta("triển khai"), .stop(reason: .complete)]
+        let coordinator = makeCoordinator(selection: Self.flagged)
+        do {
+            _ = try await coordinator.run(preset: preset)
+            XCTFail("a selection with a secret is not sent")
+        } catch let found as QuickReplaceCoordinator.SecretFound {
+            XCTAssertEqual(found.match, SecretMatch(kind: "GitHub token", masked: "ghp_…ZZZZ"))
+            XCTAssertFalse("\(found)".contains("mmmm"), "the error never carries the value")
+        }
+        XCTAssertTrue(provider.capturedMessages.isEmpty, "nothing was sent")
+        XCTAssertEqual(pasted, [], "nothing was pasted")
+        return coordinator
+    }
+
+    func testSelectionWithASecretIsNotSentOrPasted() async throws {
+        let coordinator = try await stoppedCoordinator()
+        XCTAssertFalse(coordinator.isRunning)
+    }
+
+    func testSendAnywayTranslatesAndPastesOverTheSameSelection() async throws {
+        let history = try HistoryStore(inMemory: true)
+        let coordinator = try await stoppedCoordinator()
+        coordinator.historyStore = history
+
+        let ran = try await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertTrue(ran)
+        XCTAssertEqual(pasted, ["triển khai"])
+        XCTAssertTrue(provider.capturedMessages.last?.content.contains(SecretScannerTests.githubToken) ?? false)
+        try await Task.sleep(nanoseconds: 50_000_000)
+        XCTAssertEqual(try history.allEntries().count, 0, "sent anyway is not saved to History")
+    }
+
+    func testSendAnywayBringsTheSelectionBackBeforePasting() async throws {
+        let coordinator = try await stoppedCoordinator()
+        targetInPlace = false
+
+        _ = try await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertEqual(restoreCalls, 1)
+        XCTAssertEqual(pasted, ["triển khai"])
+    }
+
+    func testSendAnywaySendsNoPasteWhenTheSelectionCannotBeBroughtBack() async throws {
+        let coordinator = try await stoppedCoordinator()
+        targetInPlace = false
+        targetRestorable = false
+
+        do {
+            _ = try await coordinator.runSendingAnyway(preset: preset)
+            XCTFail("the paste has nowhere to go")
+        } catch {
+            XCTAssertEqual(error as? SelectionCapture.Failure, .targetLost)
+        }
+        XCTAssertEqual(pasted, [])
+        XCTAssertEqual(pasteboard.string(forType: .string), "triển khai")
+    }
+
+    func testSendAnywaySendsNoPasteWhenTheSourceAppIsUnknown() async throws {
+        knowsTarget = false
+        let coordinator = try await stoppedCoordinator()
+
+        do {
+            _ = try await coordinator.runSendingAnyway(preset: preset)
+            XCTFail("an unknown app is never pasted into after a wait")
+        } catch {
+            XCTAssertEqual(error as? SelectionCapture.Failure, .targetLost)
+        }
+        XCTAssertEqual(pasted, [])
+        XCTAssertEqual(pasteboard.string(forType: .string), "triển khai")
+    }
+
+    func testDroppedSelectionCannotBeSentAnyway() async throws {
+        let coordinator = try await stoppedCoordinator()
+
+        coordinator.discardParked()
+        let ran = try await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertFalse(ran)
+        XCTAssertTrue(provider.capturedMessages.isEmpty)
+    }
+
+    func testANewRunDropsTheWaitingSelection() async throws {
+        let coordinator = try await stoppedCoordinator()
+        nextSelection = "Hello"
+        _ = try await coordinator.run(preset: preset)
+        XCTAssertEqual(pasted, ["triển khai"], "the new run pastes its own translation")
+
+        let ran = try await coordinator.runSendingAnyway(preset: preset)
+
+        XCTAssertFalse(ran, "the earlier selection is gone")
+        XCTAssertEqual(pasted.count, 1)
+    }
+
+    func testSecretIsSentWhenTheCheckIsOffOrTheEndpointIsOnThisMac() async throws {
+        provider.scriptedEvents = [.textDelta("triển khai"), .stop(reason: .complete)]
+        for check in [SecretCheck(isOn: { false }, isOnThisMac: { _ in false }),
+                      SecretCheck(isOn: { true }, isOnThisMac: { _ in true })] {
+            secretCheck = check
+            pasted = []
+            let ran = try await makeCoordinator(selection: Self.flagged).run(preset: preset)
+            XCTAssertTrue(ran)
+            XCTAssertEqual(pasted, ["triển khai"])
+        }
+    }
+
+    func testSecretAnnouncementNamesTheKindNotTheValue() async throws {
+        provider.scriptedEvents = []
+        let coordinator = makeCoordinator(selection: Self.flagged)
+        let announcer = RecordingAnnouncer()
+        coordinator.announcer = announcer
+
+        _ = try? await coordinator.run(preset: preset)
+
+        XCTAssertEqual(announcer.messages.count, 1)
+        XCTAssertTrue(announcer.messages[0].hasPrefix("GitHub token found. Not sent to "), announcer.messages[0])
+        XCTAssertFalse(announcer.messages[0].contains("mmmm"))
     }
 
     private var preset: Preset {
