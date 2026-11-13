@@ -108,9 +108,11 @@ public final class ProviderRegistry: @unchecked Sendable {
     /// An OpenAI-compatible endpoint served from this Mac: text sent to it
     /// does not leave the machine.
     public func isOnThisMac(providerID: String) -> Bool {
+        let prefix = "openai-compatible:"
+        guard providerID.hasPrefix(prefix) else { return false }
         lock.lock()
         defer { lock.unlock() }
-        guard let instance = compatInstances[providerID] else { return false }
+        guard let instance = compatInstances[String(providerID.dropFirst(prefix.count))] else { return false }
         return Self.isLocalHTTPURL(instance.baseURL)
     }
 

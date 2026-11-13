@@ -287,6 +287,55 @@ final class PopupViewModelSecretCheckTests: XCTestCase {
         XCTAssertEqual(vm.state, .done(result: "bonjour"))
     }
 
+    func testSentAnywayDraftSurvivesEveryLaterHide() async throws {
+        let vm = try flaggedViewModel()
+        vm.sendAnyway()
+        try await waitUntil({ vm.state == .done(result: "bonjour") })
+
+        vm.popupDidHide()
+        vm.openPopup(keepingDraft: true)
+        vm.popupDidHide()
+
+        XCTAssertEqual(vm.inputText, Self.flagged)
+        XCTAssertEqual(vm.state, .done(result: "bonjour"))
+        vm.translate()
+        if case .secretFound = vm.state {} else { XCTFail("kept as a Draft, but the next send still asks") }
+    }
+
+    /// A selection shortcut sets the Popup's Draft aside; hiding must not
+    /// hand a flagged one back later.
+    func testFlaggedDraftSetAsideBehindASelectionIsDropped() throws {
+        let vm = makeViewModel()
+        vm.inputText = Self.flagged
+        vm.startQuickTranslation(text: "hello", presetID: try XCTUnwrap(vm.selectedPresetID))
+
+        vm.popupDidHide()
+        vm.openPopup(keepingDraft: true)
+
+        XCTAssertEqual(vm.inputText, "")
+    }
+
+    /// Attaching an image sets the typed text aside; removing the image
+    /// after a hide must not bring a flagged one back.
+    func testFlaggedTextSetAsideBehindAnImageIsDropped() throws {
+        var preset = try XCTUnwrap(presetStore.presets.first)
+        preset.supportsVision = true
+        try presetStore.update(preset)
+        let vm = makeViewModel()
+        let image = NSImage(size: NSSize(width: 8, height: 8), flipped: false) { rect in
+            NSColor.red.setFill()
+            rect.fill()
+            return true
+        }
+        vm.inputText = Self.flagged
+        vm.attachImage(image, source: .paste)
+
+        vm.popupDidHide()
+        vm.removeAttachedImage()
+
+        XCTAssertEqual(vm.inputText, "")
+    }
+
     func testHidingOrdinaryTextKeepsIt() {
         let vm = makeViewModel()
         vm.inputText = "hello"

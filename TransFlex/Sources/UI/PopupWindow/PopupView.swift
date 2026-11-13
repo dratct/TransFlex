@@ -377,7 +377,7 @@ struct PopupView: View {
             case .streaming:
                 Text("Translating…")
             case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly,
-                 .keyRejected where !viewModel.isOutputOnly, .secretFound where !viewModel.isOutputOnly:
+                 .keyRejected where !viewModel.isOutputOnly:
                 Text("Your text is kept")
             default:
                 if let cost = viewModel.costEstimate {

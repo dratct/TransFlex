@@ -12,6 +12,7 @@ final class PopupViewModel: ObservableObject {
             guard inputText != oldValue else { return }
             if !inputText.isEmpty { attachError = nil }
             approvedSecretText = nil
+            sentAnywayDraft = nil
         }
     }
     @Published var selectedPresetID: UUID?
@@ -52,11 +53,15 @@ final class PopupViewModel: ObservableObject {
         let presetID: UUID?
         let state: PopupState
         let costEstimate: String?
+        var sentAnywayDraft: String?
     }
 
     /// The text the user chose to Send anyway. It lasts until that text or
     /// the preset changes, or the popup hides.
     private var approvedSecretText: String?
+    /// The text sent with Send anyway, for as long as it is the Draft: it
+    /// is kept like any Draft, though the next send asks again.
+    private var sentAnywayDraft: String?
     private let secretCheck: SecretCheck
 
     private let translationService: TranslationService
@@ -241,19 +246,34 @@ final class PopupViewModel: ObservableObject {
     func sendAnyway() {
         guard case .secretFound = state else { return }
         approvedSecretText = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        sentAnywayDraft = approvedSecretText
         translate()
     }
 
     /// Every way of hiding the popup ends here. A Draft the Secret check
-    /// would stop is not kept; the Output-only popup's text never becomes a
-    /// Draft, and the Popup's own Draft set aside behind it must survive.
+    /// would stop is not kept, wherever it waits: in the editor, behind an
+    /// attached image, or set aside behind a selection shortcut's result.
+    /// The Output-only popup's own text never becomes a Draft.
     func popupDidHide() {
-        defer { approvedSecretText = nil }
-        guard !isOutputOnly, let preset = selectedPreset else { return }
-        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if text != approvedSecretText, secretCheck.match(in: text, providerID: preset.providerID) != nil {
+        approvedSecretText = nil
+        if isStopped(textBeforeImage, presetID: selectedPresetID, sentAnyway: sentAnywayDraft) {
+            textBeforeImage = nil
+        }
+        if let session = popupSession,
+           isStopped(session.text, presetID: session.presetID, sentAnyway: session.sentAnywayDraft) {
+            popupSession = PopupSession(
+                text: "", image: session.image, presetID: session.presetID, state: .idle, costEstimate: nil
+            )
+        }
+        if !isOutputOnly, isStopped(inputText, presetID: selectedPresetID, sentAnyway: sentAnywayDraft) {
             reset()
         }
+    }
+
+    private func isStopped(_ text: String?, presetID: UUID?, sentAnyway: String?) -> Bool {
+        guard let text, let preset = presets.first(where: { $0.id == presetID }) else { return false }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed != sentAnyway && secretCheck.match(in: trimmed, providerID: preset.providerID) != nil
     }
 
     func confirmCostAndTranslate() {
@@ -427,6 +447,7 @@ final class PopupViewModel: ObservableObject {
         // changes, so a zero would stick when the next open has the same frame.
         popupSession = nil
         approvedSecretText = nil
+        sentAnywayDraft = nil
         state = .idle
     }
 
@@ -457,7 +478,8 @@ final class PopupViewModel: ObservableObject {
             }
             session = PopupSession(
                 text: inputText, image: attachedImage, presetID: selectedPresetID,
-                state: kept, costEstimate: kept == .idle ? nil : costEstimate
+                state: kept, costEstimate: kept == .idle ? nil : costEstimate,
+                sentAnywayDraft: sentAnywayDraft
             )
         }
         reset()
@@ -572,6 +594,7 @@ final class PopupViewModel: ObservableObject {
                     attachedImage = session.image
                     state = session.state
                     costEstimate = session.costEstimate
+                    sentAnywayDraft = session.sentAnywayDraft
                 }
             }
         } else if !keepingDraft {

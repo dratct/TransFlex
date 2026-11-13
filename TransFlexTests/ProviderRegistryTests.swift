@@ -86,4 +86,24 @@ final class ProviderRegistryTests: XCTestCase {
         XCTAssertNil(ProviderRegistry.urlRuleViolation(" https://openrouter.ai/api/v1 "))
         XCTAssertNil(ProviderRegistry.urlRuleViolation(""), "nothing typed yet, nothing to explain")
     }
+
+    func testOnlyAnEndpointOnThisMacCountsAsLocal() throws {
+        let registry = ProviderRegistry()
+        try registry.registerCompatInstance(OpenAICompatInstance(
+            instanceId: "ollama", displayName: "Local Ollama", baseURL: URL(string: "http://localhost:11434/v1")!
+        ))
+        try registry.registerCompatInstance(OpenAICompatInstance(
+            instanceId: "loop", displayName: "Loopback", baseURL: URL(string: "http://127.0.0.1:8080/v1")!
+        ))
+        try registry.registerCompatInstance(OpenAICompatInstance(
+            instanceId: "remote", displayName: "Remote", baseURL: URL(string: "https://llm.example.com/v1")!
+        ))
+
+        XCTAssertTrue(registry.isOnThisMac(providerID: "openai-compatible:ollama"))
+        XCTAssertTrue(registry.isOnThisMac(providerID: "openai-compatible:loop"))
+        XCTAssertFalse(registry.isOnThisMac(providerID: "openai-compatible:remote"))
+        XCTAssertFalse(registry.isOnThisMac(providerID: "openai-compatible:missing"))
+        XCTAssertFalse(registry.isOnThisMac(providerID: "openai"))
+        XCTAssertFalse(registry.isOnThisMac(providerID: "ollama"), "a bare instance id is not a provider id")
+    }
 }
