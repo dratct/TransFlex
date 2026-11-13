@@ -262,6 +262,56 @@ final class PopupWindowControllerTests: XCTestCase {
         XCTAssertFalse(controller.isPinned)
     }
 
+    // MARK: Secret check
+
+    private static let flagged = "deploy with \(SecretScannerTests.githubToken) today"
+
+    private func isSecretCard(_ state: PopupState?) -> Bool {
+        if case .secretFound = state { return true }
+        return false
+    }
+
+    func testFlaggedTextIsNotKeptAsDraftWhenThePopupHides() {
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        XCTAssertTrue(isSecretCard(controller.viewModelForTesting?.state))
+
+        controller.hide()
+        controller.show()
+
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "")
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+    }
+
+    func testFlaggedTextBeingEditedIsNotKeptEither() {
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        controller.viewModelForTesting?.dismissError()
+
+        controller.hide()
+        controller.show()
+
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "")
+    }
+
+    func testSendAnywayEndsWhenThePopupHides() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào")]
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        controller.viewModelForTesting?.sendAnyway()
+        try await waitUntil({ self.controller.viewModelForTesting?.state == .done(result: "xin chào") })
+
+        controller.hide()
+        controller.show()
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, Self.flagged, "a text sent anyway is kept like any Draft")
+
+        controller.viewModelForTesting?.translate()
+        XCTAssertTrue(isSecretCard(controller.viewModelForTesting?.state), "the next send asks again")
+    }
+
     /// The card replaces a pinned Popup without hiding it; the Draft's clock
     /// still starts there, or the next open would drop the Draft at once.
     func testDraftSurvivesAPermissionCardShownInThePinnedPopup() {

@@ -99,7 +99,7 @@ struct PopupView: View {
     private var showsColumns: Bool {
         switch viewModel.state {
         case .idle, .streaming, .done, .error(_, .some): return true
-        case .error(_, nil), .missingKey, .keyRejected, .accessibilityRequired: return false
+        case .error(_, nil), .missingKey, .keyRejected, .secretFound, .accessibilityRequired: return false
         }
     }
 
@@ -191,6 +191,9 @@ struct PopupView: View {
         switch viewModel.state {
         case .missingKey(let providerID):
             MissingKeyNotice(providerID: providerID, presetName: viewModel.selectedPreset?.name)
+                .padding(.horizontal, Spacing.l)
+        case .secretFound(let match, let providerID):
+            SecretFoundCard(match: match, providerID: providerID)
                 .padding(.horizontal, Spacing.l)
         case .keyRejected(let providerID):
             KeyRejectedNotice(providerID: providerID) {
@@ -374,7 +377,7 @@ struct PopupView: View {
             case .streaming:
                 Text("Translating…")
             case .error(_, nil) where !viewModel.isOutputOnly, .missingKey where !viewModel.isOutputOnly,
-                 .keyRejected where !viewModel.isOutputOnly:
+                 .keyRejected where !viewModel.isOutputOnly, .secretFound where !viewModel.isOutputOnly:
                 Text("Your text is kept")
             default:
                 if let cost = viewModel.costEstimate {
@@ -401,6 +404,7 @@ struct PopupView: View {
         case .translate, .retry, .openSystemSettings, .done:
             return KeyboardShortcut(.return, modifiers: .command)
         case .new: return KeyboardShortcut("n", modifiers: .command)
+        case .sendAnyway: return KeyboardShortcut(.return, modifiers: [.command, .shift])
         case .stop, .backToText, .copyAndClose, .translateAgain: return nil
         }
     }
@@ -413,6 +417,7 @@ struct PopupView: View {
         case .new: viewModel.startNewTranslation()
         case .copyAndClose: viewModel.copyResultIfShown()
         case .backToText: viewModel.dismissError()
+        case .sendAnyway: viewModel.sendAnyway()
         case .openSystemSettings: viewModel.openAccessibilitySettings()
         case .done: viewModel.onDismissRequest?()
         }

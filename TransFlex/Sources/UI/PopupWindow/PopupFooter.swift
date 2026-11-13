@@ -8,6 +8,8 @@ enum PopupFooter {
         case backToText, openSystemSettings, done
         /// Strip action after a partial result.
         case retry
+        /// Secret check card: send the text as it is.
+        case sendAnyway
 
         var title: String {
             switch self {
@@ -21,6 +23,7 @@ enum PopupFooter {
             case .openSystemSettings: return "Open System Settings"
             case .done: return "Done"
             case .retry: return "Retry"
+            case .sendAnyway: return "Send anyway"
             }
         }
 
@@ -31,6 +34,7 @@ enum PopupFooter {
             case .stop, .backToText: return ["esc"]
             case .new: return ["⌘", "N"]
             case .copyAndClose: return ["⌘", "C"]
+            case .sendAnyway: return ["⌘", "⇧", "↩"]
             }
         }
     }
@@ -61,6 +65,10 @@ enum PopupFooter {
         case .error(_, nil), .missingKey, .keyRejected:
             // Esc closes the Output-only popup, so it offers ⌘I instead.
             return isOutputOnly ? showText : [Item(action: .backToText, prominence: .plain)]
+        case .secretFound:
+            // Neither button takes ⌘↩: a habitual second press sends nothing.
+            return [Item(action: .sendAnyway, prominence: .secondary),
+                    Item(action: .backToText, prominence: .primary)]
         case .accessibilityRequired(granted: false):
             return [Item(action: .openSystemSettings, prominence: .primary)]
         case .accessibilityRequired(granted: true):

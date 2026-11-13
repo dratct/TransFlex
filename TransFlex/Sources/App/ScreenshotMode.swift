@@ -86,6 +86,7 @@ enum ScreenshotMode {
             popup("popup-error", .error(message: "No internet connection.", partial: nil)),
             popup("popup-missing-key", .missingKey(providerID: "openai")),
             popup("popup-key-rejected", .keyRejected(providerID: "openai")),
+            popup("popup-secret-found", .secretFound(SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerID: "openai")),
             popup("popup-accessibility", input: "", .accessibilityRequired(granted: false)),
         ]
         for tab in [SettingsTab.general, .providers, .presets, .about] {

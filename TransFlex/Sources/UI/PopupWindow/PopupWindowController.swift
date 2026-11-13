@@ -80,6 +80,7 @@ public final class PopupWindowController {
         self.replaceCoordinator.escapeHold = escapeHold
         self.panel.onHide = { [weak self, weak vm] in
             guard self?.isReorderingPinned != true else { return }
+            vm?.popupDidHide()
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
             // Every way of hiding ends here, so no close path can leave a pin behind.
