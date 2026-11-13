@@ -159,6 +159,23 @@ final class QuickReplaceCoordinatorTests: XCTestCase {
         XCTAssertEqual(pasteboard.string(forType: .string), "triển khai")
     }
 
+    /// The banner waits with no time limit. Where the field cannot be
+    /// compared (a browser), the selection itself is read again: anything
+    /// else selected now means the user moved on.
+    func testSendAnywaySendsNoPasteWhenSomethingElseIsSelectedNow() async throws {
+        let coordinator = try await stoppedCoordinator()
+        nextSelection = "another paragraph"
+
+        do {
+            _ = try await coordinator.runSendingAnyway(preset: preset)
+            XCTFail("the selection is no longer the one that was copied")
+        } catch {
+            XCTAssertEqual(error as? SelectionCapture.Failure, .targetLost)
+        }
+        XCTAssertEqual(pasted, [])
+        XCTAssertEqual(pasteboard.string(forType: .string), "triển khai")
+    }
+
     func testDroppedSelectionCannotBeSentAnyway() async throws {
         let coordinator = try await stoppedCoordinator()
 

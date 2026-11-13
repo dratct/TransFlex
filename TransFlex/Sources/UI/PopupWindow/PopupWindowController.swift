@@ -254,7 +254,8 @@ public final class PopupWindowController {
     private func finishReplace(presetID: UUID, _ run: @escaping @MainActor () async throws -> Bool) {
         Task { @MainActor in
             do {
-                _ = try await run()
+                // False: another run is in flight and owns the capsule.
+                guard try await run() else { return }
                 replaceHUD.showReplaced()
             } catch is CancellationError {
                 replaceHUD.hide()
@@ -272,7 +273,8 @@ public final class PopupWindowController {
     /// was hidden before the run, and a pinned one keeps its content.
     private func showReplaceSecretFound(_ match: SecretMatch, presetID: UUID) {
         guard let preset = presetStore.presets.first(where: { $0.id == presetID }) else {
-            return replaceCoordinator.discardParked()
+            replaceCoordinator.discardParked()
+            return replaceHUD.hide()
         }
         replaceHUD.showSecretFound(
             match,

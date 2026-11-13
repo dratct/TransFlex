@@ -40,9 +40,12 @@ dissenter) argued the flows, and the owner settled the open points.
   selection shortcut copied the text to read it, and although the app puts
   the previous clipboard back, a clipboard manager may have recorded it.
 - The Replace Selection banner for a hit has Send anyway and a close button
-  only; the selection it waits on is dropped when the banner closes. If the
-  app the text came from is not known, Send anyway sends no ⌘V and leaves
-  the translation on the clipboard.
+  only; the selection it waits on is dropped when the banner closes. The
+  banner waits with no time limit, so Send anyway pastes only when the same
+  text is still selected: where the field cannot be compared (a browser), the
+  selection is copied again and must match. Otherwise, or when the app the
+  text came from is not known, it sends no ⌘V and leaves the translation on
+  the clipboard.
 - The full value is never shown, logged, announced or stored.
 
 ## Consequences

@@ -132,9 +132,7 @@ final class QuickReplaceCoordinator {
         guard !translated.isEmpty else { throw EmptyResult() }
         let replacement = Self.keepingEdgeWhitespace(of: original, around: translated)
 
-        // Send anyway can come long after the copy. With no record of the
-        // app the text came from, ⌘V would go to whatever is in front now.
-        if !recordsHistory, copied.target == nil {
+        if !recordsHistory, await !isStillSelected(copied) {
             selection.leaveOnClipboard(replacement)
             throw SelectionCapture.Failure.targetLost
         }
@@ -146,6 +144,17 @@ final class QuickReplaceCoordinator {
             inputTokens: inputTokens, outputTokens: outputTokens,
             hadImage: false, startTime: startedAt
         )
+    }
+
+    /// Send anyway can come long after the copy: the banner waits with no
+    /// time limit. `paste` can compare the field only where the app exposes
+    /// it; elsewhere (a browser) it would paste at whatever caret the same
+    /// app has now. There the selection is copied again, and anything other
+    /// than the text that was stopped means the user moved on.
+    private func isStillSelected(_ copied: SelectionCapture.CopiedSelection) async -> Bool {
+        guard let target = copied.target else { return false }
+        if target.element != nil, target.checksSelection { return true }
+        return (try? await selection.copySelection()) == copied.text
     }
 
     /// Selections often include a trailing newline (triple-click a line);

@@ -111,7 +111,8 @@ _Avoid_: ignore, bypass, allow.
   first four and last four characters, never the whole value. In the Popup
   and the Output-only popup it is a card; ⌘↩ and Return do not send from it.
   Replace Selection shows it in its banner, with Send anyway and without
-  Retry; Send anyway there translates and pastes as usual.
+  Retry; Send anyway there translates and pastes as usual, but only while
+  the text it stopped is still the selection.
 - Send anyway covers that exact text until it changes, the preset changes or
   the popup hides. A translation sent with it is not saved to History.
 - A Draft the Secret check would stop, and that was not sent with Send
