@@ -24,6 +24,14 @@ target text field.
   always off after a build. Expect the permission card on the first shortcut.
   With `Config/Local.xcconfig` (team signing) the grants survive rebuilds;
   `make build-fresh` still resets them.
+- A git worktree has no `Config/Local.xcconfig`, so `make build` and
+  `make build-fast` there reset the Dev app's privacy grants for the whole
+  Mac. Tell the owner before running either in a worktree; to compile
+  without launching or resetting, use `scripts/build.sh --no-gen`.
+- This checks TransFlexDev, built by this Mac's Xcode. The released
+  TransFlex is built by CI and can differ: when the change calls a newer
+  macOS API or touches build settings, also follow
+  `.claude/skills/build-parity/SKILL.md`.
 
 ## 2. Find the bound shortcuts
 
@@ -62,6 +70,26 @@ cua-driver call get_desktop_state "{\"session\":\"tf\",\"screenshot_out_file\":\
 cua-driver call end_session '{"session":"tf"}'
 ```
 
+- Before the first capture, and before each batch of keys, ask whether the
+  screen is locked; the Mac relocks fast:
+
+  ```bash
+  swift -e 'import CoreGraphics; import Foundation; print((CGSessionCopyCurrentDictionary() as? [String: Any])?["CGSSessionScreenIsLocked"] ?? 0)'
+  ```
+
+  `1` means locked: a capture then shows only the wallpaper, with no menu
+  bar, and `screencapture` fails with "could not create image from rect".
+  That is not a missing window. Ask the owner to unlock, and check again
+  before saying the screen cannot be seen.
+- A session label that was ended rejects every later call ("session has
+  ended"): start it again with `start_session`, or use a new label.
+- To judge a small detail (a menu item's image, a focus ring), capture at
+  full size with `"max_image_dimension":0`, then crop the region with
+  `sips -c <height> <width> --cropOffset <y> <x> in.png --out crop.png`
+  and read the crop. A capture scaled to 1400px hides a 16pt glyph.
+- A status menu's item images depend on the SDK the app was built with:
+  macOS 27 hides them unless the item asks to keep them. Seeing them in
+  TransFlexDev does not show them in a CI-built TransFlex.
 - The popup is a non-activating panel: selection shortcuts copy from
   whatever app is frontmost, so bring that app forward and select real text
   there before firing the shortcut.

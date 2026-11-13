@@ -29,4 +29,28 @@ final class UpdateMenuTests: XCTestCase {
             )
         }
     }
+
+    func testEveryStatusMenuItemAsksToKeepItsImageVisible() throws {
+        let menu = try XCTUnwrap(StatusBarController(updater: AppUpdater(driver: FakeDriver())).menu)
+        let items = menu.items.filter { !$0.isSeparatorItem }
+        XCTAssertEqual(items.count, StatusMenuSymbol.allCases.count)
+        guard items[0].responds(to: NSSelectorFromString("setPreferredImageVisibility:")) else {
+            throw XCTSkip("Before macOS 27 a menu item always shows its image")
+        }
+        for item in items {
+            XCTAssertNotNil(item.image, item.title)
+            XCTAssertEqual(
+                item.value(forKey: "preferredImageVisibility") as? Int, 1,
+                "\(item.title) leaves its image to macOS 27, which hides it"
+            )
+        }
+    }
+
+    // Needs the macOS 27 SDK, which is where the enum is declared.
+    #if compiler(>=6.4)
+    func testVisibleIsTheValueTheAppSetsByKey() throws {
+        guard #available(macOS 27.0, *) else { throw XCTSkip("NSMenuItem.ImageVisibility is macOS 27") }
+        XCTAssertEqual(NSMenuItem.ImageVisibility.visible.rawValue, MenuItemImages.visible)
+    }
+    #endif
 }

@@ -35,6 +35,14 @@ Unit tests and screenshots do not prove a popup, Settings, History or
 shortcut flow. Drive the running app with `cua-driver`, following
 `.claude/skills/ui-e2e/SKILL.md`, and leave the app as you found it.
 
+## Dev build and Release build
+
+TransFlexDev is built by this Mac's Xcode; the released TransFlex by the
+workflow's runner. A change that calls an API newer than macOS 13, adds
+`#if` or `#available`, or touches build settings, entitlements or a runner
+is checked in both, following `.claude/skills/build-parity/SKILL.md`. Never
+gate app code on `#if compiler(...)`: an older Xcode drops it silently.
+
 ## Docs to keep in step
 
 - A changed screen or state: `docs/design/DESIGN.md` and `docs/design/mockups.html`.

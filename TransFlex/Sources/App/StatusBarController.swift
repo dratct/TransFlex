@@ -29,6 +29,9 @@ final class StatusBarController: NSObject {
             .sink { [weak self] found in self?.showUpdateFound(found) }
     }
 
+    /// The status item's menu, for tests.
+    var menu: NSMenu? { statusItem.menu }
+
     private func configureButton() {
         guard let button = statusItem.button else { return }
         let appName = AppIdentity.current.displayName
@@ -72,13 +75,7 @@ final class StatusBarController: NSObject {
         let item = NSMenuItem(title: title, action: action, keyEquivalent: key)
         item.target = self
         item.image = NSImage(systemSymbolName: symbol.rawValue, accessibilityDescription: nil)
-        // macOS 27 hides menu item images unless the item asks for them.
-        // Swift 6.4 ships with the macOS 27 SDK that declares this property.
-        #if compiler(>=6.4)
-        if #available(macOS 27.0, *) {
-            item.preferredImageVisibility = .visible
-        }
-        #endif
+        MenuItemImages.keepVisible(item)
         return item
     }
 
@@ -121,6 +118,20 @@ enum StatusMenuSymbol: String, CaseIterable {
     case update = "arrow.down.circle"
     case settings = "gearshape"
     case quit = "power"
+}
+
+/// macOS 27 hides a menu item's image unless the item asks to keep it.
+/// The request goes by key, not through `NSMenuItem.preferredImageVisibility`,
+/// so a build against an SDK older than 27 makes it too.
+enum MenuItemImages {
+    /// The raw value of `NSMenuItem.ImageVisibility.visible`.
+    static let visible = 1
+
+    @MainActor
+    static func keepVisible(_ item: NSMenuItem) {
+        guard item.responds(to: NSSelectorFromString("setPreferredImageVisibility:")) else { return }
+        item.setValue(visible, forKey: "preferredImageVisibility")
+    }
 }
 
 enum UpdateMenu {

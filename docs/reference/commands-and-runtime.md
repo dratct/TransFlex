@@ -9,7 +9,8 @@
 | `scripts/build.sh --no-gen` | Build using an already generated project. |
 | `scripts/build.sh --release` | Build Release app. |
 | `MARKETING_VERSION=0.2.0 CURRENT_PROJECT_VERSION=123 scripts/build.sh --release` | Build Release app with CI-style bundle versions. |
-| `scripts/verify-release-app.sh --app DerivedData/Build/Products/Release/TransFlex.app` | Verify release app minimum macOS, bundle versions, and architectures. |
+| `scripts/verify-release-app.sh --app DerivedData/Build/Products/Release/TransFlex.app` | Verify release app minimum macOS, build SDK (27.0 or newer), bundle versions, and architectures. |
+| `scripts/check-build-parity.sh --release <CI-built TransFlex.app>` | Compare the local Dev app with a CI-built Release app: Xcode, SDK, entitlements, probe strings, and code gated by build. |
 | `VERSION=0.2.0 SIGNING_LABEL=unsigned scripts/package-release.sh DerivedData/Build/Products/Release/TransFlex.app` | Create release zip and checksum under `dist/`. |
 | `make test` | Run unit tests (signed as `Config/Local.xcconfig` sets when it exists, otherwise ad-hoc). |
 | `make dev-keychain` | Once per Mac without a team: the Debug build's own keychain and its password file. |
@@ -105,10 +106,15 @@ Release build output is verified to contain both `arm64` and `x86_64` executable
 
 CI uses standard public GitHub-hosted macOS runners:
 
-- `macos-26` for pull request, `main`, and release builds.
+- `xcode-27` (macOS 27, Xcode 27, arm64) for pull request, `main`, release
+  and screenshot builds. Every Release app is built with the macOS 27 SDK,
+  the one the Dev app is built and checked with, and
+  `scripts/verify-release-app.sh` rejects an older one. Release 0.8.2 was
+  built with the 26.5 SDK and showed no status menu images on macOS 27.
+  GitHub labels this image a public preview, outside its Actions SLA.
 - `macos-26-intel` for the manually triggered Intel test probe.
 
-- `macos-15` and `macos-26` for the Screenshots workflow (below).
+- `macos-15` and `macos-26` to run the Screenshots workflow (below).
 
 The workflows avoid larger paid runner labels. Workflow artifacts use `retention-days: 7`; public release downloads are attached to GitHub Releases.
 
@@ -118,7 +124,7 @@ The workflows avoid larger paid runner labels. Workflow artifacts use `retention
 popup state, each Settings tab, History, the model picker and the Replace
 Selection capsule and banner from sample data, in light and dark, writes one
 PNG each to `<dir>` and quits. It calls no provider and registers no hotkey.
-The Screenshots workflow builds the Release app once on `macos-26`, runs this
+The Screenshots workflow builds the Release app once on `xcode-27`, runs this
 on `macos-15` and `macos-26`, and uploads the PNGs as `screenshots-<os>`.
 
 Known limits of the UI checks:

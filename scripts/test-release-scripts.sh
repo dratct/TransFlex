@@ -202,6 +202,7 @@ make_fixture_app() {
     -c "Add :CFBundleIdentifier string io.aiaz.transflex" \
     -c "Add :CFBundleExecutable string TransFlex" \
     -c "Add :LSMinimumSystemVersion string 13.0" \
+    -c "Add :DTSDKName string macosx27.0" \
     -c "Add :CFBundleShortVersionString string 0.2.0" \
     -c "Add :CFBundleVersion string 7" \
     -c "Add :TransFlexKeychainBackend string $backend" \
@@ -239,6 +240,16 @@ test_verify_rejects_unsigned_app_on_data_protection_keychain() {
   run_verify "$app"
   [[ "$verify_status" -ne 0 ]] || fail "unsigned app on the data protection keychain should be rejected"
   assert_file_contains "$verify_err" "must use TransFlexKeychainBackend 'file'"
+}
+
+test_verify_rejects_app_built_with_an_sdk_older_than_27() {
+  local app="$TEST_TMP/verify-old-sdk/TransFlex.app"
+  make_fixture_app "$app" file
+  /usr/libexec/PlistBuddy -c "Set :DTSDKName macosx26.5" "$app/Contents/Info.plist" >/dev/null
+  codesign -f -s - "$app" 2>/dev/null
+  run_verify "$app"
+  [[ "$verify_status" -ne 0 ]] || fail "a release built with the macOS 26.5 SDK should be rejected"
+  assert_file_contains "$verify_err" "built with the macOS 26.5 SDK; a release needs 27.0 or newer"
 }
 
 test_verify_rejects_app_with_a_dev_keychain_path() {
@@ -515,6 +526,7 @@ test_package_checksum_uses_downloadable_asset_name
 test_verify_accepts_unsigned_app_on_file_keychain
 test_verify_rejects_unsigned_app_on_data_protection_keychain
 test_verify_rejects_unsigned_app_with_access_group
+test_verify_rejects_app_built_with_an_sdk_older_than_27
 test_verify_rejects_app_with_a_dev_keychain_path
 test_verify_rejects_app_with_a_dev_keychain_password_file
 test_verify_rejects_signed_app_without_profile
