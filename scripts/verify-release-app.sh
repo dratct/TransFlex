@@ -209,7 +209,10 @@ if [[ -n "$SIGNED_TEAM" ]]; then
   if ! grep -Fq "<string>$SIGNED_TEAM.$bundle_id</string>" <<<"$entitlements"; then
     fail "signed release lacks keychain access group '$SIGNED_TEAM.$bundle_id'."
   fi
-  if ! codesign -dv "$APP_PATH" 2>&1 | grep -q 'flags=.*runtime'; then
+  # Read once, then match: piped into `grep -q` under pipefail, codesign is
+  # killed by SIGPIPE when grep stops reading, and the pipeline counts as failed.
+  app_info="$(codesign -dv "$APP_PATH" 2>&1 || true)"
+  if ! grep -q 'flags=.*runtime' <<<"$app_info"; then
     fail "signed release must enable the hardened runtime."
   fi
 else

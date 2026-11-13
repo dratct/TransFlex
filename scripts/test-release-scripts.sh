@@ -298,6 +298,44 @@ test_verify_rejects_signed_app_without_profile() {
   assert_file_contains "$verify_err" "no embedded.provisionprofile"
 }
 
+# A fixture shaped like the signed release: data protection keychain, the
+# team's keychain access group, an embedded profile. `runtime` signs it with
+# the hardened runtime; anything else leaves it off.
+make_signed_fixture_app() {
+  local case_dir="$1" runtime="$2"
+  local app="$case_dir/TransFlex.app"
+  mkdir -p "$case_dir"
+  cat > "$case_dir/app.entitlements" <<'PLIST'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>keychain-access-groups</key><array><string>TEAM123.io.aiaz.transflex</string></array>
+</dict></plist>
+PLIST
+  make_fixture_app "$app" dataProtection "$case_dir/app.entitlements"
+  : > "$app/Contents/embedded.provisionprofile"
+  if [[ "$runtime" == runtime ]]; then
+    codesign -f -s - --options runtime --entitlements "$case_dir/app.entitlements" "$app" 2>/dev/null
+  else
+    codesign -f -s - --entitlements "$case_dir/app.entitlements" "$app" 2>/dev/null
+  fi
+}
+
+test_verify_accepts_signed_app_with_hardened_runtime() {
+  local case_dir="$TEST_TMP/verify-signed-runtime"
+  make_signed_fixture_app "$case_dir" runtime
+  run_verify "$case_dir/TransFlex.app" --signed-team TEAM123
+  [[ "$verify_status" -eq 0 ]] || fail "signed app with the hardened runtime should pass: $(cat "$verify_err")"
+}
+
+test_verify_rejects_signed_app_without_hardened_runtime() {
+  local case_dir="$TEST_TMP/verify-signed-no-runtime"
+  make_signed_fixture_app "$case_dir" none
+  run_verify "$case_dir/TransFlex.app" --signed-team TEAM123
+  [[ "$verify_status" -ne 0 ]] || fail "signed app without the hardened runtime should be rejected"
+  assert_file_contains "$verify_err" "must enable the hardened runtime"
+}
+
 write_get_task_allow_entitlements() {
   cat > "$1" <<'PLIST'
 <?xml version="1.0" encoding="UTF-8"?>
@@ -530,6 +568,8 @@ test_verify_rejects_app_built_with_an_sdk_older_than_27
 test_verify_rejects_app_with_a_dev_keychain_path
 test_verify_rejects_app_with_a_dev_keychain_password_file
 test_verify_rejects_signed_app_without_profile
+test_verify_accepts_signed_app_with_hardened_runtime
+test_verify_rejects_signed_app_without_hardened_runtime
 test_verify_rejects_signed_app_with_get_task_allow
 test_verify_accepts_unsigned_app_with_get_task_allow
 
