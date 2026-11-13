@@ -34,6 +34,16 @@ Popup opens empty or with its last Draft and result, by how long it has been
 hidden (don't keep, 1–5 minutes, always).
 _Avoid_: Clear previous translation, reset policy.
 
+**Secret check** — the General setting **Check for secrets before sending**
+(on by default) and what it does: before source text goes to a provider, the
+app looks for known key formats in it and, on a hit, sends nothing until the
+user chooses.
+_Avoid_: secret scan, DLP, redaction.
+
+**Send anyway** — the user's choice, on a Secret check hit, to send that text
+as it is.
+_Avoid_: ignore, bypass, allow.
+
 ## Rules
 
 - When the Popup is opened after a Translate Selection, its Draft comes back
@@ -95,5 +105,17 @@ _Avoid_: Clear previous translation, reset policy.
   dropped or chosen from a file waits for ⌘↩.
 - After a partial result the popup offers Retry, which translates the whole
   source again; it never sends the partial result as new source.
+- The Secret check covers text only, never an image; it is skipped for an
+  endpoint on this Mac (`localhost`, `127.0.0.1`, `::1`).
+- A Secret check hit shows the kind of secret and its value masked to the
+  first four and last four characters, never the whole value. In the Popup
+  and the Output-only popup it is a card; ⌘↩ and Return do not send from it.
+  Replace Selection shows it in its banner, with Send anyway and without
+  Retry; Send anyway there translates and pastes as usual.
+- Send anyway covers that exact text until it changes, the preset changes or
+  the popup hides. A translation sent with it is not saved to History.
+- A Draft the Secret check would stop, and that was not sent with Send
+  anyway, is not kept when the popup hides, whatever Keep last translation
+  says: the card may be showing, or the user may be back in the text.
 - Settings and History are ordinary windows: they stay open when the user
   switches to another app, until the user closes them.
