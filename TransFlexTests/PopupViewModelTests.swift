@@ -988,6 +988,12 @@ final class PopupEscapeTests: XCTestCase {
         XCTAssertEqual(PopupEscape.action(for: .missingKey(providerID: "openai"), isOutputOnly: false), .backToText)
     }
 
+    func testSecretCardGoesBackToTheTextAndClosesTheOutputOnlyPopup() {
+        let state = PopupState.secretFound(SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerID: "openai")
+        XCTAssertEqual(PopupEscape.action(for: state, isOutputOnly: false), .backToText)
+        XCTAssertEqual(PopupEscape.action(for: state, isOutputOnly: true), .close)
+    }
+
     func testEverythingElseCloses() {
         XCTAssertEqual(PopupEscape.action(for: .idle, isOutputOnly: false), .close)
         XCTAssertEqual(PopupEscape.action(for: .done(result: "x"), isOutputOnly: false), .close)

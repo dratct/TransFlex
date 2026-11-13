@@ -40,8 +40,10 @@ public final class PopupWindowController {
         selection: SelectionCapture? = nil,
         translationService: TranslationService? = nil,
         pasteboard: PasteboardHelper = PasteboardHelper(),
-        defaults: UserDefaults = .standard
+        defaults: UserDefaults = .standard,
+        secretCheck: SecretCheck? = nil
     ) {
+        let secretCheck = secretCheck ?? .live(defaults: defaults)
         let escapeHold = escapeHold ?? GlobalEscapeHold()
         self.presetStore = presetStore
         self.defaults = defaults
@@ -72,14 +74,18 @@ public final class PopupWindowController {
             hasAPIKey: { preset in
                 guard PopupViewModel.keyedProviderIDs.contains(preset.providerID) else { return true }
                 return keychain.exists("provider.\(preset.providerID).apiKey")
-            }
+            },
+            secretCheck: secretCheck
         )
         vm.historyStore = historyStore
-        self.replaceCoordinator = QuickReplaceCoordinator(translationService: service, selection: selection)
+        self.replaceCoordinator = QuickReplaceCoordinator(
+            translationService: service, selection: selection, secretCheck: secretCheck
+        )
         self.replaceCoordinator.historyStore = historyStore
         self.replaceCoordinator.escapeHold = escapeHold
         self.panel.onHide = { [weak self, weak vm] in
             guard self?.isReorderingPinned != true else { return }
+            vm?.popupDidHide()
             self?.hideClock.recordHide(outputOnly: vm?.isOutputOnly ?? false)
             self?.autoDismisser?.stop()
             // Every way of hiding ends here, so no close path can leave a pin behind.
@@ -240,17 +246,50 @@ public final class PopupWindowController {
         replaceHUD.showTranslating(presetName: preset.name) { [weak self] in
             self?.replaceCoordinator.cancel()
         }
+        finishReplace(presetID: presetID) { [replaceCoordinator] in
+            try await replaceCoordinator.run(preset: preset)
+        }
+    }
+
+    private func finishReplace(presetID: UUID, _ run: @escaping @MainActor () async throws -> Bool) {
         Task { @MainActor in
             do {
-                try await replaceCoordinator.run(preset: preset)
+                // False: this run did not start, so the HUD is not its to change.
+                guard try await run() else { return }
                 replaceHUD.showReplaced()
             } catch is CancellationError {
                 replaceHUD.hide()
+            } catch let found as QuickReplaceCoordinator.SecretFound {
+                // Not logged: nothing failed, and the log has no use for it.
+                showReplaceSecretFound(found.match, presetID: presetID)
             } catch {
                 Self.logger.error("Quick replace failed: \(error.localizedDescription.redactingSecrets(), privacy: .private)")
                 reportReplaceFailure(error, presetID: presetID)
             }
         }
+    }
+
+    /// The Secret check always reports through the banner: an unpinned popup
+    /// was hidden before the run, and a pinned one keeps its content.
+    private func showReplaceSecretFound(_ match: SecretMatch, presetID: UUID) {
+        guard let preset = presetStore.presets.first(where: { $0.id == presetID }) else {
+            replaceCoordinator.discardParked()
+            return replaceHUD.hide()
+        }
+        replaceHUD.showSecretFound(
+            match,
+            providerName: ProviderRegistry.shared.displayName(for: preset.providerID),
+            onSendAnyway: { [weak self] in
+                guard let self else { return }
+                replaceHUD.showTranslating(presetName: preset.name) { [weak self] in
+                    self?.replaceCoordinator.cancel()
+                }
+                finishReplace(presetID: presetID) { [replaceCoordinator] in
+                    try await replaceCoordinator.runSendingAnyway(preset: preset)
+                }
+            },
+            onDismiss: { [weak self] in self?.replaceCoordinator.discardParked() }
+        )
     }
 
     /// The banner reports to someone still in the other app; with the popup

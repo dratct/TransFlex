@@ -393,6 +393,16 @@ figcaption b { color: var(--label); font-weight: 600; }
     </figure>
 
     <figure>
+      <div class="popup" style="width:640px;height:400px">
+        <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
+        <div class="notice"><div class="card"><div class="badge warn"><svg class="i xl"><use href="#warn"/></svg></div>
+          <h3>GitHub token found</h3><p>ghp_…9xQ2 · Not sent to OpenAI. Turn this check off in Settings › General.</p></div></div>
+        <div class="p-foot"><span class="sp"></span><span class="btn">Send anyway<span class="kc"><i>⌘</i><i>⇧</i><i>↩</i></span></span><span class="btn primary">Back to text<span class="kc"><i>esc</i></span></span></div>
+      </div>
+      <figcaption><b>Secret check.</b> A known key format in the text stops the request before it is sent. The card shows the kind and the value’s first and last four characters, never the whole value. ⌘↩ does nothing here; in the Output-only popup the filled button is Show text ⌘I.</figcaption>
+    </figure>
+
+    <figure>
       <div class="popup" style="width:860px;height:430px">
         <div class="p-head"><span class="preset"><span class="tile"><svg class="i s"><use href="#translate"/></svg></span>Natural EN ↔ VI<span class="meta">gpt-6-luna</span><svg class="i s" style="color:var(--label-3)"><use href="#chev"/></svg></span><span class="sp"></span><span class="tool" aria-label="History" title="History · ⌘Y"><svg class="i"><use href="#clock"/></svg></span><span class="tool"><svg class="i"><use href="#gear"/></svg></span><span class="tool" aria-label="Pin" title="Pin · ⌘P"><svg class="i"><use href="#pin-o"/></svg></span></div>
         <div class="sheet">
@@ -474,6 +484,7 @@ figcaption b { color: var(--label); font-weight: 600; }
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so <span class="sel">please hold the release until Friday</span> and keep the team posted.</div><span class="hud" style="left:150px;top:96px"><span class="spin"></span>Translating with Natural EN ↔ VI<span class="x">esc to cancel</span></span></div><figcaption><b>Translating.</b> Appears beside the pointer within 100 ms of the shortcut. Clicking it also cancels.</figcaption></figure>
     <figure><div class="doc"><div class="bar">Notes</div><div class="body">The QA sign-off is still pending on two items, so vui lòng hoãn phát hành đến thứ Sáu and keep the team posted.</div><span class="hud" style="left:270px;top:96px"><svg class="i s" style="color:var(--ok)"><use href="#check"/></svg>Replaced · ⌘Z to undo</span></div><figcaption><b>Replaced.</b> Fades after 1.5 s. The other app’s text cannot be highlighted, so the capsule is the only confirmation.</figcaption></figure>
     <figure><div class="banner-win"><div class="badge err"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>Couldn’t replace the selection</h4><p>OpenAI rejected the request: ‘temperature’ is not supported by this model. Nothing was changed.</p><div class="row"><span class="btn">Open Popup</span><span class="btn primary">Retry</span></div></div></div><figcaption><b>Failed.</b> The banner says that nothing was changed and stays until closed; Esc closes it from any app. An empty translation reads “The provider returned nothing. Your text was left as it was.”</figcaption></figure>
+    <figure><div class="banner-win"><div class="badge warn"><svg class="i l"><use href="#warn"/></svg></div><div class="body"><h4>GitHub token found</h4><p>ghp_…9xQ2 · Not sent to OpenAI. Your text was left as it was.</p><div class="row"><span class="btn">Send anyway</span></div></div></div><figcaption><b>Secret check.</b> One action and no key for it: the banner never has the keyboard, so a stray Return cannot send. Send anyway translates and pastes over the selection that was copied, but only while that text is still selected there; otherwise the translation is left on the clipboard. Esc or ✕ closes the banner and drops the selection.</figcaption></figure>
   </div>
 </section>
 
@@ -512,6 +523,7 @@ figcaption b { color: var(--label); font-weight: 600; }
           <div class="grp"><h5>Popup</h5><div class="box">
             <div class="r"><div class="l">Keep last translation<small>When you reopen the popup within this time, your text and result are still there.</small></div><span class="popbtn">2 minutes<span class="chev"><svg class="i s" style="width:10px;height:10px;stroke-width:2"><use href="#chev"/></svg></span></span></div>
             <div class="r"><div class="l">Open shortcut</div><span class="keycap"><i>⌥</i><i>V</i></span></div></div></div>
+          <div class="grp"><h5>Privacy</h5><div class="box"><div class="r"><div class="l">Check for secrets before sending<small>Stops before sending when your text holds an API key or token in a known format. Text only: images are not checked.</small></div><span class="switch"></span></div></div></div>
           <div class="grp"><h5>Startup</h5><div class="box"><div class="r"><div class="l">Open at login</div><span class="switch"></span></div></div></div>
         </div>
       </div>

@@ -11,6 +11,8 @@ final class ReplaceHUD {
         case replaced
         case failed(message: String)
         case selectionFailed(SelectionBanner)
+        /// The Secret check stopped a Replace Selection; nothing was sent.
+        case secretFound(SecretMatch, providerName: String)
     }
 
     @MainActor
@@ -20,6 +22,7 @@ final class ReplaceHUD {
         var onCancel: () -> Void = {}
         var onOpenPopup: () -> Void = {}
         var onRetry: () -> Void = {}
+        var onSendAnyway: () -> Void = {}
         var onClose: () -> Void = {}
         var onHover: (Bool) -> Void = { _ in }
     }
@@ -34,6 +37,9 @@ final class ReplaceHUD {
     /// during a run never releases the run's own hold.
     private var holdsEscape = false
     private var cancelFade: (() -> Void)?
+    /// Runs once when the Secret check banner goes away by any way other
+    /// than Send anyway, so the selection it waits on is dropped.
+    private var onSecretDismiss: (() -> Void)?
     private lazy var panel: NSPanel = makePanel()
 
     /// Runs `work` after a delay; the returned closure cancels it.
@@ -86,6 +92,29 @@ final class ReplaceHUD {
         holdsEscape = true
     }
 
+    /// The Secret check stopped a Replace Selection. Like the failure banner
+    /// it holds Esc and never fades; Send anyway is its only action.
+    func showSecretFound(
+        _ match: SecretMatch, providerName: String,
+        onSendAnyway: @escaping () -> Void, onDismiss: @escaping () -> Void
+    ) {
+        model.onSendAnyway = { [weak self] in
+            // Esc goes back first: the resumed run takes its own hold.
+            self?.onSecretDismiss = nil
+            self?.hide()
+            onSendAnyway()
+        }
+        present(.secretFound(match, providerName: providerName), placement: .whereItWas)
+        onSecretDismiss = onDismiss
+        escapeHold.hold { [weak self] in self?.hide() }
+        holdsEscape = true
+    }
+
+    static func secretMessage(for match: SecretMatch, providerName: String) -> String {
+        let rest = "Not sent to \(providerName). Your text was left as it was."
+        return match.masked.isEmpty ? rest : "\(match.masked) · \(rest)"
+    }
+
     /// The capsule of a Replace run in progress is showing.
     var isRunning: Bool {
         guard isShowing, case .translating = model.phase else { return false }
@@ -96,7 +125,7 @@ final class ReplaceHUD {
     func hideBanner() {
         guard isShowing else { return }
         switch model.phase {
-        case .failed, .selectionFailed: hide()
+        case .failed, .selectionFailed, .secretFound: hide()
         case .translating, .replaced: break
         }
     }
@@ -104,6 +133,7 @@ final class ReplaceHUD {
     func hide() {
         stopFade()
         releaseEscape()
+        dismissSecret()
         isShowing = false
         panel.orderOut(nil)
     }
@@ -121,6 +151,12 @@ final class ReplaceHUD {
     }
 
     // MARK: - Private
+
+    private func dismissSecret() {
+        let dismiss = onSecretDismiss
+        onSecretDismiss = nil
+        dismiss?()
+    }
 
     private func releaseEscape() {
         guard holdsEscape else { return }
@@ -143,6 +179,7 @@ final class ReplaceHUD {
         stopFade()
         // A new run starts with `showTranslating`; the old banner's hold goes first.
         releaseEscape()
+        dismissSecret()
         isShowing = true
         model.phase = phase
         let host = panel.contentView!
@@ -235,7 +272,41 @@ struct ReplaceHUDView: View {
             banner(message: message)
         case .selectionFailed(let banner):
             selectionBanner(banner)
+        case .secretFound(let match, let providerName):
+            secretBanner(match, providerName: providerName)
         }
+    }
+
+    /// One action and no key for it: the banner never has the keyboard, so
+    /// a stray Return cannot send the secret.
+    private func secretBanner(_ match: SecretMatch, providerName: String) -> some View {
+        let message = ReplaceHUD.secretMessage(for: match, providerName: providerName)
+        return HStack(alignment: .top, spacing: Spacing.m) {
+            SymbolTile(symbol: "exclamationmark.shield.fill", color: .orange, size: 32)
+            VStack(alignment: .leading, spacing: Spacing.xs) {
+                Text("\(match.kind) found")
+                    .font(.headline)
+                Text(message)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: Spacing.s) {
+                    Spacer()
+                    Button("Send anyway", action: model.onSendAnyway)
+                }
+                .padding(.top, Spacing.xs)
+            }
+            closeButton
+        }
+        .padding(Spacing.l)
+        .frame(width: 360)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: Radius.window, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Radius.window, style: .continuous)
+                .stroke(Color(nsColor: .separatorColor).opacity(0.5), lineWidth: 0.5)
+        )
+        .padding(2)
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(match.kind) found. \(message)")
     }
 
     private func capsule<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {

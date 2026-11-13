@@ -5,6 +5,7 @@ import SwiftUI
 struct GeneralTab: View {
     @State private var policy: PopupResetPolicy = PopupResetPolicyStore.load()
     @State private var copyAutomatically = UserDefaults.standard.bool(forKey: PopupViewModel.copyResultAutomaticallyKey)
+    @State private var checksForSecrets = SecretCheck.isOn(in: .standard)
     @StateObject private var launchManager = LaunchAtLoginManager.shared
 
     var body: some View {
@@ -46,6 +47,22 @@ struct GeneralTab: View {
                     KeyboardShortcuts.Recorder(for: .openPopup)
                         .shortcutValidation(ShortcutConflicts.validator(for: .openPopup) { AppDelegate.shared?.presetStore.presets ?? [] })
                 }
+            }
+
+            Section("Privacy") {
+                Toggle(isOn: Binding(
+                    get: { checksForSecrets },
+                    set: { newValue in
+                        checksForSecrets = newValue
+                        UserDefaults.standard.set(newValue, forKey: SecretCheck.settingKey)
+                    }
+                )) {
+                    SettingsLabel(
+                        "Check for secrets before sending",
+                        caption: "Stops before sending when your text holds an API key or token in a known format. Text only: images are not checked."
+                    )
+                }
+                .toggleStyle(.switch)
             }
 
             Section("Startup") {

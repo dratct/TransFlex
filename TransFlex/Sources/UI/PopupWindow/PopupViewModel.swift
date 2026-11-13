@@ -8,7 +8,12 @@ final class PopupViewModel: ObservableObject {
 
     @Published var state: PopupState = .idle
     @Published var inputText: String = "" {
-        didSet { if inputText != oldValue, !inputText.isEmpty { attachError = nil } }
+        didSet {
+            guard inputText != oldValue else { return }
+            if !inputText.isEmpty { attachError = nil }
+            approvedSecretText = nil
+            sentAnywayDraft = nil
+        }
     }
     @Published var selectedPresetID: UUID?
     @Published var costEstimate: String?
@@ -48,7 +53,16 @@ final class PopupViewModel: ObservableObject {
         let presetID: UUID?
         let state: PopupState
         let costEstimate: String?
+        var sentAnywayDraft: String?
     }
+
+    /// The text the user chose to Send anyway. It lasts until that text or
+    /// the preset changes, or the popup hides.
+    private var approvedSecretText: String?
+    /// The text sent with Send anyway, for as long as it is the Draft: it
+    /// is kept like any Draft, though the next send asks again.
+    private var sentAnywayDraft: String?
+    private let secretCheck: SecretCheck
 
     private let translationService: TranslationService
     private let presetStore: PresetStore
@@ -81,8 +95,10 @@ final class PopupViewModel: ObservableObject {
         isAccessibilityGranted: @escaping () -> Bool = AccessibilityPermission.isGranted,
         openAccessibilitySettings: @escaping () -> Void = AccessibilityPermission.openSettings,
         hasAPIKey: @escaping (Preset) -> Bool = { _ in true },
-        announcer: Announcing = VoiceOverAnnouncer()
+        announcer: Announcing = VoiceOverAnnouncer(),
+        secretCheck: SecretCheck? = nil
     ) {
+        self.secretCheck = secretCheck ?? .live(defaults: defaults)
         self.announcer = announcer
         self.isAccessibilityGranted = isAccessibilityGranted
         self.hasAPIKey = hasAPIKey
@@ -203,6 +219,13 @@ final class PopupViewModel: ObservableObject {
             state = .missingKey(providerID: preset.providerID)
             return
         }
+        if text != approvedSecretText, let match = secretCheck.match(in: text, providerID: preset.providerID) {
+            cancelStream()
+            state = .secretFound(match, providerID: preset.providerID)
+            let provider = ProviderRegistry.shared.displayName(for: preset.providerID)
+            announcer.announce("\(match.kind) found. Not sent to \(provider).")
+            return
+        }
 
         if let imageInput = attachedImage {
             let estimate = ImageTranslationCoordinator.preflightCost(
@@ -216,6 +239,41 @@ final class PopupViewModel: ObservableObject {
         }
 
         executeTranslation(text: text, imageInput: attachedImage, preset: preset)
+    }
+
+    /// Secret check card: sends the text as it is. A later ⌘↩ on the same
+    /// text does not ask again while the approval lasts.
+    func sendAnyway() {
+        guard case .secretFound = state else { return }
+        approvedSecretText = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        sentAnywayDraft = approvedSecretText
+        translate()
+    }
+
+    /// Every way of hiding the popup ends here. A Draft the Secret check
+    /// would stop is not kept, wherever it waits: in the editor, behind an
+    /// attached image, or set aside behind a selection shortcut's result.
+    /// The Output-only popup's own text never becomes a Draft.
+    func popupDidHide() {
+        approvedSecretText = nil
+        if isStopped(textBeforeImage, presetID: selectedPresetID, sentAnyway: sentAnywayDraft) {
+            textBeforeImage = nil
+        }
+        if let session = popupSession,
+           isStopped(session.text, presetID: session.presetID, sentAnyway: session.sentAnywayDraft) {
+            popupSession = PopupSession(
+                text: "", image: session.image, presetID: session.presetID, state: .idle, costEstimate: nil
+            )
+        }
+        if !isOutputOnly, isStopped(inputText, presetID: selectedPresetID, sentAnyway: sentAnywayDraft) {
+            reset()
+        }
+    }
+
+    private func isStopped(_ text: String?, presetID: UUID?, sentAnyway: String?) -> Bool {
+        guard let text, let preset = presets.first(where: { $0.id == presetID }) else { return false }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed != sentAnyway && secretCheck.match(in: trimmed, providerID: preset.providerID) != nil
     }
 
     func confirmCostAndTranslate() {
@@ -239,6 +297,8 @@ final class PopupViewModel: ObservableObject {
         let sequence = translationSequence
         let startedAt = Date()
         translationStart = startedAt
+        // Decided now: the approval ends if the popup hides mid-stream.
+        let skipHistory = approvedSecretText != nil && text == approvedSecretText
 
         let task = Task { [weak self] in
             guard let self else { return }
@@ -288,11 +348,13 @@ final class PopupViewModel: ObservableObject {
                 self.announcer.announce("Translation ready")
                 self.updateCost(model: preset.modelID, input: inputTokens, output: outputTokens, hadImage: imageInput != nil)
                 self.autoCopyIfEnabled(accumulated)
-                self.historyRecorder.record(
-                    preset: preset, inputText: text, outputText: accumulated,
-                    inputTokens: inputTokens, outputTokens: outputTokens,
-                    hadImage: imageInput != nil, startTime: startedAt
-                )
+                if !skipHistory {
+                    self.historyRecorder.record(
+                        preset: preset, inputText: text, outputText: accumulated,
+                        inputTokens: inputTokens, outputTokens: outputTokens,
+                        hadImage: imageInput != nil, startTime: startedAt
+                    )
+                }
             } catch is CancellationError {
                 guard self.translationSequence == sequence else { return }
                 self.state = .idle
@@ -384,6 +446,8 @@ final class PopupViewModel: ObservableObject {
         // outputVisibleHeight is kept: the scroll view reports it only when it
         // changes, so a zero would stick when the next open has the same frame.
         popupSession = nil
+        approvedSecretText = nil
+        sentAnywayDraft = nil
         state = .idle
     }
 
@@ -414,7 +478,8 @@ final class PopupViewModel: ObservableObject {
             }
             session = PopupSession(
                 text: inputText, image: attachedImage, presetID: selectedPresetID,
-                state: kept, costEstimate: kept == .idle ? nil : costEstimate
+                state: kept, costEstimate: kept == .idle ? nil : costEstimate,
+                sentAnywayDraft: sentAnywayDraft
             )
         }
         reset()
@@ -509,6 +574,8 @@ final class PopupViewModel: ObservableObject {
         guard isOutputOnly else { return }
         isOutputOnly = false
         popupSession = nil
+        // The card would cover the editor the user asked to see.
+        if case .secretFound = state { state = .idle }
         onShowInput?()
     }
 
@@ -527,6 +594,7 @@ final class PopupViewModel: ObservableObject {
                     attachedImage = session.image
                     state = session.state
                     costEstimate = session.costEstimate
+                    sentAnywayDraft = session.sentAnywayDraft
                 }
             }
         } else if !keepingDraft {
@@ -541,6 +609,7 @@ final class PopupViewModel: ObservableObject {
         stop()
         selectedPresetID = id
         attachError = nil
+        approvedSecretText = nil
         // Text already on screen stays until ⌘↩ translates again.
         switch state {
         case .done, .error(_, partial: .some): return
@@ -653,4 +722,6 @@ enum PopupState: Equatable {
     case missingKey(providerID: String)
     /// The provider refused the saved key (HTTP 401/403); nothing was translated.
     case keyRejected(providerID: String)
+    /// The Secret check found a known key format; nothing was sent.
+    case secretFound(SecretMatch, providerID: String)
 }

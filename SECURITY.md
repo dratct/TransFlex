@@ -18,5 +18,6 @@ Helpful reports include:
 - Keychain access in `TransFlex/Sources/Core/Keychain`.
 - Provider credential and header storage in `TransFlex/Sources/Providers`.
 - Secret redaction in `TransFlex/Sources/Core/Security`.
+- The Secret check, which stops source text holding a known key format before it is sent: `SecretScanner` and `SecretCheck` in `TransFlex/Sources/Core/Security`, and the three places that call it (`PopupViewModel`, `QuickReplaceCoordinator`, `PopupWindowController`).
 - History persistence in `TransFlex/Sources/History`.
 - Image attachment and file picker flows in `TransFlex/Sources/UI/PopupWindow/Image`.

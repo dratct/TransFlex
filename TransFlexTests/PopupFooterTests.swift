@@ -20,6 +20,26 @@ final class PopupFooterTests: XCTestCase {
         XCTAssertEqual(actions(.error(message: "x", partial: "Xin")), [.new])
         XCTAssertEqual(actions(.error(message: "x", partial: nil)), [.backToText])
         XCTAssertEqual(actions(.missingKey(providerID: "openai")), [.backToText])
+        XCTAssertEqual(actions(Self.secretFound), [.sendAnyway, .backToText])
+    }
+
+    private static let secretFound = PopupState.secretFound(
+        SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerID: "openai"
+    )
+
+    /// The Output-only popup has no text on screen to go back to, so showing
+    /// it takes the filled button there.
+    func testSecretCardInOutputOnlyPopupOffersShowTextFirst() {
+        XCTAssertEqual(actions(Self.secretFound, outputOnly: true), [.sendAnyway, .showText])
+        XCTAssertEqual(primaries(Self.secretFound, outputOnly: true), [.showText])
+    }
+
+    /// Going back is the safe choice, so it is the filled button; ⌘↩ belongs
+    /// to neither, so a habitual second press sends nothing.
+    func testSecretCardMakesBackToTextPrimaryAndKeepsSendAnywayOffCommandReturn() {
+        XCTAssertEqual(primaries(Self.secretFound), [.backToText])
+        XCTAssertEqual(PopupFooter.Action.sendAnyway.title, "Send anyway")
+        XCTAssertEqual(PopupFooter.Action.sendAnyway.keys, ["⌘", "⇧", "↩"])
     }
 
     func testOnePrimaryPerStateWhereTheFooterHasOne() {

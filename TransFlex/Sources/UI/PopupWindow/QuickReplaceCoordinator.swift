@@ -6,11 +6,21 @@ import Foundation
 final class QuickReplaceCoordinator {
     struct EmptyResult: Error {}
 
+    /// The Secret check stopped the selection; it carries what to show and
+    /// never the text.
+    struct SecretFound: Error, Equatable {
+        let match: SecretMatch
+    }
+
     private let translationService: TranslationService
     private let selection: SelectionCapture
+    private let secretCheck: SecretCheck
     private let historyRecorder = HistoryRecorder()
     private(set) var isRunning = false
     private var current: Task<Void, Error>?
+    /// The selection a `SecretFound` stopped, kept only until the banner
+    /// closes or Send anyway resumes with it.
+    private var parked: SelectionCapture.CopiedSelection?
 
     /// Holds Esc system-wide while a run is active, so Esc cancels it.
     var escapeHold: EscapeHold?
@@ -21,19 +31,56 @@ final class QuickReplaceCoordinator {
         didSet { historyRecorder.historyStore = historyStore }
     }
 
-    init(translationService: TranslationService, selection: SelectionCapture) {
+    init(translationService: TranslationService, selection: SelectionCapture, secretCheck: SecretCheck? = nil) {
         self.translationService = translationService
         self.selection = selection
+        self.secretCheck = secretCheck ?? .live(defaults: .standard)
     }
 
     /// Returns `false` without doing anything while a previous run is still
     /// in flight, so a repeated press cannot paste twice. Throws
-    /// `CancellationError` after `cancel()`; nothing is pasted then.
+    /// `CancellationError` after `cancel()`; nothing is pasted then. Throws
+    /// `SecretFound` when the Secret check stops the selection: nothing was
+    /// sent, and `runSendingAnyway` can resume with the same selection.
     @discardableResult
     func run(preset: Preset) async throws -> Bool {
         guard !isRunning else { return false }
+        parked = nil
+        return try await perform(preset: preset) { [self] in
+            let copied = try await selection.copyForReplace()
+            try Task.checkCancellation()
+            if let match = secretCheck.match(in: copied.text, providerID: preset.providerID) {
+                parked = copied
+                throw SecretFound(match: match)
+            }
+            try await translateAndPaste(copied, preset: preset, recordsHistory: true)
+        }
+    }
+
+    /// Send anyway on the Secret check banner: translates the selection the
+    /// check stopped and pastes over it while it is still the selection,
+    /// without saving to History. Returns `false` when no selection is waiting.
+    @discardableResult
+    func runSendingAnyway(preset: Preset) async throws -> Bool {
+        guard !isRunning, let copied = parked else { return false }
+        parked = nil
+        return try await perform(preset: preset) { [self] in
+            try await translateAndPaste(copied, preset: preset, recordsHistory: false)
+        }
+    }
+
+    /// The banner closed without Send anyway: the selection is not kept.
+    func discardParked() {
+        parked = nil
+    }
+
+    func cancel() {
+        current?.cancel()
+    }
+
+    private func perform(preset: Preset, _ work: @escaping @MainActor () async throws -> Void) async throws -> Bool {
         isRunning = true
-        let task = Task { try await replace(preset: preset) }
+        let task = Task { try await work() }
         current = task
         escapeHold?.hold { [weak self] in self?.cancel() }
         // Every way out — pasted, failed, empty, cancelled — lands here.
@@ -44,6 +91,10 @@ final class QuickReplaceCoordinator {
         }
         do {
             try await task.value
+        } catch let found as SecretFound {
+            let provider = ProviderRegistry.shared.displayName(for: preset.providerID)
+            announcer.announce("\(found.match.kind) found. Not sent to \(provider).")
+            throw found
         } catch {
             if !(error is CancellationError) { announcer.announce("Couldn’t replace the selection") }
             throw error
@@ -52,14 +103,10 @@ final class QuickReplaceCoordinator {
         return true
     }
 
-    func cancel() {
-        current?.cancel()
-    }
-
-    private func replace(preset: Preset) async throws {
-        let copied = try await selection.copyForReplace()
+    private func translateAndPaste(
+        _ copied: SelectionCapture.CopiedSelection, preset: Preset, recordsHistory: Bool
+    ) async throws {
         let original = copied.text
-        try Task.checkCancellation()
         let startedAt = Date()
         var output = ""
         var inputTokens = 0
@@ -83,11 +130,21 @@ final class QuickReplaceCoordinator {
 
         let translated = output.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !translated.isEmpty else { throw EmptyResult() }
+        let replacement = Self.keepingEdgeWhitespace(of: original, around: translated)
 
-        try await selection.paste(
-            Self.keepingEdgeWhitespace(of: original, around: translated),
-            over: copied
-        )
+        // Send anyway can come long after the copy: the banner waits with
+        // no time limit, so the selection is confirmed before any ⌘V.
+        if !recordsHistory {
+            let stillSelected = await selection.isStillSelected(copied)
+            try Task.checkCancellation()
+            if !stillSelected {
+                selection.leaveOnClipboard(replacement)
+                throw SelectionCapture.Failure.targetLost
+            }
+        }
+
+        try await selection.paste(replacement, over: copied)
+        guard recordsHistory else { return }
         historyRecorder.record(
             preset: preset, inputText: original, outputText: translated,
             inputTokens: inputTokens, outputTokens: outputTokens,

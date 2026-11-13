@@ -21,6 +21,8 @@ final class PopupWindowControllerTests: XCTestCase {
     private var replaceCopies = 0
     private var pasted: [String] = []
 
+    private var replaceSelection = "hello"
+
     override func setUp() async throws {
         tempDir = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
         try FileManager.default.createDirectory(at: tempDir, withIntermediateDirectories: true)
@@ -64,7 +66,7 @@ final class PopupWindowControllerTests: XCTestCase {
                 if key == CGKeyCode(kVK_ANSI_C) {
                     replaceCopies += 1
                     board.clearContents()
-                    board.setString("hello", forType: .string)
+                    board.setString(replaceSelection, forType: .string)
                 } else if key == CGKeyCode(kVK_ANSI_V) {
                     pasted.append(board.string(forType: .string) ?? "")
                 }
@@ -260,6 +262,134 @@ final class PopupWindowControllerTests: XCTestCase {
         controller.show()
 
         XCTAssertFalse(controller.isPinned)
+    }
+
+    // MARK: Secret check
+
+    private static let flagged = "deploy with \(SecretScannerTests.githubToken) today"
+
+    private func isSecretCard(_ state: PopupState?) -> Bool {
+        if case .secretFound = state { return true }
+        return false
+    }
+
+    func testFlaggedTextIsNotKeptAsDraftWhenThePopupHides() {
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        XCTAssertTrue(isSecretCard(controller.viewModelForTesting?.state))
+
+        controller.hide()
+        controller.show()
+
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "")
+        XCTAssertEqual(controller.viewModelForTesting?.state, .idle)
+    }
+
+    func testFlaggedTextBeingEditedIsNotKeptEither() {
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        controller.viewModelForTesting?.dismissError()
+
+        controller.hide()
+        controller.show()
+
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "")
+    }
+
+    func testSendAnywayEndsWhenThePopupHides() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào")]
+        controller.show()
+        controller.viewModelForTesting?.inputText = Self.flagged
+        controller.viewModelForTesting?.translate()
+        controller.viewModelForTesting?.sendAnyway()
+        try await waitUntil({ self.controller.viewModelForTesting?.state == .done(result: "xin chào") })
+
+        controller.hide()
+        controller.show()
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, Self.flagged, "a text sent anyway is kept like any Draft")
+
+        controller.viewModelForTesting?.translate()
+        XCTAssertTrue(isSecretCard(controller.viewModelForTesting?.state), "the next send asks again")
+    }
+
+    private func isSecretBanner() -> Bool {
+        if case .secretFound = hud.model.phase, hud.isShowing { return true }
+        return false
+    }
+
+    func testReplaceSelectionWithASecretShowsItsBannerAndSendsNothing() async throws {
+        replaceSelection = Self.flagged
+
+        controller.quickReplace(presetID: preset.id)
+
+        try await waitUntil({ self.isSecretBanner() }, "the secret banner shows")
+        XCTAssertTrue(provider.capturedMessages.isEmpty)
+        XCTAssertEqual(pasted, [])
+        XCTAssertFalse(controller.isVisible, "no popup")
+        XCTAssertTrue(hold.isHeld)
+
+        hold.press()
+        XCTAssertFalse(hud.isShowing)
+        XCTAssertFalse(hold.isHeld)
+    }
+
+    func testPinnedPopupKeepsItsContentWhenReplaceFindsASecret() async throws {
+        _ = showPinnedPopup()
+        replaceSelection = Self.flagged
+
+        controller.quickReplace(presetID: preset.id)
+
+        try await waitUntil({ self.isSecretBanner() }, "the secret banner shows")
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
+        XCTAssertTrue(controller.isPinned)
+    }
+
+    /// Two presses can both pass the running check before the first run
+    /// starts; the second run then does nothing and must leave the capsule.
+    func testAReplaceThatDidNotStartLeavesTheRunningCapsule() async throws {
+        provider.holdsOpen = true
+
+        controller.quickReplace(presetID: preset.id)
+        controller.quickReplace(presetID: preset.id)
+        try await waitUntil({ !self.provider.capturedMessages.isEmpty }, "the first run is translating")
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertTrue(hud.isRunning, "still the capsule of the run in flight, not Replaced")
+        hold.press()
+    }
+
+    func testSendAnywayOnTheBannerSendsTheSelection() async throws {
+        provider.scriptedEvents = [.textDelta("xin chào")]
+        replaceSelection = Self.flagged
+        controller.quickReplace(presetID: preset.id)
+        try await waitUntil({ self.isSecretBanner() }, "the secret banner shows")
+
+        hud.model.onSendAnyway()
+
+        try await waitUntil({ !self.provider.capturedMessages.isEmpty }, "the selection is sent")
+        XCTAssertTrue(provider.capturedMessages.last?.content.contains(SecretScannerTests.githubToken) ?? false)
+        XCTAssertEqual(replaceCopies, 1, "an unknown source app gets no second ⌘C")
+    }
+
+    func testTranslateSelectionWithASecretOpensTheCardAndKeepsThePopupsDraft() async throws {
+        controller.show()
+        controller.viewModelForTesting?.inputText = "draft"
+        controller.hide()
+        copied = .success(Self.flagged)
+
+        controller.quickTranslate(presetID: preset.id)
+
+        try await waitUntil({ self.isSecretCard(self.controller.viewModelForTesting?.state) }, "the card shows")
+        XCTAssertTrue(controller.isVisible)
+        XCTAssertEqual(controller.viewModelForTesting?.isOutputOnly, true)
+        XCTAssertNil(selectionBanner)
+        XCTAssertTrue(provider.capturedMessages.isEmpty, "nothing was sent")
+
+        controller.hide()
+        controller.show()
+        XCTAssertEqual(controller.viewModelForTesting?.inputText, "draft")
     }
 
     /// The card replaces a pinned Popup without hiding it; the Draft's clock

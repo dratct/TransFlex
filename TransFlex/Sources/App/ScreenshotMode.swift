@@ -56,7 +56,7 @@ enum ScreenshotMode {
         let wide = NSSize(width: 832, height: 520)
         let narrow = NSSize(width: 640, height: 520)
 
-        func popup(_ name: String, size: NSSize = wide, input: String = source, cost: String? = nil, pinned: Bool = false, _ state: PopupState) -> Shot {
+        func popup(_ name: String, size: NSSize = wide, input: String = source, cost: String? = nil, pinned: Bool = false, outputOnly: Bool = false, _ state: PopupState) -> Shot {
             Shot(name: name, size: size) {
                 let vm = PopupViewModel(
                     translationService: TranslationService(provider: { _ in throw ProviderError.unknownProvider(id: "screenshots") }, apiKey: { _ in "" }),
@@ -64,6 +64,7 @@ enum ScreenshotMode {
                     isAccessibilityGranted: { false },
                     openAccessibilitySettings: {}
                 )
+                if outputOnly, let presetID = vm.selectedPresetID { vm.presentQuickError("", presetID: presetID) }
                 vm.inputText = input
                 vm.state = state
                 vm.costEstimate = cost
@@ -86,6 +87,11 @@ enum ScreenshotMode {
             popup("popup-error", .error(message: "No internet connection.", partial: nil)),
             popup("popup-missing-key", .missingKey(providerID: "openai")),
             popup("popup-key-rejected", .keyRejected(providerID: "openai")),
+            popup("popup-secret-found", .secretFound(SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerID: "openai")),
+            popup("popup-secret-found-output-only", size: NSSize(width: 576, height: 300), outputOnly: true,
+                  .secretFound(SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerID: "openai")),
+            popup("popup-secret-found-private-key", .secretFound(SecretMatch(kind: "Private key", masked: ""), providerID: "anthropic")),
+            popup("popup-secret-found-url", .secretFound(SecretMatch(kind: "URL with a password", masked: "https://••••@example.com"), providerID: "gemini")),
             popup("popup-accessibility", input: "", .accessibilityRequired(granted: false)),
         ]
         for tab in [SettingsTab.general, .providers, .presets, .about] {
@@ -131,6 +137,8 @@ enum ScreenshotMode {
             ("replace-translating", ReplaceHUD.Phase.translating(presetName: "Natural EN ↔ VI")),
             ("replace-done", .replaced),
             ("replace-failed", .failed(message: ReplaceHUD.failureMessage(for: QuickReplaceCoordinator.EmptyResult()))),
+            ("replace-secret-found", .secretFound(SecretMatch(kind: "GitHub token", masked: "ghp_…9xQ2"), providerName: "OpenAI")),
+            ("replace-secret-found-private-key", .secretFound(SecretMatch(kind: "Private key", masked: ""), providerName: "Anthropic")),
         ] {
             shots.append(Shot(name: name, size: NSSize(width: 400, height: 170)) {
                 AnyView(ReplaceHUDView(model: ReplaceHUD.Model(phase: phase)).padding(24))
